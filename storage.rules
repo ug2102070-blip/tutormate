@@ -1,0 +1,38 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isTutorOwnerStorage(tutorId) {
+      return isAuthenticated()
+        && request.auth.token.get('role', '') == 'tutor'
+        && request.auth.token.get('tutorId', '') == tutorId;
+    }
+    
+    // Path: /doubts/{tutorId}/{studentAuthUid}/{doubtId}/{fileName}
+    match /doubts/{tutorId}/{studentAuthUid}/{doubtId}/{fileName} {
+      // READ: Blocked for all client SDK access.
+      // All reads go through Server Action → Admin SDK → short-lived signed URL.
+      // This prevents getDownloadURL() from generating persistent bypass tokens.
+      allow read: if false;
+
+      // WRITE: Client uploads allowed with role, size, and MIME validation.
+      // Student branch explicitly checks tutorId claim against path segment
+      // to prevent cross-tenant uploads to another tutor's storage namespace.
+      allow write: if isAuthenticated()
+                   && (
+                     isTutorOwnerStorage(tutorId)
+                     || (request.auth.uid == studentAuthUid
+                         && request.auth.token.get('tutorId', '') == tutorId)
+                   )
+                   && request.resource.size < 5 * 1024 * 1024
+                   && request.resource.contentType.matches('image/(jpeg|png|webp)');
+
+      // DELETE: Default deny (no allow delete rule).
+      // Stale files cleaned up via Cloud Function in Phase 4.
+    }
+  }
+}

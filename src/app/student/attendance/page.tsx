@@ -1,0 +1,181 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { collection, query, where, getDocs, doc, getDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase/config";
+import { useAuth } from "@/hooks/useAuth";
+import type { AttendanceDoc, StudentDoc } from "@/types";
+import { CalendarCheck, Check, X, Clock } from "lucide-react";
+
+export default function StudentAttendancePage() {
+  const { user, claims } = useAuth();
+  const [attendanceLogs, setAttendanceLogs] = useState<AttendanceDoc[]>([]);
+  const [studentDoc, setStudentDoc] = useState<StudentDoc | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!user || !claims || claims.role !== "student") return;
+
+    async function loadAttendance() {
+      if (!claims || claims.role !== "student") return;
+      try {
+        // Fetch student doc for enrolledBatchIds
+        const sSnap = await getDoc(doc(db, "students", claims.studentDocId));
+        if (sSnap.exists()) {
+          const sData = { id: sSnap.id, ...sSnap.data() } as StudentDoc;
+          setStudentDoc(sData);
+
+          if (sData.enrolledBatchIds && sData.enrolledBatchIds.length > 0) {
+            // Fetch attendance logs for student's tutor
+            const attQuery = query(
+              collection(db, "attendance"),
+              where("tutorId", "==", claims.tutorId)
+            );
+            const attSnap = await getDocs(attQuery);
+            const logs: AttendanceDoc[] = [];
+
+            attSnap.forEach((d) => {
+              const data = d.data() as AttendanceDoc;
+              // Check if log belongs to student's enrolled batch and student is recorded
+              if (
+                sData.enrolledBatchIds.includes(data.batchId) &&
+                data.records?.[claims.studentDocId]
+              ) {
+                logs.push({ id: d.id, ...data });
+              }
+            });
+
+            // Sort date descending
+            logs.sort((a, b) => (b.date > a.date ? 1 : -1));
+            setAttendanceLogs(logs);
+          }
+        }
+      } catch {
+        // handle error
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadAttendance();
+  }, [user, claims]);
+
+  const studentDocId = claims?.role === "student" ? claims.studentDocId : "";
+  const presentCount = attendanceLogs.filter(
+    (l) => l.records?.[studentDocId]?.status === "present"
+  ).length;
+  const absentCount = attendanceLogs.filter(
+    (l) => l.records?.[studentDocId]?.status === "absent"
+  ).length;
+  const lateCount = attendanceLogs.filter(
+    (l) => l.records?.[studentDocId]?.status === "late"
+  ).length;
+
+  const totalClasses = attendanceLogs.length;
+  const attendanceRate = totalClasses > 0 ? Math.round((presentCount / totalClasses) * 100) : 0;
+
+  return (
+    <div className="space-y-6 max-w-4xl mx-auto">
+      {/* Header */}
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight text-[var(--color-text)]">
+          My Attendance History
+        </h1>
+        <p className="text-sm text-[var(--color-text-secondary)]">
+          Track your daily class attendance logs across enrolled batches
+        </p>
+      </div>
+
+      {/* Summary Stats Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div className="p-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)]">
+          <div className="text-xs text-[var(--color-text-muted)] font-medium">Attendance Rate</div>
+          <div className="text-2xl font-bold text-[var(--color-primary)] mt-1">{attendanceRate}%</div>
+        </div>
+        <div className="p-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)]">
+          <div className="text-xs text-[var(--color-text-muted)] font-medium">Present</div>
+          <div className="text-2xl font-bold text-emerald-600 mt-1">{presentCount}</div>
+        </div>
+        <div className="p-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)]">
+          <div className="text-xs text-[var(--color-text-muted)] font-medium">Absent</div>
+          <div className="text-2xl font-bold text-rose-600 mt-1">{absentCount}</div>
+        </div>
+        <div className="p-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)]">
+          <div className="text-xs text-[var(--color-text-muted)] font-medium">Late</div>
+          <div className="text-2xl font-bold text-amber-500 mt-1">{lateCount}</div>
+        </div>
+      </div>
+
+      {/* Attendance Logs Table */}
+      {loading ? (
+        <div className="h-64 rounded-2xl animate-shimmer border border-[var(--color-border)]" />
+      ) : attendanceLogs.length === 0 ? (
+        <div className="py-16 text-center border border-dashed rounded-2xl border-[var(--color-border)] bg-[var(--color-surface)]">
+          <CalendarCheck className="w-10 h-10 mx-auto text-[var(--color-text-muted)] mb-3" />
+          <h3 className="text-base font-semibold text-[var(--color-text)]">
+            No attendance logs found
+          </h3>
+          <p className="text-xs text-[var(--color-text-muted)] mt-1 max-w-sm mx-auto">
+            Your tutor has not logged any attendance for your batch yet.
+          </p>
+        </div>
+      ) : (
+        <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] overflow-hidden shadow-sm">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="border-b border-[var(--color-border)] bg-[var(--color-bg-secondary)] text-[var(--color-text-secondary)] font-semibold">
+                <tr>
+                  <th className="px-4 py-3">Date</th>
+                  <th className="px-4 py-3">Attendance Status</th>
+                  <th className="px-4 py-3">Remarks</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[var(--color-border)] text-[var(--color-text)]">
+                {attendanceLogs.map((log) => {
+                  const record = log.records?.[studentDocId];
+                  const status = record?.status || "absent";
+
+                  return (
+                    <tr
+                      key={log.id}
+                      className="hover:bg-[var(--color-bg-secondary)] transition-colors"
+                    >
+                      <td className="px-4 py-3 font-semibold">
+                        {new Date(log.date + "T00:00:00").toLocaleDateString("en-GB", {
+                          weekday: "short",
+                          day: "numeric",
+                          month: "short",
+                          year: "numeric",
+                        })}
+                      </td>
+                      <td className="px-4 py-3">
+                        {status === "present" && (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            <Check className="w-3 h-3" /> Present
+                          </span>
+                        )}
+                        {status === "absent" && (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-rose-50 text-rose-700 border border-rose-200">
+                            <X className="w-3 h-3" /> Absent
+                          </span>
+                        )}
+                        {status === "late" && (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+                            <Clock className="w-3 h-3" /> Late
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-[var(--color-text-muted)]">
+                        {record?.remarks || "—"}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

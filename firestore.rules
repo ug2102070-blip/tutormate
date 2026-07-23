@@ -1,0 +1,187 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ==========================================
+    // HELPER FUNCTIONS
+    // ==========================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isUser(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && request.auth.token.get('role', '') == 'admin';
+    }
+
+    function isTutorOwner(tutorId) {
+      return isAuthenticated()
+        && request.auth.token.get('role', '') == 'tutor'
+        && (request.auth.uid == tutorId
+            || request.auth.token.get('tutorId', '') == tutorId);
+    }
+
+    function isStudentAuth(studentAuthUid) {
+      return isAuthenticated() && request.auth.uid == studentAuthUid;
+    }
+
+    function isStudentOfTutor(tutorId) {
+      return isAuthenticated()
+        && request.auth.token.get('role', '') == 'student'
+        && request.auth.token.get('tutorId', '') == tutorId;
+    }
+
+    function isStudentEnrolledInBatch(batchId) {
+      return isAuthenticated()
+        && request.auth.token.get('role', '') == 'student'
+        && request.auth.token.get('studentDocId', '') != ''
+        && batchId in get(
+             /databases/$(database)/documents/students/$(request.auth.token.get('studentDocId', ''))
+           ).data.enrolledBatchIds;
+    }
+
+    function getDoubtData(doubtId) {
+      return get(/databases/$(database)/documents/doubts/$(doubtId)).data;
+    }
+
+    // ==========================================
+    // USERS COLLECTION
+    // ==========================================
+    match /users/{userId} {
+      allow read, update: if isUser(userId) || isAdmin();
+      allow create: if isUser(userId)
+                    && request.resource.data.role in ['tutor', 'student'];
+      allow delete: if isAdmin();
+    }
+
+    // ==========================================
+    // TUTORS COLLECTION
+    // ==========================================
+    match /tutors/{tutorId} {
+      allow read: if isTutorOwner(tutorId) || isStudentOfTutor(tutorId) || isAdmin();
+
+      allow create: if isUser(tutorId)
+                    && request.resource.data.subscription.plan == 'free_trial'
+                    && request.resource.data.subscription.status == 'active';
+
+      allow update: if isTutorOwner(tutorId)
+                    && request.resource.data.id == resource.data.id
+                    && request.resource.data.subscription == resource.data.subscription;
+
+      allow delete: if isAdmin();
+    }
+
+    // ==========================================
+    // BATCHES COLLECTION
+    // ==========================================
+    match /batches/{batchId} {
+      allow read: if isTutorOwner(resource.data.tutorId)
+                  || isStudentEnrolledInBatch(batchId)
+                  || isAdmin();
+
+      allow create: if isTutorOwner(request.resource.data.tutorId);
+      allow update: if isTutorOwner(resource.data.tutorId)
+                    && request.resource.data.tutorId == resource.data.tutorId;
+      allow delete: if isTutorOwner(resource.data.tutorId);
+    }
+
+    // ==========================================
+    // STUDENTS COLLECTION
+    // ==========================================
+    match /students/{studentId} {
+      allow read: if isTutorOwner(resource.data.tutorId)
+                  || resource.data.authUid == request.auth.uid
+                  || isAdmin();
+
+      allow create: if isTutorOwner(request.resource.data.tutorId);
+      allow update: if isTutorOwner(resource.data.tutorId)
+                    && request.resource.data.tutorId == resource.data.tutorId;
+      allow delete: if isTutorOwner(resource.data.tutorId);
+    }
+
+    // ==========================================
+    // ATTENDANCE COLLECTION
+    // ==========================================
+    match /attendance/{attendanceId} {
+      allow read: if isTutorOwner(resource.data.tutorId)
+                  || isStudentEnrolledInBatch(resource.data.batchId)
+                  || isAdmin();
+
+      allow create: if isTutorOwner(request.resource.data.tutorId);
+      allow update: if isTutorOwner(resource.data.tutorId)
+                    && request.resource.data.tutorId == resource.data.tutorId;
+      allow delete: if isTutorOwner(resource.data.tutorId);
+    }
+
+    // ==========================================
+    // FEES COLLECTION
+    // ==========================================
+    match /fees/{feeId} {
+      allow read: if isTutorOwner(resource.data.tutorId)
+                  || resource.data.studentId == request.auth.token.get('studentDocId', '')
+                  || isAdmin();
+
+      allow create: if isTutorOwner(request.resource.data.tutorId);
+      allow update: if isTutorOwner(resource.data.tutorId)
+                    && request.resource.data.tutorId == resource.data.tutorId;
+      allow delete: if isTutorOwner(resource.data.tutorId);
+    }
+
+    // ==========================================
+    // DOUBTS COLLECTION & MESSAGES SUBCOLLECTION
+    // ==========================================
+    match /doubts/{doubtId} {
+      allow read: if isTutorOwner(resource.data.tutorId)
+                  || isStudentAuth(resource.data.studentAuthUid)
+                  || isAdmin();
+
+      // CREATE: Student creates doubt — must match their own tutorId AND studentDocId claim
+      allow create: if isAuthenticated()
+                    && isStudentAuth(request.resource.data.studentAuthUid)
+                    && request.resource.data.tutorId == request.auth.token.get('tutorId', '')
+                    && request.resource.data.studentDocId == request.auth.token.get('studentDocId', '');
+
+      // UPDATE: Tutor full update (except ownership) OR Student field-locked + status transition guard
+      allow update: if isAuthenticated() && (
+        (isTutorOwner(resource.data.tutorId)
+          && request.resource.data.tutorId == resource.data.tutorId
+          && request.resource.data.studentAuthUid == resource.data.studentAuthUid)
+        ||
+        (isStudentAuth(resource.data.studentAuthUid)
+          && request.resource.data.studentAuthUid == resource.data.studentAuthUid
+          && request.resource.data.tutorId == resource.data.tutorId
+          && request.resource.data.studentDocId == resource.data.studentDocId
+          && request.resource.data.studentName == resource.data.studentName
+          && request.resource.data.batchId == resource.data.batchId
+          && request.resource.data.initialQuestion == resource.data.initialQuestion
+          && request.resource.data.attachmentPath == resource.data.attachmentPath
+          && request.resource.data.createdAt == resource.data.createdAt
+          && (
+            request.resource.data.status == resource.data.status || 
+            (resource.data.status == 'answered' && request.resource.data.status == 'resolved')
+          ))
+      );
+
+      allow delete: if isTutorOwner(resource.data.tutorId);
+
+      // Messages subcollection
+      match /messages/{messageId} {
+        allow read: if isAuthenticated() && (
+          isTutorOwner(getDoubtData(doubtId).tutorId) ||
+          isStudentAuth(getDoubtData(doubtId).studentAuthUid) ||
+          isAdmin()
+        );
+        allow create: if isAuthenticated()
+          && (isTutorOwner(getDoubtData(doubtId).tutorId)
+              || isStudentAuth(getDoubtData(doubtId).studentAuthUid))
+          && request.resource.data.senderUid == request.auth.uid
+          && request.resource.data.text is string
+          && request.resource.data.text.size() <= 5000;
+      }
+    }
+
+  }
+}

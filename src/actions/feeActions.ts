@@ -1,6 +1,20 @@
 "use server";
 
 import { adminDb, adminAuth } from "@/lib/firebase/admin";
+import { z } from "zod";
+
+const generateMonthlyFeesSchema = z.object({
+  batchId: z.string().min(1, "Batch ID is required"),
+  year: z.number().int().min(2020).max(2100),
+  month: z.number().int().min(1).max(12),
+});
+
+const updateFeeStatusSchema = z.object({
+  feeId: z.string().min(1, "Fee ID is required"),
+  status: z.enum(["paid", "unpaid", "partial"]),
+  amountPaid: z.number().min(0, "Amount paid cannot be negative"),
+  paymentMethod: z.enum(["cash", "bkash", "nagad", "other"]).nullable().optional(),
+});
 
 interface GenerateMonthlyFeesPayload {
   batchId: string;
@@ -21,7 +35,8 @@ export async function generateMonthlyFees(
   }
   const tutorId = decodedToken.uid;
 
-  const { batchId, year, month } = payload;
+  const validated = generateMonthlyFeesSchema.parse(payload);
+  const { batchId, year, month } = validated;
 
   // 1. Fetch batch details for monthly fee amount
   const batchDoc = await adminDb.collection("batches").doc(batchId).get();
@@ -98,7 +113,9 @@ export async function updateFeeStatus(
   }
   const tutorId = decodedToken.uid;
 
-  const { feeId, status, amountPaid, paymentMethod } = payload;
+  const validated = updateFeeStatusSchema.parse(payload);
+  const { feeId, status, amountPaid, paymentMethod } = validated;
+
   const feeRef = adminDb.collection("fees").doc(feeId);
   const feeSnap = await feeRef.get();
 
@@ -109,10 +126,11 @@ export async function updateFeeStatus(
   await feeRef.update({
     status,
     amountPaid,
-    paymentMethod: status === "paid" || status === "partial" ? paymentMethod : null,
+    paymentMethod: status === "paid" || status === "partial" ? (paymentMethod || "cash") : null,
     paidAt: status === "paid" ? new Date() : null,
     updatedAt: new Date(),
   });
 
   return { success: true };
 }
+

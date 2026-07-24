@@ -10,18 +10,12 @@ export default function StudentDashboardPage() {
   return (
     <div className="space-y-6">
       {/* Welcome Banner */}
-      <div
-        className="p-6 sm:p-8 rounded-2xl text-white relative overflow-hidden shadow-md"
-        style={{
-          background:
-            "linear-gradient(135deg, var(--color-accent-dark) 0%, var(--color-accent) 50%, var(--color-primary) 100%)",
-        }}
-      >
+      <div className="p-6 sm:p-8 rounded-2xl text-white bg-gradient-to-r from-cyan-600 via-indigo-600 to-indigo-700 shadow-md relative overflow-hidden">
         <div className="relative z-10">
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
             Hello, {user?.displayName || "Student"} 🎓
           </h1>
-          <p className="mt-1 text-white/80 text-sm max-w-xl">
+          <p className="mt-1.5 text-white/90 text-sm max-w-xl leading-relaxed">
             Welcome to your student portal. Track your class attendance, monthly fee history, and ask questions to your teacher.
           </p>
         </div>
@@ -31,71 +25,62 @@ export default function StudentDashboardPage() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         <Link
           href="/student/attendance"
-          className="p-5 rounded-2xl border bg-[var(--color-surface)] border-[var(--color-border)] flex items-center justify-between transition-all duration-200 hover:shadow-md hover:border-[var(--color-primary)] group"
+          className="p-5 rounded-2xl border border-slate-200 bg-white flex items-center justify-between transition-all duration-200 hover:shadow-md hover:border-indigo-500 group shadow-xs"
         >
           <div className="flex items-center gap-4">
-            <div
-              className="p-3 rounded-xl"
-              style={{ backgroundColor: "var(--color-primary-50)" }}
-            >
-              <CalendarCheck className="w-6 h-6 text-[var(--color-primary)]" />
+            <div className="p-3 rounded-xl bg-indigo-50 text-indigo-600">
+              <CalendarCheck className="w-6 h-6" />
             </div>
             <div>
-              <div className="text-base font-bold text-[var(--color-text)]">
+              <div className="text-base font-bold text-slate-900">
                 My Attendance
               </div>
-              <div className="text-xs text-[var(--color-text-muted)] mt-0.5">
+              <div className="text-xs text-slate-500 mt-0.5 font-medium">
                 View your class attendance logs
               </div>
             </div>
           </div>
-          <ArrowRight className="w-5 h-5 text-[var(--color-text-muted)] group-hover:text-[var(--color-primary)] group-hover:translate-x-1 transition-all" />
+          <ArrowRight className="w-5 h-5 text-slate-400 group-hover:text-indigo-600 group-hover:translate-x-1 transition-all" />
         </Link>
 
         <Link
           href="/student/fees"
-          className="p-5 rounded-2xl border bg-[var(--color-surface)] border-[var(--color-border)] flex items-center justify-between transition-all duration-200 hover:shadow-md hover:border-[var(--color-success)] group"
+          className="p-5 rounded-2xl border border-slate-200 bg-white flex items-center justify-between transition-all duration-200 hover:shadow-md hover:border-emerald-500 group shadow-xs"
         >
           <div className="flex items-center gap-4">
-            <div
-              className="p-3 rounded-xl"
-              style={{ backgroundColor: "rgb(16 185 129 / 0.1)" }}
-            >
-              <CreditCard className="w-6 h-6 text-[var(--color-success)]" />
+            <div className="p-3 rounded-xl bg-emerald-50 text-emerald-600">
+              <CreditCard className="w-6 h-6" />
             </div>
             <div>
-              <div className="text-base font-bold text-[var(--color-text)]">
+              <div className="text-base font-bold text-slate-900">
                 Payment History
               </div>
-              <div className="text-xs text-[var(--color-text-muted)] mt-0.5">
+              <div className="text-xs text-slate-500 mt-0.5 font-medium">
                 Check your monthly fee statuses
               </div>
             </div>
           </div>
-          <ArrowRight className="w-5 h-5 text-[var(--color-text-muted)] group-hover:text-[var(--color-success)] group-hover:translate-x-1 transition-all" />
+          <ArrowRight className="w-5 h-5 text-slate-400 group-hover:text-emerald-600 group-hover:translate-x-1 transition-all" />
         </Link>
 
         <Link
           href="/student/doubts"
-          className="p-5 rounded-2xl border bg-[var(--color-surface)] border-[var(--color-border)] flex items-center justify-between transition-all duration-200 hover:shadow-md hover:border-[var(--color-warning)] group"
+          className="p-5 rounded-2xl border border-slate-200 bg-white flex items-center justify-between transition-all duration-200 hover:shadow-md hover:border-amber-500 group shadow-xs"
         >
           <div className="flex items-center gap-4">
-            <div
-              className="p-3 rounded-xl"
-              style={{ backgroundColor: "rgb(245 158 11 / 0.1)" }}
-            >
-              <HelpCircle className="w-6 h-6 text-[var(--color-warning)]" />
+            <div className="p-3 rounded-xl bg-amber-50 text-amber-500">
+              <HelpCircle className="w-6 h-6" />
             </div>
             <div>
-              <div className="text-base font-bold text-[var(--color-text)]">
+              <div className="text-base font-bold text-slate-900">
                 Ask Your Teacher
               </div>
-              <div className="text-xs text-[var(--color-text-muted)] mt-0.5">
+              <div className="text-xs text-slate-500 mt-0.5 font-medium">
                 Ask doubts with image attachments
               </div>
             </div>
           </div>
-          <ArrowRight className="w-5 h-5 text-[var(--color-text-muted)] group-hover:text-[var(--color-warning)] group-hover:translate-x-1 transition-all" />
+          <ArrowRight className="w-5 h-5 text-slate-400 group-hover:text-amber-500 group-hover:translate-x-1 transition-all" />
         </Link>
       </div>
     </div>

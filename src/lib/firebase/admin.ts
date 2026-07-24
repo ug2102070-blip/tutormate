@@ -8,19 +8,33 @@ function getAdminApp() {
     return getApps()[0];
   }
 
-  const projectId = process.env.FIREBASE_PROJECT_ID || "tutormate-demo";
-  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL || "demo@tutormate-demo.iam.gserviceaccount.com";
-  const privateKey = (process.env.FIREBASE_PRIVATE_KEY || "-----BEGIN PRIVATE KEY-----\nDEMO\n-----END PRIVATE KEY-----").replace(/\\n/g, "\n");
+  const projectId = process.env.FIREBASE_PROJECT_ID || "tutormate-cc55b";
+  const storageBucket =
+    process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET ||
+    "tutormate-cc55b.firebasestorage.app";
 
-  const serviceAccount: ServiceAccount = {
-    projectId,
-    clientEmail,
-    privateKey,
-  };
+  const envPrivateKey = process.env.FIREBASE_PRIVATE_KEY;
+  if (envPrivateKey && !envPrivateKey.includes("DEMO")) {
+    const clientEmail =
+      process.env.FIREBASE_CLIENT_EMAIL ||
+      `firebase-adminsdk@${projectId}.iam.gserviceaccount.com`;
+    const privateKey = envPrivateKey.replace(/\\n/g, "\n");
+
+    const serviceAccount: ServiceAccount = {
+      projectId,
+      clientEmail,
+      privateKey,
+    };
+
+    return initializeApp({
+      credential: cert(serviceAccount),
+      storageBucket,
+    });
+  }
 
   return initializeApp({
-    credential: cert(serviceAccount),
-    storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "tutormate-demo.appspot.com",
+    projectId,
+    storageBucket,
   });
 }
 

@@ -7,15 +7,70 @@ import {
   signInWithEmailAndPassword,
   GoogleAuthProvider,
   signInWithPopup,
+  type ConfirmationResult,
+  type User,
 } from "firebase/auth";
-import { auth } from "@/lib/firebase/config";
+import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
+import { auth, db } from "@/lib/firebase/config";
+import { setupRecaptcha, sendPhoneVerificationCode } from "@/lib/firebase/auth";
+import { onboardTutorUser } from "@/actions/authActions";
+import { claimStudentInvite } from "@/actions/studentActions";
+import { formatAuthError } from "@/lib/utils";
+import { useAuth } from "@/hooks/useAuth";
+import { Phone, Mail, Sparkles, ArrowRight } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
+  const { refreshClaims } = useAuth();
+
+  // Auth Modes & Form States
+  const [authMethod, setAuthMethod] = useState<"email" | "phone">("email");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+
+  // Phone Auth State
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [otpCode, setOtpCode] = useState("");
+  const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
+  const [otpSent, setOtpSent] = useState(false);
+
+  // Common UX States
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // Onboarding modal for new Google/Phone users
+  const [pendingUser, setPendingUser] = useState<User | null>(null);
+  const [onboardRole, setOnboardRole] = useState<"tutor" | "student">("tutor");
+  const [onboardName, setOnboardName] = useState("");
+  const [onboardInstitution, setOnboardInstitution] = useState("");
+  const [onboardInviteCode, setOnboardInviteCode] = useState("");
+
+  /**
+   * Check user role and redirect to dashboard, or prompt for onboarding if new.
+   */
+  async function handlePostSignIn(user: User) {
+    document.cookie = "__session=1; path=/; max-age=2592000; SameSite=Lax";
+
+    try {
+      const userSnap = await getDoc(doc(db, "users", user.uid));
+      if (userSnap.exists() && userSnap.data()) {
+        const uData = userSnap.data();
+        await refreshClaims().catch(() => {});
+        if (uData.role === "student") {
+          router.push("/student/dashboard");
+        } else {
+          router.push("/tutor/dashboard");
+        }
+        return;
+      }
+    } catch {
+      // Fallback if read fails
+    }
+
+    // New user detected! Open Onboarding Modal
+    setPendingUser(user);
+    setOnboardName(user.displayName || "");
+  }
 
   async function handleEmailLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -23,14 +78,10 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      await signInWithEmailAndPassword(auth, email, password);
-      // Set session cookie for middleware first-pass check
-      document.cookie = "__session=1; path=/; max-age=2592000; SameSite=Lax";
-      router.push("/tutor/dashboard");
+      const cred = await signInWithEmailAndPassword(auth, email, password);
+      await handlePostSignIn(cred.user);
     } catch (err: unknown) {
-      const message =
-        err instanceof Error ? err.message : "Login failed. Please try again.";
-      setError(message);
+      setError(formatAuthError(err));
     } finally {
       setLoading(false);
     }
@@ -42,13 +93,130 @@ export default function LoginPage() {
 
     try {
       const provider = new GoogleAuthProvider();
-      await signInWithPopup(auth, provider);
-      document.cookie = "__session=1; path=/; max-age=2592000; SameSite=Lax";
-      router.push("/tutor/dashboard");
+      const cred = await signInWithPopup(auth, provider);
+      await handlePostSignIn(cred.user);
     } catch (err: unknown) {
-      const message =
-        err instanceof Error ? err.message : "Google login failed.";
-      setError(message);
+      setError(formatAuthError(err));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function formatPhoneNumber(phone: string): string {
+    const cleaned = phone.replace(/\D/g, "");
+    if (cleaned.startsWith("880")) return `+${cleaned}`;
+    if (cleaned.startsWith("0")) return `+88${cleaned}`;
+    if (cleaned.length === 10) return `+880${cleaned}`;
+    return `+${cleaned}`;
+  }
+
+  async function handleSendOtp(e: React.FormEvent) {
+    e.preventDefault();
+    setError("");
+
+    if (!phoneNumber || phoneNumber.trim().length < 10) {
+      setError("Please enter a valid phone number.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const formatted = formatPhoneNumber(phoneNumber.trim());
+      const verifier = setupRecaptcha("recaptcha-container");
+      const result = await sendPhoneVerificationCode(formatted, verifier);
+      setConfirmationResult(result);
+      setOtpSent(true);
+    } catch (err: unknown) {
+      setError(formatAuthError(err));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleVerifyOtp(e: React.FormEvent) {
+    e.preventDefault();
+    setError("");
+
+    if (!confirmationResult || !otpCode) {
+      setError("Please enter the 6-digit verification code.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const cred = await confirmationResult.confirm(otpCode.trim());
+      await handlePostSignIn(cred.user);
+    } catch (err: unknown) {
+      setError(formatAuthError(err));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleCompleteOnboarding(e: React.FormEvent) {
+    e.preventDefault();
+    if (!pendingUser) return;
+
+    setError("");
+    setLoading(true);
+
+    try {
+      if (onboardRole === "tutor") {
+        // Client-side Firestore doc writes
+        await setDoc(doc(db, "users", pendingUser.uid), {
+          uid: pendingUser.uid,
+          email: pendingUser.email || null,
+          displayName: onboardName || pendingUser.displayName || "Tutor",
+          phoneNumber: pendingUser.phoneNumber || null,
+          photoURL: pendingUser.photoURL || null,
+          role: "tutor",
+          tutorId: pendingUser.uid,
+          studentDocId: null,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        });
+
+        await setDoc(doc(db, "tutors", pendingUser.uid), {
+          id: pendingUser.uid,
+          fullName: onboardName || pendingUser.displayName || "Tutor",
+          institution: onboardInstitution || "Independent",
+          contactPhone: pendingUser.phoneNumber || "",
+          bkashNumber: null,
+          nagadNumber: null,
+          subscription: {
+            plan: "free_trial",
+            status: "active",
+            validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+            maxStudents: 50,
+          },
+          stats: {
+            totalStudents: 0,
+            activeBatches: 0,
+            pendingDoubtsCount: 0,
+          },
+          createdAt: serverTimestamp(),
+        });
+
+        const idToken = await pendingUser.getIdToken();
+        await onboardTutorUser({
+          email: pendingUser.email,
+          displayName: onboardName || "Tutor",
+          phoneNumber: pendingUser.phoneNumber || undefined,
+          institution: onboardInstitution || "Independent",
+        }, idToken).catch(() => {});
+      } else {
+        if (!onboardInviteCode) {
+          throw new Error("Invite code is required for student registration.");
+        }
+        const idToken = await pendingUser.getIdToken();
+        await claimStudentInvite(onboardInviteCode, idToken);
+      }
+
+      await refreshClaims().catch(() => {});
+      document.cookie = "__session=1; path=/; max-age=2592000; SameSite=Lax";
+      router.push(onboardRole === "tutor" ? "/tutor/dashboard" : "/student/dashboard");
+    } catch (err: unknown) {
+      setError(formatAuthError(err));
     } finally {
       setLoading(false);
     }
@@ -56,6 +224,9 @@ export default function LoginPage() {
 
   return (
     <div>
+      {/* Invisible reCAPTCHA container for Phone Auth */}
+      <div id="recaptcha-container"></div>
+
       {/* Mobile branding */}
       <div className="lg:hidden mb-8 text-center">
         <h1
@@ -69,173 +240,428 @@ export default function LoginPage() {
         </p>
       </div>
 
-      <h2 className="text-2xl font-bold" style={{ color: "var(--color-text)" }}>
-        Welcome back
-      </h2>
-      <p
-        className="mt-1 text-sm"
-        style={{ color: "var(--color-text-secondary)" }}
-      >
-        Sign in to your TutorMate account
-      </p>
-
-      {error && (
-        <div
-          className="mt-4 p-3 text-sm rounded-lg"
-          style={{
-            backgroundColor: "rgb(239 68 68 / 0.1)",
-            color: "var(--color-error)",
-            border: "1px solid rgb(239 68 68 / 0.2)",
-          }}
-          role="alert"
-        >
-          {error}
-        </div>
-      )}
-
-      <form onSubmit={handleEmailLogin} className="mt-6 space-y-4">
-        <div>
-          <label
-            htmlFor="login-email"
-            className="block text-sm font-medium mb-1.5"
+      {!pendingUser ? (
+        <>
+          <h2 className="text-2xl font-bold" style={{ color: "var(--color-text)" }}>
+            Welcome back
+          </h2>
+          <p
+            className="mt-1 text-sm"
             style={{ color: "var(--color-text-secondary)" }}
           >
-            Email
-          </label>
-          <input
-            id="login-email"
-            type="email"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@example.com"
-            className="w-full px-3.5 py-2.5 text-sm rounded-lg outline-none transition-all duration-200"
-            style={{
-              backgroundColor: "var(--color-bg-secondary)",
-              border: "1px solid var(--color-border)",
-              color: "var(--color-text)",
-            }}
-          />
-        </div>
+            Sign in to your TutorMate account
+          </p>
 
-        <div>
-          <div className="flex items-center justify-between mb-1.5">
-            <label
-              htmlFor="login-password"
-              className="block text-sm font-medium"
-              style={{ color: "var(--color-text-secondary)" }}
+          {/* Auth Method Switcher Tabs */}
+          <div
+            className="mt-6 p-1 rounded-xl flex gap-1"
+            style={{ backgroundColor: "var(--color-bg-secondary)" }}
+          >
+            <button
+              type="button"
+              onClick={() => {
+                setAuthMethod("email");
+                setError("");
+              }}
+              className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
+                authMethod === "email" ? "shadow-sm" : ""
+              }`}
+              style={{
+                backgroundColor:
+                  authMethod === "email" ? "var(--color-surface)" : "transparent",
+                color:
+                  authMethod === "email"
+                    ? "var(--color-primary)"
+                    : "var(--color-text-secondary)",
+              }}
             >
-              Password
-            </label>
+              <Mail className="w-3.5 h-3.5" />
+              Email & Password
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setAuthMethod("phone");
+                setError("");
+              }}
+              className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
+                authMethod === "phone" ? "shadow-sm" : ""
+              }`}
+              style={{
+                backgroundColor:
+                  authMethod === "phone" ? "var(--color-surface)" : "transparent",
+                color:
+                  authMethod === "phone"
+                    ? "var(--color-primary)"
+                    : "var(--color-text-secondary)",
+              }}
+            >
+              <Phone className="w-3.5 h-3.5" />
+              Phone SMS OTP
+            </button>
+          </div>
+
+          {error && (
+            <div
+              className="mt-4 p-3 text-sm rounded-lg"
+              style={{
+                backgroundColor: "rgb(239 68 68 / 0.1)",
+                color: "var(--color-error)",
+                border: "1px solid rgb(239 68 68 / 0.2)",
+              }}
+              role="alert"
+            >
+              {error}
+            </div>
+          )}
+
+          {authMethod === "email" ? (
+            /* Email Login Form */
+            <form onSubmit={handleEmailLogin} className="mt-6 space-y-4">
+              <div>
+                <label
+                  htmlFor="login-email"
+                  className="block text-sm font-medium mb-1.5"
+                  style={{ color: "var(--color-text-secondary)" }}
+                >
+                  Email Address
+                </label>
+                <input
+                  id="login-email"
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@example.com"
+                  className="w-full px-3.5 py-2.5 text-sm rounded-lg outline-none transition-all duration-200"
+                  style={{
+                    backgroundColor: "var(--color-bg-secondary)",
+                    border: "1px solid var(--color-border)",
+                    color: "var(--color-text)",
+                  }}
+                />
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label
+                    htmlFor="login-password"
+                    className="block text-sm font-medium"
+                    style={{ color: "var(--color-text-secondary)" }}
+                  >
+                    Password
+                  </label>
+                  <Link
+                    href="/reset-password"
+                    className="text-xs font-medium hover:underline"
+                    style={{ color: "var(--color-primary)" }}
+                  >
+                    Forgot password?
+                  </Link>
+                </div>
+                <input
+                  id="login-password"
+                  type="password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full px-3.5 py-2.5 text-sm rounded-lg outline-none transition-all duration-200"
+                  style={{
+                    backgroundColor: "var(--color-bg-secondary)",
+                    border: "1px solid var(--color-border)",
+                    color: "var(--color-text)",
+                  }}
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full py-2.5 px-4 text-sm font-semibold text-white rounded-lg transition-all duration-200 hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                style={{
+                  background:
+                    "linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%)",
+                  boxShadow: "var(--shadow-md)",
+                }}
+              >
+                {loading ? "Signing in..." : "Sign in with Email"}
+              </button>
+            </form>
+          ) : (
+            /* Phone OTP Login Form */
+            <div className="mt-6 space-y-4">
+              {!otpSent ? (
+                <form onSubmit={handleSendOtp} className="space-y-4">
+                  <div>
+                    <label
+                      htmlFor="login-phone"
+                      className="block text-sm font-medium mb-1.5"
+                      style={{ color: "var(--color-text-secondary)" }}
+                    >
+                      Mobile Phone Number
+                    </label>
+                    <input
+                      id="login-phone"
+                      type="tel"
+                      required
+                      value={phoneNumber}
+                      onChange={(e) => setPhoneNumber(e.target.value)}
+                      placeholder="e.g. 01712345678"
+                      className="w-full px-3.5 py-2.5 text-sm rounded-lg outline-none transition-all duration-200"
+                      style={{
+                        backgroundColor: "var(--color-bg-secondary)",
+                        border: "1px solid var(--color-border)",
+                        color: "var(--color-text)",
+                      }}
+                    />
+                    <p className="mt-1 text-xs text-slate-400">
+                      We will send a 6-digit OTP code to verify your phone number.
+                    </p>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full py-2.5 px-4 text-sm font-semibold text-white rounded-lg transition-all duration-200 hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2"
+                    style={{
+                      background:
+                        "linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%)",
+                      boxShadow: "var(--shadow-md)",
+                    }}
+                  >
+                    {loading ? "Sending OTP..." : "Send Verification Code"}
+                  </button>
+                </form>
+              ) : (
+                <form onSubmit={handleVerifyOtp} className="space-y-4">
+                  <div className="p-3 rounded-lg bg-indigo-50 border border-indigo-100 text-xs text-indigo-700 flex justify-between items-center">
+                    <span>Code sent to: <strong>{formatPhoneNumber(phoneNumber)}</strong></span>
+                    <button
+                      type="button"
+                      onClick={() => setOtpSent(false)}
+                      className="underline font-semibold"
+                    >
+                      Change
+                    </button>
+                  </div>
+
+                  <div>
+                    <label
+                      htmlFor="login-otp"
+                      className="block text-sm font-medium mb-1.5"
+                      style={{ color: "var(--color-text-secondary)" }}
+                    >
+                      Enter 6-Digit OTP Code
+                    </label>
+                    <input
+                      id="login-otp"
+                      type="text"
+                      required
+                      maxLength={6}
+                      value={otpCode}
+                      onChange={(e) => setOtpCode(e.target.value)}
+                      placeholder="123456"
+                      className="w-full px-3.5 py-2.5 text-center text-lg tracking-widest font-mono rounded-lg outline-none transition-all duration-200"
+                      style={{
+                        backgroundColor: "var(--color-bg-secondary)",
+                        border: "1px solid var(--color-border)",
+                        color: "var(--color-text)",
+                      }}
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full py-2.5 px-4 text-sm font-semibold text-white rounded-lg transition-all duration-200 hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2"
+                    style={{
+                      background:
+                        "linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%)",
+                      boxShadow: "var(--shadow-md)",
+                    }}
+                  >
+                    {loading ? "Verifying..." : "Verify & Sign In"}
+                  </button>
+                </form>
+              )}
+            </div>
+          )}
+
+          {/* Social Sign In Divider */}
+          <div className="mt-6">
+            <div className="relative">
+              <div
+                className="absolute inset-0 flex items-center"
+                aria-hidden="true"
+              >
+                <div
+                  className="w-full"
+                  style={{
+                    borderTop: "1px solid var(--color-border)",
+                  }}
+                />
+              </div>
+              <div className="relative flex justify-center text-xs">
+                <span
+                  className="px-3"
+                  style={{
+                    backgroundColor: "var(--color-bg)",
+                    color: "var(--color-text-muted)",
+                  }}
+                >
+                  or continue with
+                </span>
+              </div>
+            </div>
+
+            <button
+              onClick={handleGoogleLogin}
+              disabled={loading}
+              className="mt-4 w-full py-2.5 px-4 text-sm font-medium rounded-lg transition-all duration-200 hover:opacity-80 disabled:opacity-50 flex items-center justify-center gap-2"
+              style={{
+                backgroundColor: "var(--color-bg-secondary)",
+                border: "1px solid var(--color-border)",
+                color: "var(--color-text)",
+              }}
+            >
+              <svg className="w-4 h-4" viewBox="0 0 24 24">
+                <path
+                  fill="#4285F4"
+                  d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"
+                />
+                <path
+                  fill="#34A853"
+                  d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                />
+                <path
+                  fill="#FBBC05"
+                  d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+                />
+                <path
+                  fill="#EA4335"
+                  d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                />
+              </svg>
+              Google
+            </button>
+          </div>
+
+          <p
+            className="mt-8 text-center text-sm"
+            style={{ color: "var(--color-text-muted)" }}
+          >
+            Don&apos;t have an account?{" "}
             <Link
-              href="/reset-password"
-              className="text-xs font-medium hover:underline"
+              href="/register"
+              className="font-semibold hover:underline"
               style={{ color: "var(--color-primary)" }}
             >
-              Forgot password?
+              Sign up
             </Link>
+          </p>
+        </>
+      ) : (
+        /* Onboarding View for New Social/Phone Users */
+        <div className="space-y-6">
+          <div className="flex items-center gap-2 text-indigo-600">
+            <Sparkles className="w-5 h-5" />
+            <h2 className="text-xl font-bold">Complete your Profile</h2>
           </div>
-          <input
-            id="login-password"
-            type="password"
-            required
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="••••••••"
-            className="w-full px-3.5 py-2.5 text-sm rounded-lg outline-none transition-all duration-200"
-            style={{
-              backgroundColor: "var(--color-bg-secondary)",
-              border: "1px solid var(--color-border)",
-              color: "var(--color-text)",
-            }}
-          />
-        </div>
+          <p className="text-sm text-slate-500">
+            Welcome to TutorMate! Please choose your account type to finalize registration.
+          </p>
 
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full py-2.5 px-4 text-sm font-semibold text-white rounded-lg transition-all duration-200 hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
-          style={{
-            background:
-              "linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%)",
-            boxShadow: "var(--shadow-md)",
-          }}
-        >
-          {loading ? "Signing in..." : "Sign in"}
-        </button>
-      </form>
+          {error && (
+            <div className="p-3 text-sm rounded-lg bg-red-50 text-red-600 border border-red-200">
+              {error}
+            </div>
+          )}
 
-      <div className="mt-6">
-        <div className="relative">
-          <div
-            className="absolute inset-0 flex items-center"
-            aria-hidden="true"
-          >
-            <div
-              className="w-full"
-              style={{
-                borderTop: "1px solid var(--color-border)",
-              }}
-            />
-          </div>
-          <div className="relative flex justify-center text-xs">
-            <span
-              className="px-3"
-              style={{
-                backgroundColor: "var(--color-bg)",
-                color: "var(--color-text-muted)",
-              }}
+          {/* Role Selection */}
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              type="button"
+              onClick={() => setOnboardRole("tutor")}
+              className={`p-3 rounded-xl border text-left transition-all ${
+                onboardRole === "tutor"
+                  ? "border-indigo-600 bg-indigo-50/50 text-indigo-900 shadow-xs"
+                  : "border-slate-200 hover:border-slate-300 text-slate-700"
+              }`}
             >
-              or continue with
-            </span>
+              <div className="font-bold text-sm">👨‍🏫 I am a Tutor</div>
+              <div className="text-xs text-slate-500 mt-1">Manage students, batches & fee collection</div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setOnboardRole("student")}
+              className={`p-3 rounded-xl border text-left transition-all ${
+                onboardRole === "student"
+                  ? "border-indigo-600 bg-indigo-50/50 text-indigo-900 shadow-xs"
+                  : "border-slate-200 hover:border-slate-300 text-slate-700"
+              }`}
+            >
+              <div className="font-bold text-sm">🎓 I am a Student</div>
+              <div className="text-xs text-slate-500 mt-1">View attendance, fees & ask doubts</div>
+            </button>
           </div>
+
+          <form onSubmit={handleCompleteOnboarding} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-1.5 text-slate-700">
+                Full Name
+              </label>
+              <input
+                type="text"
+                required
+                value={onboardName}
+                onChange={(e) => setOnboardName(e.target.value)}
+                placeholder="e.g. Tanvir Hossain"
+                className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-slate-200 outline-none focus:border-indigo-600"
+              />
+            </div>
+
+            {onboardRole === "tutor" ? (
+              <div>
+                <label className="block text-sm font-medium mb-1.5 text-slate-700">
+                  Institution / Coaching Name
+                </label>
+                <input
+                  type="text"
+                  value={onboardInstitution}
+                  onChange={(e) => setOnboardInstitution(e.target.value)}
+                  placeholder="e.g. BUET / Excellence Academy"
+                  className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-slate-200 outline-none focus:border-indigo-600"
+                />
+              </div>
+            ) : (
+              <div>
+                <label className="block text-sm font-medium mb-1.5 text-slate-700">
+                  Invite Code (from your tutor)
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={onboardInviteCode}
+                  onChange={(e) => setOnboardInviteCode(e.target.value.toUpperCase())}
+                  placeholder="e.g. AB12CD34"
+                  className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-slate-200 outline-none uppercase font-mono tracking-wider focus:border-indigo-600"
+                />
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-3 px-4 text-sm font-semibold text-white rounded-lg bg-indigo-600 hover:bg-indigo-700 transition-all flex items-center justify-center gap-2"
+            >
+              {loading ? "Setting up account..." : "Complete & Enter Dashboard"}
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          </form>
         </div>
-
-        <button
-          onClick={handleGoogleLogin}
-          disabled={loading}
-          className="mt-4 w-full py-2.5 px-4 text-sm font-medium rounded-lg transition-all duration-200 hover:opacity-80 disabled:opacity-50 flex items-center justify-center gap-2"
-          style={{
-            backgroundColor: "var(--color-bg-secondary)",
-            border: "1px solid var(--color-border)",
-            color: "var(--color-text)",
-          }}
-        >
-          <svg className="w-4 h-4" viewBox="0 0 24 24">
-            <path
-              fill="#4285F4"
-              d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"
-            />
-            <path
-              fill="#34A853"
-              d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-            />
-            <path
-              fill="#FBBC05"
-              d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-            />
-            <path
-              fill="#EA4335"
-              d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-            />
-          </svg>
-          Google
-        </button>
-      </div>
-
-      <p
-        className="mt-8 text-center text-sm"
-        style={{ color: "var(--color-text-muted)" }}
-      >
-        Don&apos;t have an account?{" "}
-        <Link
-          href="/register"
-          className="font-semibold hover:underline"
-          style={{ color: "var(--color-primary)" }}
-        >
-          Sign up
-        </Link>
-      </p>
+      )}
     </div>
   );
 }

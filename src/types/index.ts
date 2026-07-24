@@ -126,6 +126,7 @@ export interface FeeDoc {
 }
 
 export type DoubtStatus = "pending" | "answered" | "resolved";
+export type AttachmentType = "image" | "file" | "audio" | null;
 
 export interface DoubtDoc {
   id: string;
@@ -137,6 +138,9 @@ export interface DoubtDoc {
   title: string;
   initialQuestion: string;
   attachmentPath: string | null;
+  attachmentType?: AttachmentType;
+  attachmentName?: string | null;
+  attachmentSize?: number | null;
   status: DoubtStatus;
   lastMessageAt: Timestamp;
   unreadByTutor: boolean;
@@ -150,6 +154,14 @@ export interface MessageDoc {
   senderRole: "tutor" | "student";
   text: string;
   attachmentPath: string | null;
-  attachmentType: "image" | null;
+  attachmentType: AttachmentType;
+  attachmentName?: string | null;
+  attachmentSize?: number | null;
   createdAt: Timestamp;
+}
+
+export interface UserPresence {
+  uid: string;
+  isOnline: boolean;
+  lastSeen: Timestamp;
 }

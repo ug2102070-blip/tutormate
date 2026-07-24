@@ -1,57 +1,29 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { collection, query, where, getDocs, doc, getDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase/config";
 import { useAuth } from "@/hooks/useAuth";
-import type { AttendanceDoc, StudentDoc } from "@/types";
+import { getStudentAttendanceHistory } from "@/actions/attendanceActions";
+import type { AttendanceDoc } from "@/types";
 import { CalendarCheck, Check, X, Clock } from "lucide-react";
 
 export default function StudentAttendancePage() {
   const { user, claims } = useAuth();
   const [attendanceLogs, setAttendanceLogs] = useState<AttendanceDoc[]>([]);
-  const [studentDoc, setStudentDoc] = useState<StudentDoc | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user || !claims || claims.role !== "student") return;
+    if (!user) {
+      setLoading(false);
+      return;
+    }
 
     async function loadAttendance() {
-      if (!claims || claims.role !== "student") return;
       try {
-        // Fetch student doc for enrolledBatchIds
-        const sSnap = await getDoc(doc(db, "students", claims.studentDocId));
-        if (sSnap.exists()) {
-          const sData = { id: sSnap.id, ...sSnap.data() } as StudentDoc;
-          setStudentDoc(sData);
-
-          if (sData.enrolledBatchIds && sData.enrolledBatchIds.length > 0) {
-            // Fetch attendance logs for student's tutor
-            const attQuery = query(
-              collection(db, "attendance"),
-              where("tutorId", "==", claims.tutorId)
-            );
-            const attSnap = await getDocs(attQuery);
-            const logs: AttendanceDoc[] = [];
-
-            attSnap.forEach((d) => {
-              const data = d.data() as AttendanceDoc;
-              // Check if log belongs to student's enrolled batch and student is recorded
-              if (
-                sData.enrolledBatchIds.includes(data.batchId) &&
-                data.records?.[claims.studentDocId]
-              ) {
-                logs.push({ id: d.id, ...data });
-              }
-            });
-
-            // Sort date descending
-            logs.sort((a, b) => (b.date > a.date ? 1 : -1));
-            setAttendanceLogs(logs);
-          }
-        }
-      } catch {
-        // handle error
+        const token = await user!.getIdToken();
+        const logs = await getStudentAttendanceHistory(token);
+        setAttendanceLogs(logs);
+      } catch (err) {
+        console.error("Error loading attendance:", err);
       } finally {
         setLoading(false);
       }
@@ -59,6 +31,7 @@ export default function StudentAttendancePage() {
 
     loadAttendance();
   }, [user, claims]);
+
 
   const studentDocId = claims?.role === "student" ? claims.studentDocId : "";
   const presentCount = attendanceLogs.filter(
@@ -132,8 +105,10 @@ export default function StudentAttendancePage() {
               </thead>
               <tbody className="divide-y divide-[var(--color-border)] text-[var(--color-text)]">
                 {attendanceLogs.map((log) => {
-                  const record = log.records?.[studentDocId];
+                  const recordKey = Object.keys(log.records || {})[0];
+                  const record = log.records?.[recordKey] || log.records?.[studentDocId];
                   const status = record?.status || "absent";
+
 
                   return (
                     <tr

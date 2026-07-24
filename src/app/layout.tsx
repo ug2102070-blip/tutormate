@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { AuthProvider } from "@/hooks/useAuth";
 import { PwaRegister } from "@/components/PwaRegister";
+import { NetworkStatus } from "@/components/NetworkStatus";
+import { PwaInstallPrompt } from "@/components/PwaInstallPrompt";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -19,6 +21,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
+  viewportFit: "cover",
 };
 
 export const metadata: Metadata = {
@@ -29,6 +32,10 @@ export const metadata: Metadata = {
   description:
     "Professional tutor management platform for private tutors and coaching centers in Bangladesh. Manage batches, attendance, fees, and student communication in one place.",
   manifest: "/manifest.json",
+  icons: {
+    icon: "/favicon.ico",
+    apple: "/apple-touch-icon.png",
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
@@ -61,12 +68,15 @@ export default function RootLayout({
   return (
     <html
       lang="en"
+      data-scroll-behavior="smooth"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
-      <body className="min-h-full flex flex-col">
+      <body className="min-h-full flex flex-col relative" suppressHydrationWarning>
         <AuthProvider>
+          <NetworkStatus />
           <PwaRegister />
+          <PwaInstallPrompt />
           {children}
         </AuthProvider>
       </body>

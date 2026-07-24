@@ -1,49 +1,52 @@
 "use client";
 
+import { useState } from "react";
+import Link from "next/link";
 import { signOut } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import { auth } from "@/lib/firebase/config";
 import { useAuth } from "@/hooks/useAuth";
-import { LogOut, User } from "lucide-react";
+import { LogOut, User, Settings, ChevronDown } from "lucide-react";
 
 export function Header() {
   const router = useRouter();
   const { user, role } = useAuth();
+  const [showMenu, setShowMenu] = useState(false);
 
   async function handleLogout() {
     await signOut(auth);
-    // Clear session cookie
     document.cookie = "__session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
     router.push("/login");
   }
 
   return (
-    <header
-      className="h-16 border-b px-6 flex items-center justify-between shrink-0 transition-colors duration-200"
-      style={{
-        backgroundColor: "var(--color-surface)",
-        borderColor: "var(--color-border)",
-      }}
-    >
+    <header className="h-16 border-b border-slate-200 bg-white px-4 md:px-6 flex items-center justify-between shrink-0 shadow-xs z-20 relative">
       <div className="flex items-center gap-3">
-        <h2
-          className="text-sm font-semibold capitalize"
-          style={{ color: "var(--color-text)" }}
-        >
+        {/* Mobile Brand Title */}
+        <div className="flex items-center gap-2 md:hidden">
+          <Link href="/" className="text-lg font-black tracking-tight text-indigo-600">
+            TutorMate
+          </Link>
+          <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600 border border-indigo-100">
+            {role}
+          </span>
+        </div>
+
+        {/* Desktop Title */}
+        <h2 className="hidden md:block text-sm font-bold text-slate-800 capitalize tracking-wide">
           {role} Portal
         </h2>
       </div>
 
-      <div className="flex items-center gap-4">
-        {/* User Info */}
-        <div className="flex items-center gap-2.5">
-          <div
-            className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold"
-            style={{
-              backgroundColor: "var(--color-primary-100)",
-              color: "var(--color-primary-900)",
-            }}
-          >
+      <div className="flex items-center gap-3 relative">
+        {/* User Info Button */}
+        <button
+          onClick={() => setShowMenu(!showMenu)}
+          className="flex items-center gap-2 p-1.5 rounded-xl hover:bg-slate-50 transition-colors border border-transparent hover:border-slate-200"
+          aria-expanded={showMenu}
+          aria-label="User account menu"
+        >
+          <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-xs font-extrabold border border-indigo-200 shrink-0">
             {user?.displayName ? (
               user.displayName.charAt(0).toUpperCase()
             ) : (
@@ -51,34 +54,56 @@ export function Header() {
             )}
           </div>
           <div className="hidden sm:block text-left">
-            <div
-              className="text-xs font-semibold"
-              style={{ color: "var(--color-text)" }}
-            >
+            <div className="text-xs font-bold text-slate-900 leading-tight">
               {user?.displayName || "User"}
             </div>
-            <div
-              className="text-[11px]"
-              style={{ color: "var(--color-text-muted)" }}
-            >
+            <div className="text-[11px] text-slate-500 font-medium leading-tight">
               {user?.email}
             </div>
           </div>
-        </div>
-
-        {/* Logout Button */}
-        <button
-          onClick={handleLogout}
-          className="p-2 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5"
-          style={{
-            color: "var(--color-text-secondary)",
-          }}
-          title="Sign out"
-        >
-          <LogOut className="w-4 h-4" />
-          <span className="hidden sm:inline">Sign out</span>
+          <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
         </button>
+
+        {/* Account Dropdown Menu */}
+        {showMenu && (
+          <div
+            className="absolute right-0 top-12 w-48 bg-white rounded-2xl border border-slate-200 shadow-lg py-1.5 z-50 animate-fade-in"
+            onMouseLeave={() => setShowMenu(false)}
+          >
+            <div className="px-3 py-2 border-b border-slate-100 sm:hidden">
+              <div className="text-xs font-bold text-slate-900">
+                {user?.displayName || "User"}
+              </div>
+              <div className="text-[10px] text-slate-500 truncate font-medium">
+                {user?.email}
+              </div>
+            </div>
+
+            {role === "tutor" && (
+              <Link
+                href="/tutor/settings"
+                onClick={() => setShowMenu(false)}
+                className="flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
+              >
+                <Settings className="w-4 h-4 text-slate-400" />
+                Account Settings
+              </Link>
+            )}
+
+            <button
+              onClick={() => {
+                setShowMenu(false);
+                handleLogout();
+              }}
+              className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 transition-colors text-left"
+            >
+              <LogOut className="w-4 h-4 text-rose-500" />
+              Sign Out
+            </button>
+          </div>
+        )}
       </div>
     </header>
   );
 }
+

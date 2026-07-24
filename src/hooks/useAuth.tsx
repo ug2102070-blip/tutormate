@@ -12,7 +12,8 @@ import {
   type User,
   type IdTokenResult,
 } from "firebase/auth";
-import { auth } from "@/lib/firebase/config";
+import { doc, getDoc } from "firebase/firestore";
+import { auth, db } from "@/lib/firebase/config";
 import type { UserRole, CustomClaims } from "@/types";
 
 interface AuthState {
@@ -59,7 +60,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { role: "admin" };
       }
 
-      return null; // claims not set yet (fresh registration)
+      // Fallback: Fetch role from Firestore /users/{uid} document
+      const userSnap = await getDoc(doc(db, "users", firebaseUser.uid));
+      if (userSnap.exists()) {
+        const u = userSnap.data();
+        if (u.role === "student") {
+          return {
+            role: "student",
+            tutorId: u.tutorId as string,
+            studentDocId: u.studentDocId as string,
+          };
+        }
+        if (u.role === "tutor") {
+          return {
+            role: "tutor",
+            tutorId: (u.tutorId as string) || firebaseUser.uid,
+          };
+        }
+      }
+
+      return null;
     } catch {
       return null;
     }

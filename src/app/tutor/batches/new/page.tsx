@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { collection, doc, setDoc, updateDoc, increment, serverTimestamp } from "firebase/firestore";
+import { db } from "@/lib/firebase/config";
 import { useAuth } from "@/hooks/useAuth";
 import { createBatch } from "@/actions/batchActions";
 import { ArrowLeft, Plus, Trash2 } from "lucide-react";
@@ -45,17 +47,41 @@ export default function CreateBatchPage() {
     setLoading(true);
 
     try {
-      const token = await user.getIdToken();
-      await createBatch(
-        {
+      try {
+        const token = await user.getIdToken();
+        await createBatch(
+          {
+            name,
+            subject,
+            gradeClass,
+            monthlyFee: Number(monthlyFee),
+            schedule,
+          },
+          token
+        );
+      } catch {
+        // Fallback: Save directly via Client SDK if Server Action Admin SDK is not configured
+        const batchRef = doc(collection(db, "batches"));
+        await setDoc(batchRef, {
+          id: batchRef.id,
+          tutorId: user.uid,
           name,
           subject,
           gradeClass,
           monthlyFee: Number(monthlyFee),
           schedule,
-        },
-        token
-      );
+          studentCount: 0,
+          isArchived: false,
+          createdAt: serverTimestamp(),
+        });
+
+        const tutorRef = doc(db, "tutors", user.uid);
+        await updateDoc(tutorRef, {
+          "stats.activeBatches": increment(1),
+        }).catch(() => {
+          setDoc(tutorRef, { stats: { activeBatches: 1 } }, { merge: true });
+        });
+      }
       router.push("/tutor/batches");
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to create batch.";
@@ -71,15 +97,15 @@ export default function CreateBatchPage() {
       <div className="flex items-center gap-3">
         <Link
           href="/tutor/batches"
-          className="p-2 rounded-lg border border-[var(--color-border)] hover:bg-[var(--color-bg-secondary)] transition-colors"
+          className="p-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 transition-colors shadow-xs"
         >
-          <ArrowLeft className="w-4 h-4 text-[var(--color-text-secondary)]" />
+          <ArrowLeft className="w-4 h-4 text-slate-600" />
         </Link>
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-[var(--color-text)]">
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">
             Create New Batch
           </h1>
-          <p className="text-sm text-[var(--color-text-secondary)]">
+          <p className="text-sm text-slate-500 font-medium mt-0.5">
             Set up a class schedule and monthly fee structure
           </p>
         </div>
@@ -87,28 +113,23 @@ export default function CreateBatchPage() {
 
       {error && (
         <div
-          className="p-3 text-sm rounded-lg"
-          style={{
-            backgroundColor: "rgb(239 68 68 / 0.1)",
-            color: "var(--color-error)",
-            border: "1px solid rgb(239 68 68 / 0.2)",
-          }}
+          className="p-4 text-sm rounded-xl bg-rose-50 text-rose-700 border border-rose-200 font-medium"
           role="alert"
         >
           {error}
         </div>
       )}
 
-      {/* Form */}
+      {/* Form Card */}
       <form
         onSubmit={handleSubmit}
-        className="p-6 rounded-2xl border bg-[var(--color-surface)] border-[var(--color-border)] space-y-6 shadow-sm"
+        className="p-6 sm:p-8 rounded-2xl border border-slate-200 bg-white space-y-6 shadow-xs"
       >
         <div className="space-y-4">
           <div>
             <label
               htmlFor="batch-name"
-              className="block text-sm font-medium mb-1 text-[var(--color-text-secondary)]"
+              className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5"
             >
               Batch Name
             </label>
@@ -119,7 +140,7 @@ export default function CreateBatchPage() {
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g. HSC Physics Batch A"
-              className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-secondary)] text-[var(--color-text)] outline-none"
+              className="w-full px-4 py-2.5 text-sm rounded-xl border border-slate-200 bg-slate-50/50 text-slate-900 focus:bg-white focus:border-indigo-600 outline-none transition-colors"
             />
           </div>
 
@@ -127,7 +148,7 @@ export default function CreateBatchPage() {
             <div>
               <label
                 htmlFor="batch-subject"
-                className="block text-sm font-medium mb-1 text-[var(--color-text-secondary)]"
+                className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5"
               >
                 Subject
               </label>
@@ -138,14 +159,14 @@ export default function CreateBatchPage() {
                 value={subject}
                 onChange={(e) => setSubject(e.target.value)}
                 placeholder="e.g. Physics"
-                className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-secondary)] text-[var(--color-text)] outline-none"
+                className="w-full px-4 py-2.5 text-sm rounded-xl border border-slate-200 bg-slate-50/50 text-slate-900 focus:bg-white focus:border-indigo-600 outline-none transition-colors"
               />
             </div>
 
             <div>
               <label
                 htmlFor="batch-class"
-                className="block text-sm font-medium mb-1 text-[var(--color-text-secondary)]"
+                className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5"
               >
                 Grade / Class
               </label>
@@ -156,7 +177,7 @@ export default function CreateBatchPage() {
                 value={gradeClass}
                 onChange={(e) => setGradeClass(e.target.value)}
                 placeholder="e.g. 11-12 / HSC"
-                className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-secondary)] text-[var(--color-text)] outline-none"
+                className="w-full px-4 py-2.5 text-sm rounded-xl border border-slate-200 bg-slate-50/50 text-slate-900 focus:bg-white focus:border-indigo-600 outline-none transition-colors"
               />
             </div>
           </div>
@@ -164,7 +185,7 @@ export default function CreateBatchPage() {
           <div>
             <label
               htmlFor="batch-fee"
-              className="block text-sm font-medium mb-1 text-[var(--color-text-secondary)]"
+              className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5"
             >
               Monthly Fee per Student (BDT ৳)
             </label>
@@ -177,26 +198,26 @@ export default function CreateBatchPage() {
               value={monthlyFee}
               onChange={(e) => setMonthlyFee(Number(e.target.value))}
               placeholder="1500"
-              className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-secondary)] text-[var(--color-text)] outline-none"
+              className="w-full px-4 py-2.5 text-sm rounded-xl border border-slate-200 bg-slate-50/50 text-slate-900 focus:bg-white focus:border-indigo-600 outline-none transition-colors font-semibold"
             />
           </div>
         </div>
 
         {/* Schedule Builder */}
-        <div className="pt-4 border-t border-[var(--color-border)]">
-          <div className="flex items-center justify-between mb-3">
+        <div className="pt-6 border-t border-slate-100">
+          <div className="flex items-center justify-between mb-4">
             <div>
-              <h3 className="text-sm font-semibold text-[var(--color-text)]">
+              <h3 className="text-sm font-bold text-slate-900">
                 Class Days & Time Slots
               </h3>
-              <p className="text-xs text-[var(--color-text-muted)]">
+              <p className="text-xs text-slate-500 font-medium">
                 Specify weekly schedule for this batch
               </p>
             </div>
             <button
               type="button"
               onClick={addScheduleSlot}
-              className="text-xs font-semibold text-[var(--color-primary)] hover:underline flex items-center gap-1"
+              className="text-xs font-bold text-indigo-600 hover:text-indigo-700 flex items-center gap-1 bg-indigo-50 px-3 py-1.5 rounded-lg border border-indigo-100"
             >
               <Plus className="w-3.5 h-3.5" /> Add Day
             </button>
@@ -206,12 +227,12 @@ export default function CreateBatchPage() {
             {schedule.map((slot, index) => (
               <div
                 key={index}
-                className="flex items-center gap-3 p-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-secondary)]"
+                className="flex items-center gap-3 p-3.5 rounded-xl border border-slate-200 bg-slate-50/60"
               >
                 <select
                   value={slot.day}
                   onChange={(e) => updateScheduleSlot(index, "day", e.target.value)}
-                  className="px-3 py-1.5 text-xs font-medium rounded border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)] outline-none"
+                  className="px-3 py-2 text-xs font-bold rounded-lg border border-slate-200 bg-white text-slate-900 outline-none"
                 >
                   {daysOfWeek.map((d) => (
                     <option key={d} value={d}>
@@ -225,14 +246,14 @@ export default function CreateBatchPage() {
                   value={slot.time}
                   onChange={(e) => updateScheduleSlot(index, "time", e.target.value)}
                   placeholder="e.g. 4:00 PM - 5:30 PM"
-                  className="flex-1 px-3 py-1.5 text-xs rounded border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)] outline-none"
+                  className="flex-1 px-3 py-2 text-xs rounded-lg border border-slate-200 bg-white text-slate-900 font-medium outline-none"
                 />
 
                 {schedule.length > 1 && (
                   <button
                     type="button"
                     onClick={() => removeScheduleSlot(index)}
-                    className="p-1 rounded text-[var(--color-text-muted)] hover:text-[var(--color-error)]"
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -243,21 +264,17 @@ export default function CreateBatchPage() {
         </div>
 
         {/* Form Footer */}
-        <div className="pt-4 border-t border-[var(--color-border)] flex justify-end gap-3">
+        <div className="pt-6 border-t border-slate-100 flex items-center justify-end gap-3">
           <Link
             href="/tutor/batches"
-            className="px-4 py-2.5 text-sm font-medium rounded-lg text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-secondary)]"
+            className="px-4 py-2.5 text-sm font-semibold rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors"
           >
             Cancel
           </Link>
           <button
             type="submit"
             disabled={loading}
-            className="px-5 py-2.5 text-sm font-semibold text-white rounded-xl shadow-md transition-all hover:opacity-90 disabled:opacity-50"
-            style={{
-              background:
-                "linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%)",
-            }}
+            className="px-6 py-2.5 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-xs transition-all disabled:opacity-50"
           >
             {loading ? "Creating Batch..." : "Create Batch"}
           </button>

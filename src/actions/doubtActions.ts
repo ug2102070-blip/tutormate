@@ -35,6 +35,9 @@ export async function createDoubt(formData: DoubtFormValues, studentName: string
     title: validated.title,
     initialQuestion: validated.initialQuestion,
     attachmentPath: validated.attachmentPath || null,
+    attachmentType: validated.attachmentType || (validated.attachmentPath ? "image" : null),
+    attachmentName: validated.attachmentName || null,
+    attachmentSize: validated.attachmentSize || null,
     status: "pending",
     lastMessageAt: new Date(),
     unreadByTutor: true,
@@ -93,7 +96,9 @@ export async function postMessage(
     senderRole: isTutor ? "tutor" : "student",
     text: validated.text,
     attachmentPath: validated.attachmentPath || null,
-    attachmentType: validated.attachmentPath ? "image" : null,
+    attachmentType: validated.attachmentType || (validated.attachmentPath ? "image" : null),
+    attachmentName: validated.attachmentName || null,
+    attachmentSize: validated.attachmentSize || null,
     createdAt: new Date(),
   });
 
@@ -126,6 +131,32 @@ export async function postMessage(
   await doubtRef.update(updates);
 
   return { success: true, messageId: messageRef.id };
+}
+
+/**
+ * Marks unread flags as read when opening a thread.
+ */
+export async function markDoubtAsRead(doubtId: string, idToken: string) {
+  const decodedToken = await adminAuth.verifyIdToken(idToken);
+  const callerUid = decodedToken.uid;
+  const callerRole = (decodedToken.role as string) || "";
+  const callerTutorId = (decodedToken.tutorId as string) || "";
+
+  const doubtRef = adminDb.collection("doubts").doc(doubtId);
+  const doubtSnap = await doubtRef.get();
+  if (!doubtSnap.exists) return;
+
+  const doubtData = doubtSnap.data()!;
+  const isTutor = callerRole === "tutor" && callerTutorId === doubtData.tutorId;
+  const isStudent = callerRole === "student" && callerUid === doubtData.studentAuthUid;
+
+  if (isTutor && doubtData.unreadByTutor) {
+    await doubtRef.update({ unreadByTutor: false });
+  } else if (isStudent && doubtData.unreadByStudent) {
+    await doubtRef.update({ unreadByStudent: false });
+  }
+
+  return { success: true };
 }
 
 /**

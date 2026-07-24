@@ -1,194 +1,717 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import Link from "next/link";
+import { useEffect, useState, useRef, use } from "react";
 import { collection, query, where, onSnapshot } from "firebase/firestore";
-import { db } from "@/lib/firebase/config";
+import { ref, uploadBytes } from "firebase/storage";
+import { db, storage } from "@/lib/firebase/config";
 import { useAuth } from "@/hooks/useAuth";
-import type { DoubtDoc } from "@/types";
-import { HelpCircle, MessageSquare, Image as ImageIcon, Search } from "lucide-react";
+import { usePresence, useUserPresence } from "@/hooks/usePresence";
+import { postMessage, markDoubtAsRead, updateDoubtStatus } from "@/actions/doubtActions";
+import { getMediaSignedUrl } from "@/actions/mediaActions";
+import { AudioPlayer } from "@/components/chat/AudioPlayer";
+import { VoiceRecorder } from "@/components/chat/VoiceRecorder";
+import type { DoubtDoc, MessageDoc, AttachmentType } from "@/types";
+import {
+  Search,
+  Send,
+  Paperclip,
+  Image as ImageIcon,
+  Mic,
+  CheckCircle,
+  FileText,
+  X,
+  Download,
+  HelpCircle,
+  MessageSquare,
+  ChevronLeft,
+  User,
+} from "lucide-react";
 
-export default function TutorDoubtsPage() {
-  const { user, claims } = useAuth();
+export default function TutorDoubtsPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ id?: string }>;
+}) {
+  const unwrappedSearchParams = searchParams ? use(searchParams) : undefined;
+  const initialSelectedId = unwrappedSearchParams?.id;
+
+  const { user } = useAuth();
+  usePresence(user?.uid);
+
   const [doubts, setDoubts] = useState<DoubtDoc[]>([]);
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [search, setSearch] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [selectedDoubtId, setSelectedDoubtId] = useState<string | null>(initialSelectedId || null);
+  const [messages, setMessages] = useState<MessageDoc[]>([]);
+  const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
 
+  // Active student presence
+  const activeDoubt = doubts.find((d) => d.id === selectedDoubtId);
+  const studentPresence = useUserPresence(activeDoubt?.studentAuthUid);
+
+  // UI state
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [sending, setSending] = useState(false);
+  const [showVoiceRecorder, setShowVoiceRecorder] = useState(false);
+
+  // Form & Attachment State
+  const [newMessageText, setNewMessageText] = useState("");
+  const [selectedAttachment, setSelectedAttachment] = useState<{
+    file: File;
+    type: AttachmentType;
+  } | null>(null);
+  const [error, setError] = useState("");
+
+  const messagesEndRef = useRef<HTMLDivElement | null>(null);
+
+  // Load Tutor Doubts
   useEffect(() => {
-    if (!user || claims?.role !== "tutor") return;
+    if (!user) {
+      setLoading(false);
+      return;
+    }
 
     const q = query(
       collection(db, "doubts"),
       where("tutorId", "==", user.uid)
     );
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const list: DoubtDoc[] = [];
-      snapshot.forEach((d) => list.push({ id: d.id, ...d.data() } as DoubtDoc));
-      list.sort((a, b) => b.lastMessageAt?.toMillis() - a.lastMessageAt?.toMillis());
-      setDoubts(list);
-      setLoading(false);
-    });
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        const list: DoubtDoc[] = [];
+        snapshot.forEach((d) => list.push({ id: d.id, ...d.data() } as DoubtDoc));
+        list.sort((a, b) => (b.lastMessageAt?.toMillis() || 0) - (a.lastMessageAt?.toMillis() || 0));
+        setDoubts(list);
+        setLoading(false);
+
+        if (!selectedDoubtId && list.length > 0) {
+          setSelectedDoubtId(list[0].id);
+        }
+      },
+      (err) => {
+        console.error("Tutor doubts snapshot error:", err);
+        setLoading(false);
+      }
+    );
 
     return unsubscribe;
-  }, [user, claims]);
+  }, [user, selectedDoubtId]);
+
+  // Active doubt thread listener
+  useEffect(() => {
+    if (!user || !selectedDoubtId) {
+      setMessages([]);
+      return;
+    }
+
+    // Mark as read by tutor
+    user.getIdToken().then((token) => markDoubtAsRead(selectedDoubtId, token));
+
+    const unsubMessages = onSnapshot(
+      collection(db, "doubts", selectedDoubtId, "messages"),
+      (snap) => {
+        const list: MessageDoc[] = [];
+        snap.forEach((d) => list.push({ id: d.id, ...d.data() } as MessageDoc));
+        list.sort((a, b) => (a.createdAt?.toMillis() || 0) - (b.createdAt?.toMillis() || 0));
+        setMessages(list);
+      }
+    );
+
+    return unsubMessages;
+  }, [user, selectedDoubtId]);
+
+  // Auto scroll to latest message
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, selectedDoubtId]);
+
+  // Signed URLs fetcher
+  useEffect(() => {
+    if (!user || (!activeDoubt && messages.length === 0)) return;
+
+    async function fetchSignedUrls() {
+      const token = await user!.getIdToken();
+      const pathsToFetch: string[] = [];
+
+      if (activeDoubt?.attachmentPath) pathsToFetch.push(activeDoubt.attachmentPath);
+      messages.forEach((m) => {
+        if (m.attachmentPath) pathsToFetch.push(m.attachmentPath);
+      });
+
+      const newUrls: Record<string, string> = {};
+      for (const path of pathsToFetch) {
+        if (!signedUrls[path]) {
+          try {
+            const url = await getMediaSignedUrl(path, token);
+            if (url) newUrls[path] = url;
+          } catch (err) {
+            console.error("Signed URL fetch error:", err);
+          }
+        }
+      }
+
+      if (Object.keys(newUrls).length > 0) {
+        setSignedUrls((prev) => ({ ...prev, ...newUrls }));
+      }
+    }
+
+    fetchSignedUrls();
+  }, [user, activeDoubt, messages, signedUrls]);
+
+  // Send Message Handler
+  async function handleSendMessage(e?: React.FormEvent) {
+    if (e) e.preventDefault();
+    if (!user || !selectedDoubtId) return;
+    if (!newMessageText.trim() && !selectedAttachment) return;
+
+    setSending(true);
+    setError("");
+
+    try {
+      let attachmentPath: string | null = null;
+      let attachmentType: AttachmentType = null;
+      let attachmentName: string | null = null;
+      let attachmentSize: number | null = null;
+
+      if (selectedAttachment) {
+        const file = selectedAttachment.file;
+        const tempId = `m_${Date.now()}`;
+        const cleanName = file.name.replace(/[^a-zA-Z0-9._-]/g, "");
+        attachmentPath = `doubts/${user.uid}/${activeDoubt?.studentAuthUid}/${selectedDoubtId}/${tempId}_${cleanName}`;
+        attachmentType = selectedAttachment.type;
+        attachmentName = file.name;
+        attachmentSize = file.size;
+
+        const storageRef = ref(storage, attachmentPath);
+        await uploadBytes(storageRef, file);
+      }
+
+      const token = await user.getIdToken();
+      await postMessage(
+        selectedDoubtId,
+        {
+          text: newMessageText.trim(),
+          attachmentPath,
+          attachmentType,
+          attachmentName,
+          attachmentSize,
+        },
+        token
+      );
+
+      setNewMessageText("");
+      setSelectedAttachment(null);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to send message.";
+      setError(msg);
+    } finally {
+      setSending(false);
+    }
+  }
+
+  // Voice Note Send Handler
+  async function handleSendVoice(audioBlob: Blob, duration: number) {
+    if (!user || !selectedDoubtId) return;
+    setSending(true);
+    setError("");
+
+    try {
+      const fileName = `voice_${Date.now()}.webm`;
+      const attachmentPath = `doubts/${user.uid}/${activeDoubt?.studentAuthUid}/${selectedDoubtId}/${fileName}`;
+      const storageRef = ref(storage, attachmentPath);
+      await uploadBytes(storageRef, audioBlob);
+
+      const token = await user.getIdToken();
+      await postMessage(
+        selectedDoubtId,
+        {
+          text: `Voice note (${duration}s)`,
+          attachmentPath,
+          attachmentType: "audio",
+          attachmentName: fileName,
+          attachmentSize: audioBlob.size,
+        },
+        token
+      );
+
+      setShowVoiceRecorder(false);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to send voice note.";
+      setError(msg);
+    } finally {
+      setSending(false);
+    }
+  }
+
+  async function handleMarkResolved() {
+    if (!user || !selectedDoubtId) return;
+    try {
+      const token = await user.getIdToken();
+      await updateDoubtStatus(selectedDoubtId, "resolved", token);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to resolve doubt.";
+      setError(msg);
+    }
+  }
 
   const filteredDoubts = doubts.filter((d) => {
+    const matchesFilter = statusFilter === "all" ? true : d.status === statusFilter;
     const matchesSearch =
-      d.title.toLowerCase().includes(search.toLowerCase()) ||
-      d.studentName.toLowerCase().includes(search.toLowerCase()) ||
-      d.initialQuestion.toLowerCase().includes(search.toLowerCase());
-
-    const matchesStatus = statusFilter === "all" ? true : d.status === statusFilter;
-    return matchesSearch && matchesStatus;
+      d.studentName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      d.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      d.initialQuestion.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesFilter && matchesSearch;
   });
 
   const pendingCount = doubts.filter((d) => d.status === "pending").length;
 
+  const formatFileSize = (bytes?: number | null) => {
+    if (!bytes) return "";
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
   return (
-    <div className="space-y-6">
+    <div className="h-[calc(100vh-9.5rem)] md:h-[calc(100vh-6.5rem)] flex flex-col space-y-3">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div className="flex items-center justify-between px-1 shrink-0">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-[var(--color-text)]">
-            Ask Your Teacher — Student Doubts
+          <h1 className="text-xl font-bold tracking-tight text-slate-900">
+            Student Inbox & Doubts Chat
           </h1>
-          <p className="text-sm text-[var(--color-text-secondary)]">
-            Answer questions submitted by your batch students with images and threaded replies
+          <p className="text-xs text-slate-500 font-medium">
+            Answer questions submitted by your batch students with images, files & voice messages
           </p>
         </div>
 
         {pendingCount > 0 && (
-          <span className="px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-500 text-white shadow-xs">
+          <span className="px-3 py-1 rounded-xl text-xs font-extrabold bg-amber-500 text-white shadow-xs">
             {pendingCount} Pending Answers
           </span>
         )}
       </div>
 
-      {/* Filter & Search Bar */}
-      <div className="flex flex-col sm:flex-row items-center gap-3">
-        <div className="relative flex-1 w-full">
-          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by student name or topic..."
-            className="w-full pl-10 pr-4 py-2 text-xs rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)] outline-none"
-          />
+      {/* Dual Panel Messenger Inbox */}
+      <div className="flex-1 grid grid-cols-1 md:grid-cols-12 gap-4 bg-white border border-slate-200 rounded-2xl shadow-xs overflow-hidden min-h-0">
+        {/* LEFT SIDEBAR: Student Conversations List */}
+        <div
+          className={`md:col-span-4 border-r border-slate-200 flex flex-col bg-slate-50/50 ${
+            selectedDoubtId ? "hidden md:flex" : "flex"
+          }`}
+        >
+          {/* Search & Filter */}
+          <div className="p-3 space-y-2 border-b border-slate-200 bg-white">
+            <div className="relative">
+              <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search student or topic..."
+                className="w-full pl-9 pr-3 py-1.5 text-xs rounded-xl border border-slate-200 bg-slate-50 outline-none focus:border-indigo-500 font-medium"
+              />
+            </div>
+
+            <div className="flex gap-1 overflow-x-auto pb-1 scrollbar-none">
+              {["all", "pending", "answered", "resolved"].map((st) => (
+                <button
+                  key={st}
+                  onClick={() => setStatusFilter(st)}
+                  className={`px-2.5 py-1 text-[11px] font-bold rounded-lg capitalize whitespace-nowrap transition-colors ${
+                    statusFilter === st
+                      ? "bg-indigo-50 text-indigo-700"
+                      : "text-slate-500 hover:text-slate-900"
+                  }`}
+                >
+                  {st}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Threads list */}
+          <div className="flex-1 overflow-y-auto divide-y divide-slate-100">
+            {loading ? (
+              <div className="p-4 space-y-3">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="h-16 rounded-xl animate-shimmer bg-slate-200/60" />
+                ))}
+              </div>
+            ) : filteredDoubts.length === 0 ? (
+              <div className="py-12 text-center px-4">
+                <HelpCircle className="w-8 h-8 mx-auto text-slate-300 mb-2" />
+                <p className="text-xs font-semibold text-slate-600">No student doubts found</p>
+              </div>
+            ) : (
+              filteredDoubts.map((d) => {
+                const isSelected = d.id === selectedDoubtId;
+                return (
+                  <button
+                    key={d.id}
+                    onClick={() => setSelectedDoubtId(d.id)}
+                    className={`w-full text-left p-3.5 transition-all flex items-start gap-3 relative ${
+                      isSelected
+                        ? "bg-indigo-50/70 border-l-4 border-indigo-600"
+                        : "hover:bg-slate-100/70"
+                    }`}
+                  >
+                    <div className="w-9 h-9 rounded-full bg-indigo-600 text-white font-bold flex items-center justify-center shrink-0 text-xs shadow-xs">
+                      {d.studentName.charAt(0).toUpperCase()}
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-1">
+                        <h4 className="text-xs font-bold text-slate-900 truncate">
+                          {d.studentName}
+                        </h4>
+                        <span className="text-[10px] text-slate-400 shrink-0">
+                          {d.lastMessageAt
+                            ? new Date(d.lastMessageAt.toMillis()).toLocaleTimeString([], {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })
+                            : ""}
+                        </span>
+                      </div>
+
+                      <p className="text-[11px] font-semibold text-indigo-600 truncate mt-0.5">
+                        {d.title}
+                      </p>
+
+                      <div className="flex items-center gap-2 mt-1.5">
+                        {d.status === "pending" && (
+                          <span className="px-2 py-0.5 rounded-md text-[9px] font-extrabold bg-amber-50 text-amber-700 border border-amber-200">
+                            Needs Answer
+                          </span>
+                        )}
+                        {d.status === "answered" && (
+                          <span className="px-2 py-0.5 rounded-md text-[9px] font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            Answered
+                          </span>
+                        )}
+                        {d.status === "resolved" && (
+                          <span className="px-2 py-0.5 rounded-md text-[9px] font-extrabold bg-slate-100 text-slate-600 border border-slate-200">
+                            Resolved
+                          </span>
+                        )}
+
+                        {d.unreadByTutor && (
+                          <span className="px-1.5 py-0.5 rounded text-[9px] font-extrabold bg-indigo-600 text-white ml-auto shrink-0">
+                            NEW
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </button>
+                );
+              })
+            )}
+          </div>
         </div>
 
-        <div className="flex gap-1.5 self-start sm:self-auto">
-          {["all", "pending", "answered", "resolved"].map((st) => (
-            <button
-              key={st}
-              onClick={() => setStatusFilter(st)}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-xl capitalize transition-all ${
-                statusFilter === st
-                  ? "bg-[var(--color-primary-50)] text-[var(--color-primary-dark)] shadow-sm"
-                  : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
-              }`}
-            >
-              {st} ({doubts.filter((d) => (st === "all" ? true : d.status === st)).length})
-            </button>
-          ))}
-        </div>
-      </div>
+        {/* RIGHT PANEL: Active Messenger Chat Area */}
+        <div
+          className={`md:col-span-8 flex flex-col h-full bg-white ${
+            selectedDoubtId ? "flex" : "hidden md:flex"
+          }`}
+        >
+          {activeDoubt ? (
+            <>
+              {/* Header */}
+              <div className="p-3.5 border-b border-slate-200 flex items-center justify-between bg-white shrink-0">
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => setSelectedDoubtId(null)}
+                    className="md:hidden p-1.5 rounded-lg text-slate-500 hover:bg-slate-100"
+                  >
+                    <ChevronLeft className="w-5 h-5" />
+                  </button>
 
-      {/* Doubts List */}
-      {loading ? (
-        <div className="space-y-3">
-          {[1, 2, 3].map((i) => (
-            <div
-              key={i}
-              className="h-24 rounded-xl animate-shimmer border border-[var(--color-border)]"
-            />
-          ))}
-        </div>
-      ) : filteredDoubts.length === 0 ? (
-        <div className="py-16 text-center border border-dashed rounded-2xl border-[var(--color-border)] bg-[var(--color-surface)]">
-          <HelpCircle className="w-10 h-10 mx-auto text-[var(--color-text-muted)] mb-3" />
-          <h3 className="text-base font-semibold text-[var(--color-text)]">
-            No doubts found
-          </h3>
-          <p className="text-xs text-[var(--color-text-muted)] mt-1 max-w-sm mx-auto">
-            {search || statusFilter !== "all"
-              ? "No student doubts match your search filter."
-              : "No questions have been submitted by students yet."}
-          </p>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {filteredDoubts.map((doubt) => (
-            <Link
-              key={doubt.id}
-              href={`/tutor/doubts/${doubt.id}`}
-              className={`block p-5 rounded-2xl border bg-[var(--color-surface)] hover:border-[var(--color-primary)] transition-all duration-200 shadow-xs ${
-                doubt.unreadByTutor
-                  ? "border-[var(--color-primary-light)] bg-[var(--color-primary-50)]/30"
-                  : "border-[var(--color-border)]"
-              }`}
-            >
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-[var(--color-primary)]">
-                      {doubt.studentName}
-                    </span>
-                    {doubt.unreadByTutor && (
-                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[var(--color-primary)] text-white">
-                        NEW REPLY
-                      </span>
-                    )}
+                  <div className="relative">
+                    <div className="w-10 h-10 rounded-full bg-slate-800 text-white font-bold flex items-center justify-center text-sm shadow-xs">
+                      {activeDoubt.studentName.charAt(0).toUpperCase()}
+                    </div>
+                    <span
+                      className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white ${
+                        studentPresence.isOnline ? "bg-emerald-500" : "bg-slate-400"
+                      }`}
+                      title={studentPresence.isOnline ? "Student is Online" : "Student is Offline"}
+                    />
                   </div>
-                  <h3 className="text-base font-bold text-[var(--color-text)] mt-1">
-                    {doubt.title}
-                  </h3>
-                  <p className="text-xs text-[var(--color-text-secondary)] mt-1 line-clamp-2">
-                    {doubt.initialQuestion}
-                  </p>
+
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-sm font-bold text-slate-900">
+                        {activeDoubt.studentName}
+                      </h3>
+                      <span
+                        className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                          studentPresence.isOnline
+                            ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                            : "bg-slate-100 text-slate-500"
+                        }`}
+                      >
+                        {studentPresence.lastSeenText}
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-500 truncate max-w-xs md:max-w-md font-medium">
+                      Topic: <strong className="text-slate-800">{activeDoubt.title}</strong>
+                    </p>
+                  </div>
                 </div>
 
-                {/* Status Pills */}
-                {doubt.status === "pending" && (
-                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200 shrink-0">
-                    Needs Answer
-                  </span>
-                )}
-                {doubt.status === "answered" && (
-                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0">
-                    Answered
-                  </span>
-                )}
-                {doubt.status === "resolved" && (
-                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-600 border border-slate-200 shrink-0">
-                    Resolved
-                  </span>
-                )}
-              </div>
-
-              <div className="mt-4 pt-3 border-t border-[var(--color-border)] flex items-center justify-between text-xs text-[var(--color-text-muted)]">
-                <div className="flex items-center gap-3">
-                  <span className="flex items-center gap-1">
-                    <MessageSquare className="w-3.5 h-3.5" /> Reply Thread
-                  </span>
-                  {doubt.attachmentPath && (
-                    <span className="flex items-center gap-1 text-[var(--color-primary)]">
-                      <ImageIcon className="w-3.5 h-3.5" /> Includes Photo
-                    </span>
+                <div className="flex items-center gap-2">
+                  {activeDoubt.status !== "resolved" && (
+                    <button
+                      onClick={handleMarkResolved}
+                      className="px-3 py-1.5 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl flex items-center gap-1.5 transition-colors"
+                    >
+                      <CheckCircle className="w-3.5 h-3.5 text-emerald-600" /> Mark Resolved
+                    </button>
                   )}
                 </div>
-                <span>
-                  {doubt.createdAt
-                    ? new Date(doubt.createdAt.toMillis()).toLocaleDateString()
-                    : ""}
-                </span>
               </div>
-            </Link>
-          ))}
+
+              {/* Chat Messages Stream */}
+              <div className="flex-1 p-4 overflow-y-auto space-y-4 bg-slate-50/40">
+                {/* Initial Question Overview */}
+                <div className="max-w-xl mx-auto p-4 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-2">
+                  <div className="text-[10px] font-extrabold uppercase tracking-wider text-indigo-600 flex items-center justify-between">
+                    <span>Student Question</span>
+                    <span>Status: {activeDoubt.status}</span>
+                  </div>
+                  <p className="text-xs text-slate-800 leading-relaxed whitespace-pre-wrap font-medium">
+                    {activeDoubt.initialQuestion}
+                  </p>
+
+                  {/* Initial Attachment */}
+                  {activeDoubt.attachmentPath && signedUrls[activeDoubt.attachmentPath] && (
+                    <div className="pt-2">
+                      {activeDoubt.attachmentType === "image" || !activeDoubt.attachmentType ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={signedUrls[activeDoubt.attachmentPath]}
+                          alt="Student photo attachment"
+                          className="max-h-64 rounded-xl border border-slate-200 object-contain bg-black/5"
+                        />
+                      ) : (
+                        <a
+                          href={signedUrls[activeDoubt.attachmentPath]}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-2 p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-xs font-bold text-indigo-600 transition-colors"
+                        >
+                          <FileText className="w-4 h-4" />
+                          <span>{activeDoubt.attachmentName || "Attached Document"}</span>
+                          <Download className="w-3.5 h-3.5 ml-1 text-slate-400" />
+                        </a>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                <div className="text-center text-[10px] font-bold text-slate-400 uppercase tracking-widest my-2">
+                  Reply Thread
+                </div>
+
+                {messages.map((msg) => {
+                  const isMe = msg.senderUid === user?.uid;
+                  const attachmentUrl = msg.attachmentPath ? signedUrls[msg.attachmentPath] : null;
+
+                  return (
+                    <div
+                      key={msg.id}
+                      className={`flex flex-col ${isMe ? "items-end" : "items-start"}`}
+                    >
+                      <div
+                        className={`max-w-[80%] p-3.5 rounded-2xl text-xs space-y-2 shadow-xs ${
+                          isMe
+                            ? "bg-indigo-600 text-white rounded-br-xs"
+                            : "bg-white text-slate-800 border border-slate-200 rounded-bl-xs"
+                        }`}
+                      >
+                        <div
+                          className={`text-[10px] font-bold flex items-center justify-between gap-4 ${
+                            isMe ? "text-indigo-200" : "text-slate-400"
+                          }`}
+                        >
+                          <span>{isMe ? "You (Tutor)" : activeDoubt.studentName}</span>
+                          <span>
+                            {msg.createdAt
+                              ? new Date(msg.createdAt.toMillis()).toLocaleTimeString([], {
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                })
+                              : ""}
+                          </span>
+                        </div>
+
+                        {msg.text && (
+                          <div className="leading-relaxed whitespace-pre-wrap font-medium">
+                            {msg.text}
+                          </div>
+                        )}
+
+                        {/* Attachment */}
+                        {attachmentUrl && (
+                          <div className="pt-1">
+                            {msg.attachmentType === "audio" ? (
+                              <AudioPlayer src={attachmentUrl} isMe={isMe} />
+                            ) : msg.attachmentType === "image" ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img
+                                src={attachmentUrl}
+                                alt="Image Attachment"
+                                className="max-h-60 rounded-xl border border-black/10 object-contain bg-black/5"
+                              />
+                            ) : (
+                              <a
+                                href={attachmentUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className={`inline-flex items-center gap-2 p-2.5 rounded-xl text-xs font-bold transition-colors ${
+                                  isMe
+                                    ? "bg-indigo-700 text-white hover:bg-indigo-800"
+                                    : "bg-slate-100 text-indigo-600 hover:bg-slate-200"
+                                }`}
+                              >
+                                <FileText className="w-4 h-4" />
+                                <span className="truncate max-w-[180px]">
+                                  {msg.attachmentName || "Document"}
+                                </span>
+                                <span className="text-[10px] opacity-75">
+                                  {formatFileSize(msg.attachmentSize)}
+                                </span>
+                                <Download className="w-3.5 h-3.5 ml-auto" />
+                              </a>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+
+                <div ref={messagesEndRef} />
+              </div>
+
+              {/* Reply Input Bar */}
+              <div className="p-3 border-t border-slate-200 bg-white shrink-0 space-y-2">
+                {error && (
+                  <div className="p-2 text-xs rounded-lg bg-red-50 text-red-600 border border-red-200">
+                    {error}
+                  </div>
+                )}
+
+                {/* Selected File Preview */}
+                {selectedAttachment && (
+                  <div className="flex items-center justify-between p-2 rounded-xl bg-indigo-50 border border-indigo-200 text-xs font-semibold text-indigo-700">
+                    <div className="flex items-center gap-2 truncate">
+                      {selectedAttachment.type === "image" ? (
+                        <ImageIcon className="w-4 h-4 text-indigo-600 shrink-0" />
+                      ) : (
+                        <FileText className="w-4 h-4 text-indigo-600 shrink-0" />
+                      )}
+                      <span className="truncate">{selectedAttachment.file.name}</span>
+                      <span className="text-[10px] text-indigo-500 font-mono">
+                        ({formatFileSize(selectedAttachment.file.size)})
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => setSelectedAttachment(null)}
+                      className="p-1 hover:bg-indigo-100 rounded-lg text-indigo-700"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
+
+                {/* Input Bar or Voice Recorder */}
+                {showVoiceRecorder ? (
+                  <VoiceRecorder
+                    onSendAudio={handleSendVoice}
+                    onCancel={() => setShowVoiceRecorder(false)}
+                  />
+                ) : (
+                  <form onSubmit={handleSendMessage} className="flex items-center gap-2">
+                    {/* Attach Image */}
+                    <label
+                      className="p-2.5 rounded-xl text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 cursor-pointer transition-colors"
+                      title="Attach Image"
+                    >
+                      <ImageIcon className="w-5 h-5" />
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const f = e.target.files?.[0];
+                          if (f) setSelectedAttachment({ file: f, type: "image" });
+                        }}
+                      />
+                    </label>
+
+                    {/* Attach Document */}
+                    <label
+                      className="p-2.5 rounded-xl text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 cursor-pointer transition-colors"
+                      title="Attach File/Document"
+                    >
+                      <Paperclip className="w-5 h-5" />
+                      <input
+                        type="file"
+                        accept=".pdf,.doc,.docx,.zip,.txt,.ppt,.pptx,.xls,.xlsx"
+                        className="hidden"
+                        onChange={(e) => {
+                          const f = e.target.files?.[0];
+                          if (f) setSelectedAttachment({ file: f, type: "file" });
+                        }}
+                      />
+                    </label>
+
+                    {/* Voice Note Button */}
+                    <button
+                      type="button"
+                      onClick={() => setShowVoiceRecorder(true)}
+                      className="p-2.5 rounded-xl text-slate-500 hover:text-red-600 hover:bg-red-50 transition-colors"
+                      title="Record Voice Note"
+                    >
+                      <Mic className="w-5 h-5" />
+                    </button>
+
+                    {/* Text Input */}
+                    <input
+                      type="text"
+                      value={newMessageText}
+                      onChange={(e) => setNewMessageText(e.target.value)}
+                      placeholder={`Reply to ${activeDoubt.studentName}...`}
+                      className="flex-1 px-4 py-2.5 text-xs rounded-xl border border-slate-200 bg-slate-50 outline-none focus:border-indigo-500 text-slate-900 font-medium"
+                    />
+
+                    {/* Send Button */}
+                    <button
+                      type="submit"
+                      disabled={sending || (!newMessageText.trim() && !selectedAttachment)}
+                      className="p-2.5 text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-xs transition-all disabled:opacity-50"
+                    >
+                      <Send className="w-4 h-4" />
+                    </button>
+                  </form>
+                )}
+              </div>
+            </>
+          ) : (
+            <div className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-slate-50/50">
+              <MessageSquare className="w-12 h-12 text-slate-300 mb-3" />
+              <h3 className="text-sm font-bold text-slate-800">Select a student doubt thread</h3>
+              <p className="text-xs text-slate-500 max-w-sm mt-1">
+                Choose a student question from the left sidebar to start replying.
+              </p>
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }

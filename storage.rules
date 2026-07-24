@@ -8,7 +8,7 @@ service firebase.storage {
     
     function isTutorOwnerStorage(tutorId) {
       return isAuthenticated()
-        && request.auth.token.get('role', '') == 'tutor'
+        && (request.auth.token.get('role', '') == 'tutor' || 'tutor' in request.auth.token.get('roles', []))
         && request.auth.token.get('tutorId', '') == tutorId;
     }
     
@@ -19,20 +19,22 @@ service firebase.storage {
       // This prevents getDownloadURL() from generating persistent bypass tokens.
       allow read: if false;
 
-      // WRITE: Client uploads allowed with role, size, and MIME validation.
+      // WRITE: Client uploads allowed with role, size (<10MB), and strict MIME validation.
       // Student branch explicitly checks tutorId claim against path segment
       // to prevent cross-tenant uploads to another tutor's storage namespace.
       allow write: if isAuthenticated()
+                   && request.resource.size < 10 * 1024 * 1024
                    && (
                      isTutorOwnerStorage(tutorId)
                      || (request.auth.uid == studentAuthUid
                          && request.auth.token.get('tutorId', '') == tutorId)
                    )
-                   && request.resource.size < 5 * 1024 * 1024
-                   && request.resource.contentType.matches('image/(jpeg|png|webp)');
+                   && (request.resource.contentType.matches('image/(jpeg|png|webp|gif)')
+                       || request.resource.contentType.matches('audio/(webm|mp3|mpeg|ogg|wav|m4a|aac)')
+                       || request.resource.contentType.matches('application/(pdf|msword|vnd.openxmlformats-officedocument.wordprocessingml.document)'));
 
       // DELETE: Default deny (no allow delete rule).
-      // Stale files cleaned up via Cloud Function in Phase 4.
     }
   }
 }
+

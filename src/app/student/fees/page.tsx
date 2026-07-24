@@ -19,24 +19,40 @@ export default function StudentFeesPage() {
   ];
 
   useEffect(() => {
-    if (!user || !claims || claims.role !== "student") return;
+    if (!user) {
+      setLoading(false);
+      return;
+    }
 
     async function loadFees() {
-      if (!claims || claims.role !== "student") return;
       try {
-        const q = query(
-          collection(db, "fees"),
-          where("studentId", "==", claims.studentDocId)
-        );
-        const snap = await getDocs(q);
-        const list: FeeDoc[] = [];
-        snap.forEach((d) => list.push({ id: d.id, ...d.data() } as FeeDoc));
-        
-        // Sort by year desc, month desc
-        list.sort((a, b) => b.year - a.year || b.month - a.month);
-        setFees(list);
-      } catch {
-        // handle error
+        let studentDocId = claims?.role === "student" ? claims.studentDocId : "";
+
+        if (!studentDocId) {
+          const sQuery = query(
+            collection(db, "students"),
+            where("authUid", "==", user!.uid)
+          );
+          const sSnap = await getDocs(sQuery);
+          if (!sSnap.empty) {
+            studentDocId = sSnap.docs[0].id;
+          }
+        }
+
+        if (studentDocId) {
+          const q = query(
+            collection(db, "fees"),
+            where("studentId", "==", studentDocId)
+          );
+          const snap = await getDocs(q);
+          const list: FeeDoc[] = [];
+          snap.forEach((d) => list.push({ ...d.data(), id: d.id } as FeeDoc));
+          
+          list.sort((a, b) => b.year - a.year || b.month - a.month);
+          setFees(list);
+        }
+      } catch (err) {
+        console.error("Error loading fees:", err);
       } finally {
         setLoading(false);
       }
@@ -100,7 +116,39 @@ export default function StudentFeesPage() {
         </div>
       ) : (
         <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] overflow-hidden shadow-sm">
-          <div className="overflow-x-auto">
+          {/* Mobile Cards */}
+          <div className="divide-y divide-slate-100 md:hidden">
+            {fees.map((fee) => (
+              <div key={fee.id} className="p-4 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-extrabold text-slate-900">
+                    {months[fee.month - 1]} {fee.year}
+                  </span>
+                  {fee.status === "paid" ? (
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                      Paid
+                    </span>
+                  ) : (
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
+                      Unpaid
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex items-center justify-between text-xs font-semibold py-1">
+                  <span className="text-slate-500">Amount: <strong className="text-slate-900">{formatBDT(fee.amountDue)}</strong></span>
+                  <span className="text-slate-500">Paid: <strong className="text-emerald-600">{formatBDT(fee.amountPaid)}</strong></span>
+                </div>
+
+                <div className="text-[11px] font-mono font-semibold text-slate-400 uppercase pt-0.5">
+                  Method: {fee.paymentMethod || "N/A"}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop Table */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-left text-xs">
               <thead className="border-b border-[var(--color-border)] bg-[var(--color-bg-secondary)] text-[var(--color-text-secondary)] font-semibold">
                 <tr>

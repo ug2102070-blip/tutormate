@@ -25,7 +25,7 @@ export function Sidebar({ role }: SidebarProps) {
     { href: "/tutor/students", label: "Students", icon: GraduationCap },
     { href: "/tutor/attendance", label: "Attendance", icon: CalendarCheck },
     { href: "/tutor/fees", label: "Fee Ledger", icon: CreditCard },
-    { href: "/tutor/doubts", label: "Ask Your Teacher", icon: HelpCircle },
+    { href: "/tutor/doubts", label: "Student Doubts", icon: HelpCircle },
     { href: "/tutor/settings", label: "Settings", icon: Settings },
   ];
 
@@ -39,30 +39,15 @@ export function Sidebar({ role }: SidebarProps) {
   const items = role === "tutor" ? tutorNavItems : studentNavItems;
 
   return (
-    <aside
-      className="hidden md:flex w-64 flex-col justify-between border-r p-4 shrink-0 transition-colors duration-200"
-      style={{
-        backgroundColor: "var(--color-surface)",
-        borderColor: "var(--color-border)",
-      }}
-    >
+    <aside className="hidden md:flex w-64 flex-col justify-between border-r border-slate-200 bg-white p-4 shrink-0 shadow-xs">
       <div className="space-y-6">
-        {/* Brand */}
+        {/* Brand Header */}
         <div className="px-3 py-2">
           <Link href="/" className="flex items-center gap-2">
-            <span
-              className="text-xl font-bold tracking-tight"
-              style={{ color: "var(--color-primary)" }}
-            >
+            <span className="text-xl font-extrabold tracking-tight text-indigo-600">
               TutorMate
             </span>
-            <span
-              className="text-[10px] uppercase font-semibold px-2 py-0.5 rounded-full"
-              style={{
-                backgroundColor: "var(--color-primary-50)",
-                color: "var(--color-primary)",
-              }}
-            >
+            <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600 border border-indigo-100">
               {role}
             </span>
           </Link>
@@ -78,23 +63,16 @@ export function Sidebar({ role }: SidebarProps) {
               <Link
                 key={item.href}
                 href={item.href}
-                className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-150"
-                style={{
-                  backgroundColor: isActive
-                    ? "var(--color-primary-50)"
-                    : "transparent",
-                  color: isActive
-                    ? "var(--color-primary-dark)"
-                    : "var(--color-text-secondary)",
-                }}
+                className={`flex items-center gap-3 px-3 py-2.5 text-sm font-semibold rounded-xl transition-all duration-150 ${
+                  isActive
+                    ? "bg-indigo-50 text-indigo-700 shadow-xs"
+                    : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                }`}
               >
                 <Icon
-                  className="w-4 h-4"
-                  style={{
-                    color: isActive
-                      ? "var(--color-primary)"
-                      : "var(--color-text-muted)",
-                  }}
+                  className={`w-4 h-4 ${
+                    isActive ? "text-indigo-600" : "text-slate-400"
+                  }`}
                 />
                 {item.label}
               </Link>
@@ -104,13 +82,7 @@ export function Sidebar({ role }: SidebarProps) {
       </div>
 
       {/* Footer Info */}
-      <div
-        className="p-3 rounded-lg text-xs"
-        style={{
-          backgroundColor: "var(--color-bg-secondary)",
-          color: "var(--color-text-muted)",
-        }}
-      >
+      <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 text-xs text-slate-500 font-medium">
         TutorMate BD v1.0.0
       </div>
     </aside>

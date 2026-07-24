@@ -1,15 +1,29 @@
 "use client";
 
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { Sidebar } from "@/components/navigation/Sidebar";
 import { Header } from "@/components/navigation/Header";
+import { MobileNav } from "@/components/navigation/MobileNav";
 
 export default function TutorLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const { loading } = useAuth();
+  const router = useRouter();
+  const { user, role, loading } = useAuth();
+
+  useEffect(() => {
+    if (!loading) {
+      if (!user) {
+        router.push("/login");
+      } else if (role === "student") {
+        router.push("/student/dashboard");
+      }
+    }
+  }, [loading, user, role, router]);
 
   if (loading) {
     return (
@@ -24,13 +38,18 @@ export default function TutorLayout({
     );
   }
 
+  if (!user || role === "student") {
+    return null;
+  }
+
   return (
-    <div className="flex min-h-screen bg-[var(--color-bg-secondary)]">
+    <div className="flex min-h-screen bg-[var(--color-bg-secondary)] relative">
       <Sidebar role="tutor" />
       <div className="flex-1 flex flex-col min-w-0">
         <Header />
-        <main className="flex-1 p-6 overflow-y-auto">{children}</main>
+        <main className="flex-1 p-4 md:p-6 pb-20 md:pb-6 overflow-y-auto">{children}</main>
       </div>
+      <MobileNav role="tutor" />
     </div>
   );
 }

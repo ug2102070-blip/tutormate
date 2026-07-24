@@ -42,3 +42,40 @@ export function formatDate(dateStr: string): string {
     year: "numeric",
   });
 }
+
+/**
+ * Parses raw Firebase Auth error codes into clean, user-friendly error messages.
+ */
+export function formatAuthError(err: unknown): string {
+  if (!(err instanceof Error)) return "An unexpected error occurred. Please try again.";
+  const msg = err.message;
+
+  if (msg.includes("auth/operation-not-allowed")) {
+    return "Phone sign-in is disabled. Please enable 'Phone' in Firebase Console (Authentication -> Sign-in method -> Phone).";
+  }
+  if (msg.includes("auth/unauthorized-domain")) {
+    return "Unauthorized domain: Please add 'localhost' to Authorized Domains in Firebase Console (Authentication -> Settings -> Authorized domains).";
+  }
+  if (msg.includes("auth/email-already-in-use")) {
+    return "This email address is already registered. Please sign in instead.";
+  }
+  if (
+    msg.includes("auth/invalid-credential") ||
+    msg.includes("auth/wrong-password") ||
+    msg.includes("auth/user-not-found")
+  ) {
+    return "Invalid email or password. Please check your credentials.";
+  }
+  if (msg.includes("auth/weak-password")) {
+    return "Password is too weak. Please use at least 6 characters.";
+  }
+  if (msg.includes("auth/invalid-email")) {
+    return "Please enter a valid email address.";
+  }
+  if (msg.includes("auth/too-many-requests")) {
+    return "Access blocked due to multiple failed attempts. Please try again later.";
+  }
+
+  // Fallback clean message
+  return msg.replace(/^Firebase:\s*Error\s*\(auth\//i, "").replace(/\)\.?$/, "");
+}

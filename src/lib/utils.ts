@@ -54,7 +54,8 @@ export function formatAuthError(err: unknown): string {
     return "Phone sign-in is disabled. Please enable 'Phone' in Firebase Console (Authentication -> Sign-in method -> Phone).";
   }
   if (msg.includes("auth/unauthorized-domain")) {
-    return "Unauthorized domain: Please add 'localhost' to Authorized Domains in Firebase Console (Authentication -> Settings -> Authorized domains).";
+    const domain = typeof window !== "undefined" ? window.location.hostname : "your domain";
+    return `Unauthorized domain (${domain}): Please add '${domain}' to Authorized Domains in Firebase Console (Authentication -> Settings -> Authorized domains).`;
   }
   if (msg.includes("auth/email-already-in-use")) {
     return "This email address is already registered. Please sign in instead.";

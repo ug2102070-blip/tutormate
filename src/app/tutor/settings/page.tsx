@@ -1,14 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { updateProfile } from "firebase/auth";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase/config";
+import { auth, db } from "@/lib/firebase/config";
 import { useAuth } from "@/hooks/useAuth";
 import type { TutorDoc } from "@/types";
 import { Save, User, Phone, Wallet, ShieldCheck, Check } from "lucide-react";
 
 export default function TutorSettingsPage() {
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const [tutor, setTutor] = useState<TutorDoc | null>(null);
   const [fullName, setFullName] = useState("");
   const [institution, setInstitution] = useState("");
@@ -55,6 +56,11 @@ export default function TutorSettingsPage() {
     setSuccess(false);
 
     try {
+      // Update Firebase Auth user profile displayName
+      if (auth.currentUser) {
+        await updateProfile(auth.currentUser, { displayName: fullName });
+      }
+
       // Update /tutors/{uid}
       await updateDoc(doc(db, "tutors", user.uid), {
         fullName,
@@ -71,6 +77,9 @@ export default function TutorSettingsPage() {
         phoneNumber: contactPhone || null,
         updatedAt: new Date(),
       });
+
+      // Refresh Auth Context state so Top Header immediately reflects updated displayName
+      await refreshUser();
 
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);

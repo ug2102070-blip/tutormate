@@ -23,6 +23,8 @@ interface AuthState {
   loading: boolean;
   /** Force refresh the ID token to pick up new custom claims */
   refreshClaims: () => Promise<void>;
+  /** Reload Firebase Auth user & refresh local state */
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthState>({
@@ -31,6 +33,7 @@ const AuthContext = createContext<AuthState>({
   role: null,
   loading: true,
   refreshClaims: async () => {},
+  refreshUser: async () => {},
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -93,6 +96,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setClaims(newClaims);
   }
 
+  async function refreshUser() {
+    if (auth.currentUser) {
+      await auth.currentUser.reload();
+      setUser({ ...auth.currentUser });
+    }
+  }
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       setUser(firebaseUser);
@@ -111,7 +121,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const role = claims?.role ?? null;
 
   return (
-    <AuthContext.Provider value={{ user, claims, role, loading, refreshClaims }}>
+    <AuthContext.Provider value={{ user, claims, role, loading, refreshClaims, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );

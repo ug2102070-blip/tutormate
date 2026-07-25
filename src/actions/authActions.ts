@@ -14,8 +14,9 @@ export async function setTutorClaims(idToken: string) {
   try {
     const decodedToken = await adminAuth.verifyIdToken(idToken);
     uid = decodedToken.uid;
-  } catch {
-    throw new Error("Unauthorized: Invalid or expired token");
+  } catch (err) {
+    console.warn("Could not verify ID token via Admin Auth:", err);
+    return { success: false, error: "Unauthorized: Invalid or expired token" };
   }
 
   try {
@@ -100,8 +101,9 @@ export async function onboardTutorUser(
   try {
     const decodedToken = await adminAuth.verifyIdToken(idToken);
     uid = decodedToken.uid;
-  } catch {
-    throw new Error("Unauthorized: Invalid or expired token");
+  } catch (err) {
+    console.warn("Could not verify ID token via Admin Auth:", err);
+    return { success: false, error: "Unauthorized: Invalid or expired token" };
   }
 
   try {

@@ -48,7 +48,15 @@ export function formatDate(dateStr: string): string {
  */
 export function formatAuthError(err: unknown): string {
   if (!(err instanceof Error)) return "An unexpected error occurred. Please try again.";
-  const msg = err.message;
+  const msg = err.message || "";
+
+  if (
+    msg.includes("Server Components render") ||
+    msg.includes("digest") ||
+    msg.includes("minified React error")
+  ) {
+    return "A server communication error occurred. Please check your connection and try again.";
+  }
 
   if (msg.includes("auth/operation-not-allowed")) {
     return "Phone sign-in is disabled. Please enable 'Phone' in Firebase Console (Authentication -> Sign-in method -> Phone).";

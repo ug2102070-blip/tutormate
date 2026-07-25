@@ -206,10 +206,17 @@ export default function LoginPage() {
         }, idToken).catch(() => {});
       } else {
         if (!onboardInviteCode) {
-          throw new Error("Invite code is required for student registration.");
+          setError("Invite code is required for student registration.");
+          setLoading(false);
+          return;
         }
         const idToken = await pendingUser.getIdToken();
-        await claimStudentInvite(onboardInviteCode, idToken);
+        const claimRes = await claimStudentInvite(onboardInviteCode, idToken);
+        if (claimRes && !claimRes.success && claimRes.error) {
+          setError(claimRes.error);
+          setLoading(false);
+          return;
+        }
       }
 
       await refreshClaims().catch(() => {});

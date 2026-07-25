@@ -17,13 +17,14 @@ export async function claimStudentInvite(
   try {
     const decodedToken = await adminAuth.verifyIdToken(idToken);
     studentUid = decodedToken.uid;
-  } catch {
-    throw new Error("Unauthorized: Invalid or expired token");
+  } catch (err) {
+    console.warn("Could not verify ID token via Admin Auth in claimStudentInvite:", err);
+    return { success: false, error: "Unauthorized: Invalid or expired token" };
   }
 
   const cleanCode = inviteCode ? inviteCode.toUpperCase().trim() : "";
   if (!cleanCode || cleanCode.length < 4) {
-    throw new Error("Invalid invite code format.");
+    return { success: false, error: "Invalid invite code format." };
   }
 
   try {
@@ -32,13 +33,14 @@ export async function claimStudentInvite(
     const { success: rateLimitOk } = await inviteRateLimiter.limit(ip);
 
     if (!rateLimitOk) {
-      throw new Error(
-        "Too many attempts. Please wait 1 minute before trying again."
-      );
+      return {
+        success: false,
+        error: "Too many attempts. Please wait 1 minute before trying again.",
+      };
     }
   } catch (rlErr) {
     if (rlErr instanceof Error && rlErr.message.includes("Too many attempts")) {
-      throw rlErr;
+      return { success: false, error: rlErr.message };
     }
   }
 
@@ -117,7 +119,7 @@ export async function claimStudentInvite(
         err.message.includes("Invalid or already claimed") ||
         err.message.includes("already linked to another student profile")
       ) {
-        throw err;
+        return { success: false, error: err.message };
       }
     }
     console.warn("Admin SDK operation skipped during claimStudentInvite:", err);

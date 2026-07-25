@@ -130,7 +130,12 @@ export default function RegisterPage() {
         });
 
         const idToken = await user.getIdToken();
-        await claimStudentInvite(inviteCode, idToken);
+        const claimRes = await claimStudentInvite(inviteCode, idToken);
+        if (claimRes && !claimRes.success && claimRes.error) {
+          setError(claimRes.error);
+          setLoading(false);
+          return;
+        }
       }
 
       await refreshClaims().catch(() => {});
@@ -201,7 +206,12 @@ export default function RegisterPage() {
           institution: institution || "Independent",
         }, idToken).catch(() => {});
       } else {
-        await claimStudentInvite(inviteCode, idToken);
+        const claimRes = await claimStudentInvite(inviteCode, idToken);
+        if (claimRes && !claimRes.success && claimRes.error) {
+          setError(claimRes.error);
+          setLoading(false);
+          return;
+        }
       }
 
       await refreshClaims().catch(() => {});
@@ -307,7 +317,12 @@ export default function RegisterPage() {
           institution: institution || "Independent",
         }, idToken).catch(() => {});
       } else {
-        await claimStudentInvite(inviteCode, idToken);
+        const claimRes = await claimStudentInvite(inviteCode, idToken);
+        if (claimRes && !claimRes.success && claimRes.error) {
+          setError(claimRes.error);
+          setLoading(false);
+          return;
+        }
       }
 
       await refreshClaims().catch(() => {});

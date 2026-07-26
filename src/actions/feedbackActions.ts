@@ -1,8 +1,7 @@
-"use me"; // Server action directive below
 "use server";
 
 import { z } from "zod";
-import { adminDb } from "@/lib/firebase/admin";
+import { createAdminClient } from "@/lib/supabase/server";
 import { authRateLimiter } from "@/lib/ratelimit";
 import { headers } from "next/headers";
 
@@ -27,7 +26,6 @@ export async function submitFeedbackAction(input: FeedbackInput) {
   try {
     const validated = FeedbackSchema.parse(input);
 
-    // Basic IP rate limiting
     const headerList = await headers();
     const ip = headerList.get("x-forwarded-for") || "127.0.0.1";
     const rateCheck = await authRateLimiter.limit(`feedback:${ip}`);
@@ -38,16 +36,18 @@ export async function submitFeedbackAction(input: FeedbackInput) {
       };
     }
 
-    // Persist to Firestore feedback collection
-    await adminDb.collection("feedback").add({
-      userId: validated.userId,
-      userRole: validated.userRole,
+    const supabase = createAdminClient();
+
+    const { error } = await supabase.from("feedback").insert({
+      user_id: validated.userId,
+      role: validated.userRole,
       rating: validated.rating,
-      category: validated.category,
-      message: validated.message,
-      suggestedPrice: validated.suggestedPrice || "",
-      createdAt: new Date().toISOString(),
+      comment: `[${validated.category}] ${validated.message} ${validated.suggestedPrice ? `(Suggested Price: ${validated.suggestedPrice})` : ''}`,
     });
+
+    if (error) {
+      throw new Error(error.message);
+    }
 
     return {
       success: true,

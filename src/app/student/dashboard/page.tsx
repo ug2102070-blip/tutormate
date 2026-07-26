@@ -13,7 +13,7 @@ export default function StudentDashboardPage() {
       <div className="p-6 sm:p-8 rounded-2xl text-white bg-gradient-to-r from-cyan-600 via-indigo-600 to-indigo-700 shadow-md relative overflow-hidden">
         <div className="relative z-10">
           <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
-            Hello, {user?.displayName || "Student"} 🎓
+            Hello, {user?.user_metadata?.full_name || user?.email?.split("@")[0] || "Student"} 🎓
           </h1>
           <p className="mt-1.5 text-white/90 text-sm max-w-xl leading-relaxed">
             Welcome to your student portal. Track your class attendance, monthly fee history, and ask questions to your teacher.

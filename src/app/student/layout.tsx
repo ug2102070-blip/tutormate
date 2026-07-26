@@ -51,7 +51,7 @@ export default function StudentLayout({
         <main className="flex-1 p-4 md:p-6 pb-20 md:pb-6 overflow-y-auto">{children}</main>
       </div>
       <MobileNav role="student" />
-      {user && <FeedbackWidget userId={user.uid} userRole="student" />}
+      {user && <FeedbackWidget userId={user.id} userRole="student" />}
     </div>
   );
 }

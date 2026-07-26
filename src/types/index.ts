@@ -1,7 +1,5 @@
-import { Timestamp } from "firebase/firestore";
-
 // ============================================
-// CUSTOM CLAIMS (from JWT token)
+// CUSTOM CLAIMS & USER ROLES
 // ============================================
 export type UserRole = "tutor" | "student" | "admin";
 
@@ -23,7 +21,7 @@ export interface AdminClaims {
 export type CustomClaims = TutorClaims | StudentClaims | AdminClaims;
 
 // ============================================
-// FIRESTORE DOCUMENT TYPES
+// DATABASE DOCUMENT / ROW TYPES
 // ============================================
 
 export interface UserDoc {
@@ -35,14 +33,14 @@ export interface UserDoc {
   role: UserRole;
   tutorId: string | null;
   studentDocId: string | null;
-  createdAt: Timestamp;
-  updatedAt: Timestamp;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface SubscriptionInfo {
   plan: "free_trial" | "starter" | "pro" | "pro_plus";
   status: "active" | "past_due" | "canceled";
-  validUntil: Timestamp;
+  validUntil: string;
   maxStudents: number;
 }
 
@@ -61,7 +59,7 @@ export interface TutorDoc {
   nagadNumber: string | null;
   subscription: SubscriptionInfo;
   stats: TutorStats;
-  createdAt: Timestamp;
+  createdAt: string;
 }
 
 export interface ScheduleEntry {
@@ -79,7 +77,7 @@ export interface BatchDoc {
   schedule: ScheduleEntry[];
   studentCount: number;
   isArchived: boolean;
-  createdAt: Timestamp;
+  createdAt: string;
 }
 
 export interface StudentDoc {
@@ -93,7 +91,7 @@ export interface StudentDoc {
   institution: string | null;
   enrolledBatchIds: string[];
   status: "active" | "archived";
-  createdAt: Timestamp;
+  createdAt: string;
 }
 
 export interface AttendanceRecord {
@@ -106,7 +104,7 @@ export interface AttendanceDoc {
   tutorId: string;
   batchId: string;
   date: string; // YYYY-MM-DD
-  timestamp: Timestamp;
+  timestamp: string;
   records: Record<string, AttendanceRecord>;
 }
 
@@ -121,8 +119,8 @@ export interface FeeDoc {
   amountPaid: number;
   status: "paid" | "unpaid" | "partial";
   paymentMethod: "cash" | "bkash" | "nagad" | "other" | null;
-  paidAt: Timestamp | null;
-  updatedAt: Timestamp;
+  paidAt: string | null;
+  updatedAt: string;
 }
 
 export type DoubtStatus = "pending" | "answered" | "resolved";
@@ -142,10 +140,10 @@ export interface DoubtDoc {
   attachmentName?: string | null;
   attachmentSize?: number | null;
   status: DoubtStatus;
-  lastMessageAt: Timestamp;
+  lastMessageAt: string;
   unreadByTutor: boolean;
   unreadByStudent: boolean;
-  createdAt: Timestamp;
+  createdAt: string;
 }
 
 export interface MessageDoc {
@@ -157,11 +155,24 @@ export interface MessageDoc {
   attachmentType: AttachmentType;
   attachmentName?: string | null;
   attachmentSize?: number | null;
-  createdAt: Timestamp;
+  createdAt: string;
 }
 
 export interface UserPresence {
   uid: string;
   isOnline: boolean;
-  lastSeen: Timestamp;
+  lastSeen: string;
+}
+
+export interface MaterialDoc {
+  id: string;
+  tutorId: string;
+  batchId: string | null;
+  title: string;
+  description: string | null;
+  filePath: string;
+  fileType: "pdf" | "video" | "image" | "docx" | "ppt" | "other";
+  fileSize: number | null;
+  isPublished: boolean;
+  createdAt: string;
 }

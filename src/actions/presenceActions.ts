@@ -1,33 +1,24 @@
 "use server";
 
-import { adminDb, adminAuth } from "@/lib/firebase/admin";
-import { FieldValue } from "firebase-admin/firestore";
+import { createAdminClient } from "@/lib/supabase/server";
 
 /**
- * Updates user presence status in Firestore using Admin SDK.
- * Bypasses client security rules restrictions so it never throws permission errors.
+ * Updates user presence status in Supabase `user_presence` table.
  */
-export async function updateUserPresence(idToken: string, isOnline: boolean) {
-  if (!idToken) return { success: false };
+export async function updateUserPresence(uid: string, isOnline: boolean) {
+  if (!uid) return { success: false };
 
   try {
-    const decodedToken = await adminAuth.verifyIdToken(idToken);
-    const uid = decodedToken.uid;
+    const supabase = createAdminClient();
 
-    if (!uid) return { success: false };
-
-    await adminDb.collection("presence").doc(uid).set(
-      {
-        uid,
-        isOnline,
-        lastSeen: FieldValue.serverTimestamp(),
-      },
-      { merge: true }
-    );
+    await supabase.from("user_presence").upsert({
+      uid,
+      is_online: isOnline,
+      last_seen: new Date().toISOString(),
+    });
 
     return { success: true };
-  } catch (err) {
-    // Fail silently without crashing
+  } catch {
     return { success: false };
   }
 }

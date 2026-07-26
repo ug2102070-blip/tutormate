@@ -1,51 +1,126 @@
 "use server";
 
-import { adminDb, adminAuth } from "@/lib/firebase/admin";
+import { createAdminClient, getSupabaseServerClient } from "@/lib/supabase/server";
+import { verifyUserAuth } from "@/lib/authHelpers";
 import { batchSchema, type BatchFormValues } from "@/lib/validations/batch";
-import { FieldValue } from "firebase-admin/firestore";
+
+async function ensureTutorRecord(tutorId: string, email?: string) {
+  const adminSupabase = createAdminClient();
+
+  // 1. Ensure profile record exists (tutors.user_id references profiles.id)
+  const { data: existingProfile } = await adminSupabase
+    .from("profiles")
+    .select("id, display_name, phone_number")
+    .eq("id", tutorId)
+    .maybeSingle();
+
+  if (!existingProfile) {
+    let userEmail = email || "";
+    if (!userEmail) {
+      try {
+        const { data: userById } = await adminSupabase.auth.admin.getUserById(tutorId);
+        if (userById?.user?.email) {
+          userEmail = userById.user.email;
+        }
+      } catch {
+        // ignore
+      }
+    }
+
+    await adminSupabase.from("profiles").upsert({
+      id: tutorId,
+      email: userEmail,
+      display_name: userEmail ? userEmail.split("@")[0] : "Tutor",
+      role: "tutor",
+      tutor_id: tutorId,
+      updated_at: new Date().toISOString(),
+    });
+  }
+
+  // 2. Ensure tutor record exists (batches.tutor_id references tutors.id)
+  const { data: existingTutor } = await adminSupabase
+    .from("tutors")
+    .select("id")
+    .eq("id", tutorId)
+    .maybeSingle();
+
+  if (!existingTutor) {
+    const displayName = existingProfile?.display_name || email?.split("@")[0] || "Tutor";
+    const phone = existingProfile?.phone_number || "";
+
+    await adminSupabase.from("tutors").upsert({
+      id: tutorId,
+      user_id: tutorId,
+      full_name: displayName,
+      institution: "Independent",
+      contact_phone: phone,
+    });
+  }
+}
 
 /**
  * Creates a new batch under the authenticated tutor.
  */
 export async function createBatch(formData: BatchFormValues, idToken: string) {
-  // 1. Verify caller identity & role
-  const decodedToken = await adminAuth.verifyIdToken(idToken);
-  if (decodedToken.role !== "tutor") {
+  const authState = await verifyUserAuth(idToken);
+  if (authState.role !== "tutor") {
     throw new Error("Unauthorized: Only tutors can create batches.");
   }
-  const tutorId = decodedToken.uid;
-
-  // 2. Validate input
+  const tutorId = authState.tutorId || authState.uid;
   const validated = batchSchema.parse(formData);
 
-  // 3. Create batch doc in Firestore
-  const batchRef = adminDb.collection("batches").doc();
-  const batchData = {
-    id: batchRef.id,
-    tutorId,
-    name: validated.name,
-    subject: validated.subject,
-    gradeClass: validated.gradeClass,
-    monthlyFee: validated.monthlyFee,
-    schedule: validated.schedule,
-    studentCount: 0,
-    isArchived: false,
-    createdAt: new Date(),
-  };
+  // Guarantee tutor row exists in public.tutors to satisfy foreign key constraints
+  await ensureTutorRecord(tutorId, authState.email);
 
-  await batchRef.set(batchData);
+  const supabase = await getSupabaseServerClient();
 
-  // 4. Update tutor stats (activeBatches)
-  await adminDb.collection("tutors").doc(tutorId).set(
-    {
-      stats: {
-        activeBatches: FieldValue.increment(1),
-      },
-    },
-    { merge: true }
-  );
+  let { data: batch, error } = await supabase
+    .from("batches")
+    .insert({
+      tutor_id: tutorId,
+      name: validated.name,
+      subject: validated.subject,
+      grade_class: validated.gradeClass,
+      monthly_fee: validated.monthlyFee,
+      schedule: validated.schedule,
+      student_count: 0,
+      is_archived: false,
+    })
+    .select("id")
+    .single();
 
-  return { success: true, batchId: batchRef.id };
+  if (error) {
+    // Fallback to admin client if client insert had any permission or RLS issue
+    const adminSupabase = createAdminClient();
+    const adminRes = await adminSupabase
+      .from("batches")
+      .insert({
+        tutor_id: tutorId,
+        name: validated.name,
+        subject: validated.subject,
+        grade_class: validated.gradeClass,
+        monthly_fee: validated.monthlyFee,
+        schedule: validated.schedule,
+        student_count: 0,
+        is_archived: false,
+      })
+      .select("id")
+      .single();
+
+    batch = adminRes.data;
+    error = adminRes.error;
+  }
+
+  if (error || !batch) {
+    if (error?.message?.includes("permission denied")) {
+      throw new Error(
+        "Supabase RLS Permission Denied: Please run the SQL Editor script in Supabase (or set your real SUPABASE_SERVICE_ROLE_KEY in .env.local)."
+      );
+    }
+    throw new Error(`Failed to create batch: ${error?.message || "Unknown error"}`);
+  }
+
+  return { success: true, batchId: batch.id };
 }
 
 /**
@@ -56,28 +131,46 @@ export async function updateBatch(
   formData: BatchFormValues,
   idToken: string
 ) {
-  const decodedToken = await adminAuth.verifyIdToken(idToken);
-  if (decodedToken.role !== "tutor") {
+  const authState = await verifyUserAuth(idToken);
+  if (authState.role !== "tutor") {
     throw new Error("Unauthorized");
   }
-  const tutorId = decodedToken.uid;
-
-  // Check batch ownership
-  const batchDoc = await adminDb.collection("batches").doc(batchId).get();
-  if (!batchDoc.exists || batchDoc.data()?.tutorId !== tutorId) {
-    throw new Error("Batch not found or unauthorized");
-  }
-
+  const tutorId = authState.tutorId || authState.uid;
   const validated = batchSchema.parse(formData);
 
-  await batchDoc.ref.update({
-    name: validated.name,
-    subject: validated.subject,
-    gradeClass: validated.gradeClass,
-    monthlyFee: validated.monthlyFee,
-    schedule: validated.schedule,
-    updatedAt: new Date(),
-  });
+  const supabase = await getSupabaseServerClient();
+
+  let { error } = await supabase
+    .from("batches")
+    .update({
+      name: validated.name,
+      subject: validated.subject,
+      grade_class: validated.gradeClass,
+      monthly_fee: validated.monthlyFee,
+      schedule: validated.schedule,
+    })
+    .eq("id", batchId)
+    .eq("tutor_id", tutorId);
+
+  if (error && (error.code === "42501" || error.message.includes("permission denied"))) {
+    const adminSupabase = createAdminClient();
+    const adminRes = await adminSupabase
+      .from("batches")
+      .update({
+        name: validated.name,
+        subject: validated.subject,
+        grade_class: validated.gradeClass,
+        monthly_fee: validated.monthlyFee,
+        schedule: validated.schedule,
+      })
+      .eq("id", batchId)
+      .eq("tutor_id", tutorId);
+    error = adminRes.error;
+  }
+
+  if (error) {
+    throw new Error(`Failed to update batch: ${error.message}`);
+  }
 
   return { success: true };
 }
@@ -86,34 +179,57 @@ export async function updateBatch(
  * Toggles batch archive status.
  */
 export async function toggleArchiveBatch(batchId: string, idToken: string) {
-  const decodedToken = await adminAuth.verifyIdToken(idToken);
-  if (decodedToken.role !== "tutor") {
+  const authState = await verifyUserAuth(idToken);
+  if (authState.role !== "tutor") {
     throw new Error("Unauthorized");
   }
-  const tutorId = decodedToken.uid;
+  const tutorId = authState.tutorId || authState.uid;
 
-  const batchDoc = await adminDb.collection("batches").doc(batchId).get();
-  if (!batchDoc.exists || batchDoc.data()?.tutorId !== tutorId) {
+  const supabase = await getSupabaseServerClient();
+
+  let { data: batch, error: getErr } = await supabase
+    .from("batches")
+    .select("is_archived")
+    .eq("id", batchId)
+    .eq("tutor_id", tutorId)
+    .single();
+
+  if (getErr) {
+    const adminSupabase = createAdminClient();
+    const adminRes = await adminSupabase
+      .from("batches")
+      .select("is_archived")
+      .eq("id", batchId)
+      .eq("tutor_id", tutorId)
+      .single();
+    batch = adminRes.data;
+  }
+
+  if (!batch) {
     throw new Error("Batch not found or unauthorized");
   }
 
-  const currentArchived = batchDoc.data()?.isArchived || false;
-  const nextArchived = !currentArchived;
+  const nextArchived = !batch.is_archived;
 
-  await batchDoc.ref.update({
-    isArchived: nextArchived,
-    updatedAt: new Date(),
-  });
+  let { error } = await supabase
+    .from("batches")
+    .update({ is_archived: nextArchived })
+    .eq("id", batchId)
+    .eq("tutor_id", tutorId);
 
-  // Update stats increment
-  await adminDb.collection("tutors").doc(tutorId).set(
-    {
-      stats: {
-        activeBatches: FieldValue.increment(nextArchived ? -1 : 1),
-      },
-    },
-    { merge: true }
-  );
+  if (error) {
+    const adminSupabase = createAdminClient();
+    const adminRes = await adminSupabase
+      .from("batches")
+      .update({ is_archived: nextArchived })
+      .eq("id", batchId)
+      .eq("tutor_id", tutorId);
+    error = adminRes.error;
+  }
+
+  if (error) {
+    throw new Error(`Failed to update batch status: ${error.message}`);
+  }
 
   return { success: true, isArchived: nextArchived };
 }

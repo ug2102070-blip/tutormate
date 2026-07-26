@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { collection, query, where, onSnapshot } from "firebase/firestore";
-import { db } from "@/lib/firebase/config";
+import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { formatBDT } from "@/lib/utils";
 import type { BatchDoc } from "@/types";
@@ -11,10 +10,11 @@ import { Plus, Users, Calendar, Archive, CheckCircle } from "lucide-react";
 import { toggleArchiveBatch } from "@/actions/batchActions";
 
 export default function BatchesPage() {
-  const { user, claims } = useAuth();
+  const { user } = useAuth();
   const [batches, setBatches] = useState<BatchDoc[]>([]);
   const [tab, setTab] = useState<"active" | "archived">("active");
   const [loading, setLoading] = useState(true);
+  const supabase = createClient();
 
   useEffect(() => {
     if (!user) {
@@ -22,28 +22,31 @@ export default function BatchesPage() {
       return;
     }
 
-    const q = query(
-      collection(db, "batches"),
-      where("tutorId", "==", user.uid)
-    );
+    async function loadBatches() {
+      const { data } = await supabase
+        .from("batches")
+        .select("*");
 
-    const unsubscribe = onSnapshot(
-      q,
-      (snapshot) => {
-        const list: BatchDoc[] = [];
-        snapshot.forEach((doc) => {
-          list.push({ ...doc.data(), id: doc.id } as BatchDoc);
-        });
-        setBatches(list);
-        setLoading(false);
-      },
-      (error) => {
-        console.error("Error fetching batches:", error);
-        setLoading(false);
+      if (data) {
+        setBatches(
+          data.map((b) => ({
+            id: b.id,
+            tutorId: b.tutor_id,
+            name: b.name,
+            subject: b.subject,
+            gradeClass: b.grade_class,
+            monthlyFee: Number(b.monthly_fee),
+            schedule: b.schedule || [],
+            studentCount: b.student_count,
+            isArchived: b.is_archived,
+            createdAt: b.created_at,
+          }))
+        );
       }
-    );
+      setLoading(false);
+    }
 
-    return unsubscribe;
+    loadBatches();
   }, [user]);
 
   const filteredBatches = batches.filter((b) =>
@@ -52,8 +55,10 @@ export default function BatchesPage() {
 
   async function handleToggleArchive(batchId: string) {
     if (!user) return;
-    const token = await user.getIdToken();
-    await toggleArchiveBatch(batchId, token);
+    await toggleArchiveBatch(batchId, user.id);
+    setBatches((prev) =>
+      prev.map((b) => (b.id === batchId ? { ...b, isArchived: !b.isArchived } : b))
+    );
   }
 
   return (

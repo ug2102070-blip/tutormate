@@ -1,15 +1,14 @@
 "use client";
 
-import { useEffect, useState, useRef, use } from "react";
-import { collection, query, where, onSnapshot } from "firebase/firestore";
-import { ref, uploadBytes } from "firebase/storage";
-import { db, storage } from "@/lib/firebase/config";
+import { useEffect, useState, useRef, useCallback, use } from "react";
+import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { usePresence, useUserPresence } from "@/hooks/usePresence";
 import { postMessage, markDoubtAsRead, updateDoubtStatus } from "@/actions/doubtActions";
 import { getMediaSignedUrl } from "@/actions/mediaActions";
 import { AudioPlayer } from "@/components/chat/AudioPlayer";
 import { VoiceRecorder } from "@/components/chat/VoiceRecorder";
+import { ImageLightbox } from "@/components/chat/ImageLightbox";
 import type { DoubtDoc, MessageDoc, AttachmentType } from "@/types";
 import {
   Search,
@@ -24,7 +23,6 @@ import {
   HelpCircle,
   MessageSquare,
   ChevronLeft,
-  User,
 } from "lucide-react";
 
 export default function TutorDoubtsPage({
@@ -35,26 +33,27 @@ export default function TutorDoubtsPage({
   const unwrappedSearchParams = searchParams ? use(searchParams) : undefined;
   const initialSelectedId = unwrappedSearchParams?.id;
 
-  const { user } = useAuth();
-  usePresence(user?.uid);
+  const { user, claims } = useAuth();
+  usePresence(user?.id);
+  const supabase = createClient();
+
+  const tutorId = claims && claims.role === "tutor" ? claims.tutorId : null;
 
   const [doubts, setDoubts] = useState<DoubtDoc[]>([]);
   const [selectedDoubtId, setSelectedDoubtId] = useState<string | null>(initialSelectedId || null);
   const [messages, setMessages] = useState<MessageDoc[]>([]);
   const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
+  const [lightboxImage, setLightboxImage] = useState<string | null>(null);
 
-  // Active student presence
   const activeDoubt = doubts.find((d) => d.id === selectedDoubtId);
   const studentPresence = useUserPresence(activeDoubt?.studentAuthUid);
 
-  // UI state
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [showVoiceRecorder, setShowVoiceRecorder] = useState(false);
 
-  // Form & Attachment State
   const [newMessageText, setNewMessageText] = useState("");
   const [selectedAttachment, setSelectedAttachment] = useState<{
     file: File;
@@ -63,6 +62,42 @@ export default function TutorDoubtsPage({
   const [error, setError] = useState("");
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const activeChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const chatContainerRef = useRef<HTMLDivElement | null>(null);
+  const isAtBottomRef = useRef<boolean>(true);
+  const prevDoubtIdRef = useRef<string | null>(null);
+  const prevMessageCountRef = useRef<number>(0);
+
+  function handleScroll() {
+    const container = chatContainerRef.current;
+    if (!container) return;
+    const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
+    isAtBottomRef.current = distanceFromBottom <= 100;
+  }
+
+  const fetchMessagesForThread = useCallback(async (doubtId: string) => {
+    const { data } = await supabase
+      .from("doubt_messages")
+      .select("*")
+      .eq("doubt_id", doubtId)
+      .order("created_at", { ascending: true });
+
+    if (data) {
+      setMessages(
+        data.map((m) => ({
+          id: m.id,
+          senderUid: m.sender_uid,
+          senderRole: m.sender_role,
+          text: m.text,
+          attachmentPath: m.attachment_path,
+          attachmentType: m.attachment_type as AttachmentType,
+          attachmentName: m.attachment_name,
+          attachmentSize: m.attachment_size,
+          createdAt: m.created_at,
+        }))
+      );
+    }
+  }, []);
 
   // Load Tutor Doubts
   useEffect(() => {
@@ -71,32 +106,63 @@ export default function TutorDoubtsPage({
       return;
     }
 
-    const q = query(
-      collection(db, "doubts"),
-      where("tutorId", "==", user.uid)
-    );
+    async function fetchDoubts() {
+      let query = supabase.from("doubts").select("*");
+      if (tutorId) {
+        query = query.eq("tutor_id", tutorId);
+      }
+      const { data } = await query.order("last_message_at", { ascending: false });
 
-    const unsubscribe = onSnapshot(
-      q,
-      (snapshot) => {
-        const list: DoubtDoc[] = [];
-        snapshot.forEach((d) => list.push({ id: d.id, ...d.data() } as DoubtDoc));
-        list.sort((a, b) => (b.lastMessageAt?.toMillis() || 0) - (a.lastMessageAt?.toMillis() || 0));
+      if (data) {
+        const list: DoubtDoc[] = data.map((d) => ({
+          id: d.id,
+          tutorId: d.tutor_id,
+          studentDocId: d.student_doc_id,
+          studentAuthUid: d.student_auth_uid,
+          studentName: d.student_name,
+          batchId: d.batch_id,
+          title: d.title,
+          initialQuestion: d.initial_question,
+          attachmentPath: d.attachment_path,
+          attachmentType: d.attachment_type as AttachmentType,
+          attachmentName: d.attachment_name,
+          attachmentSize: d.attachment_size,
+          status: d.status,
+          lastMessageAt: d.last_message_at,
+          unreadByTutor: d.unread_by_tutor,
+          unreadByStudent: d.unread_by_student,
+          createdAt: d.created_at,
+        }));
         setDoubts(list);
-        setLoading(false);
-
         if (!selectedDoubtId && list.length > 0) {
           setSelectedDoubtId(list[0].id);
         }
-      },
-      (err) => {
-        console.error("Tutor doubts snapshot error:", err);
-        setLoading(false);
       }
-    );
+      setLoading(false);
+    }
 
-    return unsubscribe;
-  }, [user, selectedDoubtId]);
+    fetchDoubts();
+
+    const channel = supabase
+      .channel(`doubts_tutor_${tutorId || user.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "doubts",
+          ...(tutorId ? { filter: `tutor_id=eq.${tutorId}` } : {}),
+        },
+        () => {
+          fetchDoubts();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, claims, tutorId, selectedDoubtId]);
 
   // Active doubt thread listener
   useEffect(() => {
@@ -105,25 +171,62 @@ export default function TutorDoubtsPage({
       return;
     }
 
-    // Mark as read by tutor
-    user.getIdToken().then((token) => markDoubtAsRead(selectedDoubtId, token));
-
-    const unsubMessages = onSnapshot(
-      collection(db, "doubts", selectedDoubtId, "messages"),
-      (snap) => {
-        const list: MessageDoc[] = [];
-        snap.forEach((d) => list.push({ id: d.id, ...d.data() } as MessageDoc));
-        list.sort((a, b) => (a.createdAt?.toMillis() || 0) - (b.createdAt?.toMillis() || 0));
-        setMessages(list);
-      }
+    // Optimistically clear unread badge for tutor
+    setDoubts((prev) =>
+      prev.map((d) => (d.id === selectedDoubtId ? { ...d, unreadByTutor: false } : d))
     );
 
-    return unsubMessages;
-  }, [user, selectedDoubtId]);
+    markDoubtAsRead(selectedDoubtId, user.id);
 
-  // Auto scroll to latest message
+    fetchMessagesForThread(selectedDoubtId);
+
+    const channel = supabase
+      .channel(`doubt_chat_${selectedDoubtId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "doubt_messages",
+          filter: `doubt_id=eq.${selectedDoubtId}`,
+        },
+        () => {
+          fetchMessagesForThread(selectedDoubtId);
+        }
+      )
+      .on(
+        "broadcast",
+        { event: "new_message" },
+        () => {
+          fetchMessagesForThread(selectedDoubtId);
+        }
+      )
+      .subscribe();
+
+    activeChannelRef.current = channel;
+
+    // 4s polling fallback to guarantee real-time updates even on network/subscription hiccups
+    const pollInterval = setInterval(() => {
+      fetchMessagesForThread(selectedDoubtId);
+    }, 4000);
+
+    return () => {
+      clearInterval(pollInterval);
+      supabase.removeChannel(channel);
+      activeChannelRef.current = null;
+    };
+  }, [user, selectedDoubtId, fetchMessagesForThread]);
+
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    const isThreadChanged = prevDoubtIdRef.current !== selectedDoubtId;
+    const hasNewMessages = messages.length > prevMessageCountRef.current;
+
+    prevDoubtIdRef.current = selectedDoubtId;
+    prevMessageCountRef.current = messages.length;
+
+    if (isThreadChanged || (hasNewMessages && isAtBottomRef.current)) {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
   }, [messages, selectedDoubtId]);
 
   // Signed URLs fetcher
@@ -131,7 +234,6 @@ export default function TutorDoubtsPage({
     if (!user || (!activeDoubt && messages.length === 0)) return;
 
     async function fetchSignedUrls() {
-      const token = await user!.getIdToken();
       const pathsToFetch: string[] = [];
 
       if (activeDoubt?.attachmentPath) pathsToFetch.push(activeDoubt.attachmentPath);
@@ -143,7 +245,7 @@ export default function TutorDoubtsPage({
       for (const path of pathsToFetch) {
         if (!signedUrls[path]) {
           try {
-            const url = await getMediaSignedUrl(path, token);
+            const url = await getMediaSignedUrl(path, user!.id);
             if (url) newUrls[path] = url;
           } catch (err) {
             console.error("Signed URL fetch error:", err);
@@ -178,16 +280,18 @@ export default function TutorDoubtsPage({
         const file = selectedAttachment.file;
         const tempId = `m_${Date.now()}`;
         const cleanName = file.name.replace(/[^a-zA-Z0-9._-]/g, "");
-        attachmentPath = `doubts/${user.uid}/${activeDoubt?.studentAuthUid}/${selectedDoubtId}/${tempId}_${cleanName}`;
+        attachmentPath = `${user.id}/${activeDoubt?.studentAuthUid}/${selectedDoubtId}/${tempId}_${cleanName}`;
         attachmentType = selectedAttachment.type;
         attachmentName = file.name;
         attachmentSize = file.size;
 
-        const storageRef = ref(storage, attachmentPath);
-        await uploadBytes(storageRef, file);
+        const { error: uploadErr } = await supabase.storage
+          .from("attachments")
+          .upload(attachmentPath, file);
+
+        if (uploadErr) throw uploadErr;
       }
 
-      const token = await user.getIdToken();
       await postMessage(
         selectedDoubtId,
         {
@@ -197,11 +301,23 @@ export default function TutorDoubtsPage({
           attachmentName,
           attachmentSize,
         },
-        token
+        user.id
       );
 
       setNewMessageText("");
       setSelectedAttachment(null);
+
+      // Instant local refetch so sender sees message immediately
+      await fetchMessagesForThread(selectedDoubtId);
+
+      // Broadcast to student over WebSockets
+      if (activeChannelRef.current) {
+        activeChannelRef.current.send({
+          type: "broadcast",
+          event: "new_message",
+          payload: { doubtId: selectedDoubtId },
+        });
+      }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to send message.";
       setError(msg);
@@ -218,11 +334,17 @@ export default function TutorDoubtsPage({
 
     try {
       const fileName = `voice_${Date.now()}.webm`;
-      const attachmentPath = `doubts/${user.uid}/${activeDoubt?.studentAuthUid}/${selectedDoubtId}/${fileName}`;
-      const storageRef = ref(storage, attachmentPath);
-      await uploadBytes(storageRef, audioBlob);
+      const attachmentPath = `${user.id}/${activeDoubt?.studentAuthUid}/${selectedDoubtId}/${fileName}`;
 
-      const token = await user.getIdToken();
+      const { error: uploadErr } = await supabase.storage
+        .from("attachments")
+        .upload(attachmentPath, audioBlob, {
+          contentType: audioBlob.type || "audio/webm",
+          upsert: true,
+        });
+
+      if (uploadErr) throw uploadErr;
+
       await postMessage(
         selectedDoubtId,
         {
@@ -232,10 +354,22 @@ export default function TutorDoubtsPage({
           attachmentName: fileName,
           attachmentSize: audioBlob.size,
         },
-        token
+        user.id
       );
 
       setShowVoiceRecorder(false);
+
+      // Instant local refetch so sender sees voice note immediately
+      await fetchMessagesForThread(selectedDoubtId);
+
+      // Broadcast to student over WebSockets
+      if (activeChannelRef.current) {
+        activeChannelRef.current.send({
+          type: "broadcast",
+          event: "new_message",
+          payload: { doubtId: selectedDoubtId },
+        });
+      }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to send voice note.";
       setError(msg);
@@ -247,8 +381,7 @@ export default function TutorDoubtsPage({
   async function handleMarkResolved() {
     if (!user || !selectedDoubtId) return;
     try {
-      const token = await user.getIdToken();
-      await updateDoubtStatus(selectedDoubtId, "resolved", token);
+      await updateDoubtStatus(selectedDoubtId, "resolved", user.id);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to resolve doubt.";
       setError(msg);
@@ -368,7 +501,7 @@ export default function TutorDoubtsPage({
                         </h4>
                         <span className="text-[10px] text-slate-400 shrink-0">
                           {d.lastMessageAt
-                            ? new Date(d.lastMessageAt.toMillis()).toLocaleTimeString([], {
+                            ? new Date(d.lastMessageAt).toLocaleTimeString([], {
                                 hour: "2-digit",
                                 minute: "2-digit",
                               })
@@ -413,7 +546,7 @@ export default function TutorDoubtsPage({
 
         {/* RIGHT PANEL: Active Messenger Chat Area */}
         <div
-          className={`md:col-span-8 flex flex-col h-full bg-white ${
+          className={`md:col-span-8 flex flex-col h-full min-h-0 bg-white ${
             selectedDoubtId ? "flex" : "hidden md:flex"
           }`}
         >
@@ -475,7 +608,11 @@ export default function TutorDoubtsPage({
               </div>
 
               {/* Chat Messages Stream */}
-              <div className="flex-1 p-4 overflow-y-auto space-y-4 bg-slate-50/40">
+              <div
+                ref={chatContainerRef}
+                onScroll={handleScroll}
+                className="flex-1 p-4 overflow-y-auto min-h-0 space-y-4 bg-slate-50/40"
+              >
                 {/* Initial Question Overview */}
                 <div className="max-w-xl mx-auto p-4 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-2">
                   <div className="text-[10px] font-extrabold uppercase tracking-wider text-indigo-600 flex items-center justify-between">
@@ -494,7 +631,8 @@ export default function TutorDoubtsPage({
                         <img
                           src={signedUrls[activeDoubt.attachmentPath]}
                           alt="Student photo attachment"
-                          className="max-h-64 rounded-xl border border-slate-200 object-contain bg-black/5"
+                          onClick={() => setLightboxImage(signedUrls[activeDoubt.attachmentPath!])}
+                          className="max-h-64 rounded-xl border border-slate-200 object-contain bg-black/5 cursor-zoom-in hover:opacity-90 transition-opacity"
                         />
                       ) : (
                         <a
@@ -517,7 +655,7 @@ export default function TutorDoubtsPage({
                 </div>
 
                 {messages.map((msg) => {
-                  const isMe = msg.senderUid === user?.uid;
+                  const isMe = msg.senderUid === user?.id;
                   const attachmentUrl = msg.attachmentPath ? signedUrls[msg.attachmentPath] : null;
 
                   return (
@@ -540,7 +678,7 @@ export default function TutorDoubtsPage({
                           <span>{isMe ? "You (Tutor)" : activeDoubt.studentName}</span>
                           <span>
                             {msg.createdAt
-                              ? new Date(msg.createdAt.toMillis()).toLocaleTimeString([], {
+                              ? new Date(msg.createdAt).toLocaleTimeString([], {
                                   hour: "2-digit",
                                   minute: "2-digit",
                                 })
@@ -564,7 +702,8 @@ export default function TutorDoubtsPage({
                               <img
                                 src={attachmentUrl}
                                 alt="Image Attachment"
-                                className="max-h-60 rounded-xl border border-black/10 object-contain bg-black/5"
+                                onClick={() => setLightboxImage(attachmentUrl)}
+                                className="max-h-60 rounded-xl border border-black/10 object-contain bg-black/5 cursor-zoom-in hover:opacity-90 transition-opacity"
                               />
                             ) : (
                               <a
@@ -712,6 +851,10 @@ export default function TutorDoubtsPage({
           )}
         </div>
       </div>
+
+      {lightboxImage && (
+        <ImageLightbox src={lightboxImage} onClose={() => setLightboxImage(null)} />
+      )}
     </div>
   );
 }

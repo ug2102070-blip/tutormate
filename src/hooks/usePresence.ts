@@ -1,28 +1,22 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { doc, onSnapshot, Timestamp } from "firebase/firestore";
-import { auth, db } from "@/lib/firebase/config";
+import { createClient } from "@/lib/supabase/client";
 import { updateUserPresence } from "@/actions/presenceActions";
 
 /**
- * Updates current user's presence heartbeat via Server Action (Admin SDK).
- * Guarantees zero permission errors regardless of client Firestore security rules status.
+ * Updates current user's presence heartbeat via Server Action.
  */
 export function usePresence(uid: string | null | undefined) {
   useEffect(() => {
     if (!uid) return;
 
+    const currentUid = uid;
     async function sendPresence(isOnline: boolean) {
       try {
-        const currentUser = auth.currentUser;
-        if (!currentUser) return;
-        const token = await currentUser.getIdToken();
-        if (token) {
-          await updateUserPresence(token, isOnline);
-        }
+        await updateUserPresence(currentUid, isOnline);
       } catch {
-        // Silently swallow any transient network or auth errors
+        // Silently swallow transient network errors
       }
     }
 
@@ -34,13 +28,10 @@ export function usePresence(uid: string | null | undefined) {
       sendPresence(false);
     }
 
-    // Set online immediately
     updateOnline();
 
-    // Heartbeat every 35 seconds
     const interval = setInterval(updateOnline, 35000);
 
-    // Handle visibility changes
     const handleVisibilityChange = () => {
       if (document.visibilityState === "visible") {
         updateOnline();
@@ -68,7 +59,7 @@ export interface PresenceState {
 }
 
 /**
- * Listens to real-time presence of a target user (e.g., teacher or student).
+ * Listens to real-time presence of a target user via Supabase Realtime channel or database query.
  */
 export function useUserPresence(targetUid: string | null | undefined): PresenceState {
   const [state, setState] = useState<PresenceState>({
@@ -83,56 +74,65 @@ export function useUserPresence(targetUid: string | null | undefined): PresenceS
       return;
     }
 
-    const presenceRef = doc(db, "presence", targetUid);
+    const supabase = createClient();
 
-    const unsubscribe = onSnapshot(
-      presenceRef,
-      (snap) => {
-        if (!snap.exists()) {
-          setState({ isOnline: false, lastSeenText: "Offline", loading: false });
-          return;
-        }
+    async function fetchPresence() {
+      const { data } = await supabase
+        .from("user_presence")
+        .select("is_online, last_seen")
+        .eq("uid", targetUid)
+        .maybeSingle();
 
-        const data = snap.data();
-        const rawIsOnline = Boolean(data.isOnline);
-        const lastSeenTs = data.lastSeen as Timestamp | undefined;
-
-        if (!lastSeenTs) {
-          setState({ isOnline: false, lastSeenText: "Offline", loading: false });
-          return;
-        }
-
-        const lastSeenDate = lastSeenTs.toDate();
-        const now = new Date();
-        const diffSeconds = Math.floor((now.getTime() - lastSeenDate.getTime()) / 1000);
-
-        // Active if updated in the last 70 seconds
-        const isOnline = rawIsOnline && diffSeconds < 70;
-
-        let lastSeenText = "Offline";
-        if (isOnline) {
-          lastSeenText = "Active now";
-        } else if (diffSeconds < 60) {
-          lastSeenText = "Active a moment ago";
-        } else if (diffSeconds < 3600) {
-          const mins = Math.floor(diffSeconds / 60);
-          lastSeenText = `Active ${mins}m ago`;
-        } else if (diffSeconds < 86400) {
-          const hours = Math.floor(diffSeconds / 3600);
-          lastSeenText = `Active ${hours}h ago`;
-        } else {
-          lastSeenText = `Last seen ${lastSeenDate.toLocaleDateString()}`;
-        }
-
-        setState({ isOnline, lastSeenText, loading: false });
-      },
-      () => {
-        // Handle fallback silently if read fails
+      if (!data || !data.last_seen) {
         setState({ isOnline: false, lastSeenText: "Offline", loading: false });
+        return;
       }
-    );
 
-    return unsubscribe;
+      const lastSeenDate = new Date(data.last_seen);
+      const now = new Date();
+      const diffSeconds = Math.floor((now.getTime() - lastSeenDate.getTime()) / 1000);
+
+      const isOnline = Boolean(data.is_online) && diffSeconds < 70;
+
+      let lastSeenText = "Offline";
+      if (isOnline) {
+        lastSeenText = "Active now";
+      } else if (diffSeconds < 60) {
+        lastSeenText = "Active a moment ago";
+      } else if (diffSeconds < 3600) {
+        const mins = Math.floor(diffSeconds / 60);
+        lastSeenText = `Active ${mins}m ago`;
+      } else if (diffSeconds < 86400) {
+        const hours = Math.floor(diffSeconds / 3600);
+        lastSeenText = `Active ${hours}h ago`;
+      } else {
+        lastSeenText = `Last seen ${lastSeenDate.toLocaleDateString()}`;
+      }
+
+      setState({ isOnline, lastSeenText, loading: false });
+    }
+
+    fetchPresence();
+
+    const channel = supabase
+      .channel(`presence_${targetUid}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "user_presence",
+          filter: `uid=eq.${targetUid}`,
+        },
+        () => {
+          fetchPresence();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [targetUid]);
 
   return state;

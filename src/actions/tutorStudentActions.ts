@@ -1,64 +1,50 @@
 "use server";
 
-import { adminDb, adminAuth } from "@/lib/firebase/admin";
+import { createAdminClient } from "@/lib/supabase/server";
+import { verifyUserAuth } from "@/lib/authHelpers";
 import { studentSchema, type StudentFormValues } from "@/lib/validations/student";
 import { generateInviteCode } from "@/lib/utils";
-import { FieldValue } from "firebase-admin/firestore";
 
 /**
- * Creates a student record under the authenticated tutor and generates a unique invite code.
+ * Creates a student record under the authenticated tutor and generates a unique invite code in Supabase.
  */
 export async function createStudent(formData: StudentFormValues, idToken: string) {
-  // 1. Verify caller identity & role
-  const decodedToken = await adminAuth.verifyIdToken(idToken);
-  if (decodedToken.role !== "tutor") {
+  const authState = await verifyUserAuth(idToken);
+  if (authState.role !== "tutor") {
     throw new Error("Unauthorized: Only tutors can add students.");
   }
-  const tutorId = decodedToken.uid;
-
-  // 2. Validate input
+  const tutorId = authState.tutorId || authState.uid;
   const validated = studentSchema.parse(formData);
-
-  // 3. Generate unique invite code
   const inviteCode = generateInviteCode(8);
 
-  // 4. Create student doc in Firestore
-  const studentRef = adminDb.collection("students").doc();
-  const studentData = {
-    id: studentRef.id,
-    tutorId,
-    authUid: null, // Unlinked until student registers with invite code
-    inviteCode,
-    fullName: validated.fullName,
-    phone: validated.phone,
-    guardianPhone: validated.guardianPhone || null,
-    institution: validated.institution || null,
-    enrolledBatchIds: validated.enrolledBatchIds,
-    status: "active",
-    createdAt: new Date(),
-  };
+  const supabase = createAdminClient();
 
-  await studentRef.set(studentData);
+  const { data: student, error } = await supabase
+    .from("students")
+    .insert({
+      tutor_id: tutorId,
+      auth_uid: null,
+      invite_code: inviteCode,
+      full_name: validated.fullName,
+      phone: validated.phone,
+      guardian_phone: validated.guardianPhone || null,
+      institution: validated.institution || null,
+      enrolled_batch_ids: validated.enrolledBatchIds,
+      status: "active",
+    })
+    .select("id")
+    .single();
 
-  // 5. Update studentCount for enrolled batches
-  for (const batchId of validated.enrolledBatchIds) {
-    await adminDb.collection("batches").doc(batchId).set(
-      {
-        studentCount: FieldValue.increment(1),
-      },
-      { merge: true }
-    );
+  if (error || !student) {
+    throw new Error(`Failed to create student: ${error?.message || "Unknown error"}`);
   }
 
-  // 6. Update tutor stats (totalStudents)
-  await adminDb.collection("tutors").doc(tutorId).set(
-    {
-      stats: {
-        totalStudents: FieldValue.increment(1),
-      },
-    },
-    { merge: true }
-  );
+  // Update student_count for enrolled batches
+  for (const batchId of validated.enrolledBatchIds) {
+    const { data: b } = await supabase.from("batches").select("student_count").eq("id", batchId).single();
+    const currentCount = b?.student_count || 0;
+    await supabase.from("batches").update({ student_count: currentCount + 1 }).eq("id", batchId);
+  }
 
-  return { success: true, studentId: studentRef.id, inviteCode };
+  return { success: true, studentId: student.id, inviteCode };
 }

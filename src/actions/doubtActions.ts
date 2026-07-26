@@ -1,87 +1,84 @@
 "use server";
 
-import { adminDb, adminAuth } from "@/lib/firebase/admin";
+import { createAdminClient } from "@/lib/supabase/server";
+import { verifyUserAuth } from "@/lib/authHelpers";
 import { doubtSchema, messageSchema, type DoubtFormValues, type MessageFormValues } from "@/lib/validations/doubt";
-import { FieldValue } from "firebase-admin/firestore";
 
 /**
- * Creates a new doubt conversation under `/doubts/{doubtId}`.
- * Verifies that caller is a student and that studentDocId / tutorId match their JWT custom claims.
+ * Creates a new doubt conversation in Supabase `doubts` table.
  */
 export async function createDoubt(formData: DoubtFormValues, studentName: string, idToken: string) {
-  const decodedToken = await adminAuth.verifyIdToken(idToken);
-  if (decodedToken.role !== "student") {
+  const authState = await verifyUserAuth(idToken);
+  if (authState.role !== "student") {
     throw new Error("Unauthorized: Only students can ask doubts.");
   }
 
-  const studentAuthUid = decodedToken.uid;
-  const tutorId = (decodedToken.tutorId as string) || "";
-  const studentDocId = (decodedToken.studentDocId as string) || "";
+  const studentAuthUid = authState.uid;
+  const tutorId = authState.tutorId || "";
+  const studentDocId = authState.studentDocId || "";
 
   if (!tutorId || !studentDocId) {
     throw new Error("Invalid student claims: missing tutorId or studentDocId");
   }
 
   const validated = doubtSchema.parse(formData);
+  const supabase = createAdminClient();
 
-  const doubtRef = adminDb.collection("doubts").doc();
-  const doubtData = {
-    id: doubtRef.id,
-    tutorId,
-    studentDocId,
-    studentAuthUid,
-    studentName,
-    batchId: validated.batchId,
-    title: validated.title,
-    initialQuestion: validated.initialQuestion,
-    attachmentPath: validated.attachmentPath || null,
-    attachmentType: validated.attachmentType || (validated.attachmentPath ? "image" : null),
-    attachmentName: validated.attachmentName || null,
-    attachmentSize: validated.attachmentSize || null,
-    status: "pending",
-    lastMessageAt: new Date(),
-    unreadByTutor: true,
-    unreadByStudent: false,
-    createdAt: new Date(),
-  };
+  const { data: doubt, error } = await supabase
+    .from("doubts")
+    .insert({
+      tutor_id: tutorId,
+      student_doc_id: studentDocId,
+      student_auth_uid: studentAuthUid,
+      student_name: studentName,
+      batch_id: validated.batchId,
+      title: validated.title,
+      initial_question: validated.initialQuestion,
+      attachment_path: validated.attachmentPath || null,
+      attachment_type: validated.attachmentType || (validated.attachmentPath ? "image" : null),
+      attachment_name: validated.attachmentName || null,
+      attachment_size: validated.attachmentSize || null,
+      status: "pending",
+      unread_by_tutor: true,
+      unread_by_student: false,
+    })
+    .select("id")
+    .single();
 
-  await doubtRef.set(doubtData);
+  if (error || !doubt) {
+    throw new Error(`Failed to create doubt: ${error?.message || "Unknown error"}`);
+  }
 
-  // Increment tutor pendingDoubtsCount stats
-  await adminDb.collection("tutors").doc(tutorId).set(
-    {
-      stats: {
-        pendingDoubtsCount: FieldValue.increment(1),
-      },
-    },
-    { merge: true }
-  );
-
-  return { success: true, doubtId: doubtRef.id };
+  return { success: true, doubtId: doubt.id };
 }
 
 /**
- * Posts a message reply into `/doubts/{doubtId}/messages/{messageId}`.
+ * Posts a message reply into `doubt_messages` table.
  */
 export async function postMessage(
   doubtId: string,
   formData: MessageFormValues,
   idToken: string
 ) {
-  const decodedToken = await adminAuth.verifyIdToken(idToken);
-  const callerUid = decodedToken.uid;
-  const callerRole = (decodedToken.role as string) || "";
-  const callerTutorId = (decodedToken.tutorId as string) || "";
+  const authState = await verifyUserAuth(idToken);
+  const callerUid = authState.uid;
+  const callerRole = authState.role || "";
+  const callerTutorId = authState.tutorId || "";
 
-  const doubtRef = adminDb.collection("doubts").doc(doubtId);
-  const doubtSnap = await doubtRef.get();
-  if (!doubtSnap.exists) {
+  const supabase = createAdminClient();
+
+  const { data: doubt } = await supabase
+    .from("doubts")
+    .select("*")
+    .eq("id", doubtId)
+    .single();
+
+  if (!doubt) {
     throw new Error("Doubt thread not found");
   }
 
-  const doubtData = doubtSnap.data()!;
-  const isTutor = callerRole === "tutor" && callerTutorId === doubtData.tutorId;
-  const isStudent = callerRole === "student" && callerUid === doubtData.studentAuthUid;
+  const isTutor = callerRole === "tutor" && callerTutorId === doubt.tutor_id;
+  const isStudent = callerRole === "student" && callerUid === doubt.student_auth_uid;
 
   if (!isTutor && !isStudent) {
     throw new Error("Unauthorized to access this doubt thread");
@@ -89,71 +86,71 @@ export async function postMessage(
 
   const validated = messageSchema.parse(formData);
 
-  const messageRef = doubtRef.collection("messages").doc();
-  await messageRef.set({
-    id: messageRef.id,
-    senderUid: callerUid,
-    senderRole: isTutor ? "tutor" : "student",
-    text: validated.text,
-    attachmentPath: validated.attachmentPath || null,
-    attachmentType: validated.attachmentType || (validated.attachmentPath ? "image" : null),
-    attachmentName: validated.attachmentName || null,
-    attachmentSize: validated.attachmentSize || null,
-    createdAt: new Date(),
-  });
+  const { data: message, error } = await supabase
+    .from("doubt_messages")
+    .insert({
+      doubt_id: doubtId,
+      sender_uid: callerUid,
+      sender_role: isTutor ? "tutor" : "student",
+      text: validated.text,
+      attachment_path: validated.attachmentPath || null,
+      attachment_type: validated.attachmentType || (validated.attachmentPath ? "image" : null),
+      attachment_name: validated.attachmentName || null,
+      attachment_size: validated.attachmentSize || null,
+    })
+    .select("id")
+    .single();
 
-  // Update parent doubt metadata
+  if (error || !message) {
+    throw new Error(`Failed to post message: ${error?.message || "Unknown error"}`);
+  }
+
   const updates: Record<string, unknown> = {
-    lastMessageAt: new Date(),
+    last_message_at: new Date().toISOString(),
   };
 
   if (isTutor) {
-    updates.unreadByStudent = true;
-    updates.unreadByTutor = false;
-    // Auto-update status to answered if currently pending
-    if (doubtData.status === "pending") {
+    updates.unread_by_student = true;
+    updates.unread_by_tutor = false;
+    if (doubt.status === "pending") {
       updates.status = "answered";
-      // Decrement tutor pending count
-      await adminDb.collection("tutors").doc(doubtData.tutorId).set(
-        {
-          stats: {
-            pendingDoubtsCount: FieldValue.increment(-1),
-          },
-        },
-        { merge: true }
-      );
     }
   } else {
-    updates.unreadByTutor = true;
-    updates.unreadByStudent = false;
+    updates.unread_by_tutor = true;
+    updates.unread_by_student = false;
   }
 
-  await doubtRef.update(updates);
+  await supabase.from("doubts").update(updates).eq("id", doubtId);
 
-  return { success: true, messageId: messageRef.id };
+  return { success: true, messageId: message.id };
 }
 
 /**
  * Marks unread flags as read when opening a thread.
  */
 export async function markDoubtAsRead(doubtId: string, idToken: string) {
-  const decodedToken = await adminAuth.verifyIdToken(idToken);
-  const callerUid = decodedToken.uid;
-  const callerRole = (decodedToken.role as string) || "";
-  const callerTutorId = (decodedToken.tutorId as string) || "";
+  const authState = await verifyUserAuth(idToken);
+  const callerUid = authState.uid;
+  const callerRole = authState.role || "";
+  const callerTutorId = authState.tutorId || "";
 
-  const doubtRef = adminDb.collection("doubts").doc(doubtId);
-  const doubtSnap = await doubtRef.get();
-  if (!doubtSnap.exists) return;
+  const supabase = createAdminClient();
 
-  const doubtData = doubtSnap.data()!;
-  const isTutor = callerRole === "tutor" && callerTutorId === doubtData.tutorId;
-  const isStudent = callerRole === "student" && callerUid === doubtData.studentAuthUid;
+  const { data: doubt } = await supabase
+    .from("doubts")
+    .select("*")
+    .eq("id", doubtId)
+    .single();
 
-  if (isTutor && doubtData.unreadByTutor) {
-    await doubtRef.update({ unreadByTutor: false });
-  } else if (isStudent && doubtData.unreadByStudent) {
-    await doubtRef.update({ unreadByStudent: false });
+  if (!doubt) return;
+
+  const isTutor = callerRole === "tutor" && callerTutorId === doubt.tutor_id;
+  const isStudent = callerRole === "student" && callerUid === doubt.student_auth_uid;
+
+  if (isTutor && doubt.unread_by_tutor) {
+    await supabase.from("doubts").update({ unread_by_tutor: false }).eq("id", doubtId);
+  } else if (isStudent && doubt.unread_by_student) {
+    await supabase.from("doubts").update({ unread_by_student: false }).eq("id", doubtId);
   }
 
   return { success: true };
@@ -161,32 +158,34 @@ export async function markDoubtAsRead(doubtId: string, idToken: string) {
 
 /**
  * Updates status of a doubt (e.g. mark resolved).
- * Student status transition guard: student can ONLY transition from 'answered' -> 'resolved'.
  */
 export async function updateDoubtStatus(
   doubtId: string,
   newStatus: "pending" | "answered" | "resolved",
   idToken: string
 ) {
-  const decodedToken = await adminAuth.verifyIdToken(idToken);
-  const callerUid = decodedToken.uid;
-  const callerRole = (decodedToken.role as string) || "";
-  const callerTutorId = (decodedToken.tutorId as string) || "";
+  const authState = await verifyUserAuth(idToken);
+  const callerUid = authState.uid;
+  const callerRole = authState.role || "";
+  const callerTutorId = authState.tutorId || "";
 
-  const doubtRef = adminDb.collection("doubts").doc(doubtId);
-  const doubtSnap = await doubtRef.get();
-  if (!doubtSnap.exists) {
+  const supabase = createAdminClient();
+
+  const { data: doubt } = await supabase
+    .from("doubts")
+    .select("*")
+    .eq("id", doubtId)
+    .single();
+
+  if (!doubt) {
     throw new Error("Doubt not found");
   }
 
-  const doubtData = doubtSnap.data()!;
-  const currentStatus = doubtData.status;
-
-  const isTutor = callerRole === "tutor" && callerTutorId === doubtData.tutorId;
-  const isStudent = callerRole === "student" && callerUid === doubtData.studentAuthUid;
+  const currentStatus = doubt.status;
+  const isTutor = callerRole === "tutor" && callerTutorId === doubt.tutor_id;
+  const isStudent = callerRole === "student" && callerUid === doubt.student_auth_uid;
 
   if (isStudent) {
-    // ENUM STATUS TRANSITION GUARD FOR STUDENT
     if (currentStatus !== "answered" || newStatus !== "resolved") {
       throw new Error("Students can only mark answered doubts as resolved.");
     }
@@ -194,10 +193,7 @@ export async function updateDoubtStatus(
     throw new Error("Unauthorized");
   }
 
-  await doubtRef.update({
-    status: newStatus,
-    updatedAt: new Date(),
-  });
+  await supabase.from("doubts").update({ status: newStatus }).eq("id", doubtId);
 
   return { success: true };
 }

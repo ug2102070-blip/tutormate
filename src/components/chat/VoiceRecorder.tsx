@@ -36,7 +36,21 @@ export function VoiceRecorder({ onSendAudio, onCancel }: VoiceRecorderProps) {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
 
-      const mediaRecorder = new MediaRecorder(stream);
+      const mimeTypes = [
+        "audio/webm;codecs=opus",
+        "audio/webm",
+        "audio/mp4",
+        "audio/aac",
+        "audio/ogg",
+      ];
+      const supportedType = mimeTypes.find((type) =>
+        typeof MediaRecorder !== "undefined" && MediaRecorder.isTypeSupported
+          ? MediaRecorder.isTypeSupported(type)
+          : false
+      );
+
+      const options = supportedType ? { mimeType: supportedType } : undefined;
+      const mediaRecorder = new MediaRecorder(stream, options);
       mediaRecorderRef.current = mediaRecorder;
       chunksRef.current = [];
 

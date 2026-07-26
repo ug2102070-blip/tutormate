@@ -8,6 +8,7 @@ import {
   CalendarCheck,
   CreditCard,
   HelpCircle,
+  BookOpen,
 } from "lucide-react";
 
 interface MobileNavProps {
@@ -22,6 +23,7 @@ export function MobileNav({ role }: MobileNavProps) {
     { href: "/tutor/batches", label: "Batches", icon: Users },
     { href: "/tutor/attendance", label: "Attendance", icon: CalendarCheck },
     { href: "/tutor/fees", label: "Fees", icon: CreditCard },
+    { href: "/tutor/materials", label: "Materials", icon: BookOpen },
     { href: "/tutor/doubts", label: "Doubts", icon: HelpCircle },
   ];
 
@@ -29,6 +31,7 @@ export function MobileNav({ role }: MobileNavProps) {
     { href: "/student/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { href: "/student/attendance", label: "Attendance", icon: CalendarCheck },
     { href: "/student/fees", label: "Fees", icon: CreditCard },
+    { href: "/student/materials", label: "Materials", icon: BookOpen },
     { href: "/student/doubts", label: "Doubts", icon: HelpCircle },
   ];
 

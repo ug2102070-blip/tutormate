@@ -10,6 +10,7 @@ import {
   CreditCard,
   HelpCircle,
   Settings,
+  BookOpen,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -26,6 +27,7 @@ export function Sidebar({ role }: SidebarProps) {
     { href: "/tutor/attendance", label: "Attendance", icon: CalendarCheck },
     { href: "/tutor/fees", label: "Fee Ledger", icon: CreditCard },
     { href: "/tutor/doubts", label: "Student Doubts", icon: HelpCircle },
+    { href: "/tutor/materials", label: "Study Materials", icon: BookOpen },
     { href: "/tutor/settings", label: "Settings", icon: Settings },
   ];
 
@@ -34,6 +36,7 @@ export function Sidebar({ role }: SidebarProps) {
     { href: "/student/attendance", label: "My Attendance", icon: CalendarCheck },
     { href: "/student/fees", label: "Payment History", icon: CreditCard },
     { href: "/student/doubts", label: "Ask Doubts", icon: HelpCircle },
+    { href: "/student/materials", label: "Study Materials", icon: BookOpen },
   ];
 
   const items = role === "tutor" ? tutorNavItems : studentNavItems;

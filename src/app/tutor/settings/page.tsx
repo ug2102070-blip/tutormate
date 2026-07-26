@@ -1,9 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { updateProfile } from "firebase/auth";
-import { doc, getDoc, updateDoc } from "firebase/firestore";
-import { auth, db } from "@/lib/firebase/config";
+import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import type { TutorDoc } from "@/types";
 import { Save, User, Phone, Wallet, ShieldCheck, Check } from "lucide-react";
@@ -20,21 +18,36 @@ export default function TutorSettingsPage() {
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
+  const supabase = createClient();
 
   useEffect(() => {
     if (!user) return;
 
     async function loadTutorProfile() {
       try {
-        const tSnap = await getDoc(doc(db, "tutors", user!.uid));
-        if (tSnap.exists()) {
-          const data = tSnap.data() as TutorDoc;
-          setTutor(data);
-          setFullName(data.fullName || user!.displayName || "");
+        const { data } = await supabase
+          .from("tutors")
+          .select("*")
+          .eq("user_id", user!.id)
+          .maybeSingle();
+
+        if (data) {
+          setTutor({
+            id: data.id,
+            fullName: data.full_name,
+            institution: data.institution,
+            contactPhone: data.contact_phone,
+            bkashNumber: data.bkash_number,
+            nagadNumber: data.nagad_number,
+            subscription: data.subscription,
+            stats: { totalStudents: 0, activeBatches: 0, pendingDoubtsCount: 0 },
+            createdAt: data.created_at,
+          });
+          setFullName(data.full_name || user!.user_metadata?.full_name || "");
           setInstitution(data.institution || "");
-          setContactPhone(data.contactPhone || "");
-          setBkashNumber(data.bkashNumber || "");
-          setNagadNumber(data.nagadNumber || "");
+          setContactPhone(data.contact_phone || "");
+          setBkashNumber(data.bkash_number || "");
+          setNagadNumber(data.nagad_number || "");
         }
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : "Failed to load settings.";
@@ -56,29 +69,33 @@ export default function TutorSettingsPage() {
     setSuccess(false);
 
     try {
-      // Update Firebase Auth user profile displayName
-      if (auth.currentUser) {
-        await updateProfile(auth.currentUser, { displayName: fullName });
-      }
-
-      // Update /tutors/{uid}
-      await updateDoc(doc(db, "tutors", user.uid), {
-        fullName,
-        institution,
-        contactPhone,
-        bkashNumber: bkashNumber || null,
-        nagadNumber: nagadNumber || null,
-        updatedAt: new Date(),
+      // Update Supabase Auth metadata
+      await supabase.auth.updateUser({
+        data: { full_name: fullName },
       });
 
-      // Update /users/{uid}
-      await updateDoc(doc(db, "users", user.uid), {
-        displayName: fullName,
-        phoneNumber: contactPhone || null,
-        updatedAt: new Date(),
-      });
+      // Update `tutors` table
+      await supabase
+        .from("tutors")
+        .update({
+          full_name: fullName,
+          institution,
+          contact_phone: contactPhone,
+          bkash_number: bkashNumber || null,
+          nagad_number: nagadNumber || null,
+        })
+        .eq("user_id", user.id);
 
-      // Refresh Auth Context state so Top Header immediately reflects updated displayName
+      // Update `profiles` table
+      await supabase
+        .from("profiles")
+        .update({
+          display_name: fullName,
+          phone_number: contactPhone || null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", user.id);
+
       await refreshUser();
 
       setSuccess(true);

@@ -2,22 +2,28 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { signOut } from "firebase/auth";
 import { useRouter } from "next/navigation";
-import { auth } from "@/lib/firebase/config";
 import { useAuth } from "@/hooks/useAuth";
+import { createClient } from "@/lib/supabase/client";
 import { LogOut, User, Settings, ChevronDown } from "lucide-react";
 
 export function Header() {
   const router = useRouter();
   const { user, role } = useAuth();
   const [showMenu, setShowMenu] = useState(false);
+  const supabase = createClient();
 
   async function handleLogout() {
-    await signOut(auth);
+    await supabase.auth.signOut();
     document.cookie = "__session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
     router.push("/login");
   }
+
+  const displayName =
+    user?.user_metadata?.full_name ||
+    user?.user_metadata?.displayName ||
+    user?.email?.split("@")[0] ||
+    "User";
 
   return (
     <header className="h-16 border-b border-slate-200 bg-white px-4 md:px-6 flex items-center justify-between shrink-0 shadow-xs z-20 relative">
@@ -47,15 +53,15 @@ export function Header() {
           aria-label="User account menu"
         >
           <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-xs font-extrabold border border-indigo-200 shrink-0">
-            {user?.displayName ? (
-              user.displayName.charAt(0).toUpperCase()
+            {displayName ? (
+              displayName.charAt(0).toUpperCase()
             ) : (
               <User className="w-4 h-4" />
             )}
           </div>
           <div className="hidden sm:block text-left">
             <div className="text-xs font-bold text-slate-900 leading-tight">
-              {user?.displayName || "User"}
+              {displayName}
             </div>
             <div className="text-[11px] text-slate-500 font-medium leading-tight">
               {user?.email}
@@ -72,7 +78,7 @@ export function Header() {
           >
             <div className="px-3 py-2 border-b border-slate-100 sm:hidden">
               <div className="text-xs font-bold text-slate-900">
-                {user?.displayName || "User"}
+                {displayName}
               </div>
               <div className="text-[10px] text-slate-500 truncate font-medium">
                 {user?.email}
@@ -106,4 +112,3 @@ export function Header() {
     </header>
   );
 }
-

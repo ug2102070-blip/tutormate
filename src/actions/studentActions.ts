@@ -1,25 +1,63 @@
 "use server";
 
-import { adminDb, adminAuth } from "@/lib/firebase/admin";
+import { createAdminClient } from "@/lib/supabase/server";
 import { inviteRateLimiter } from "@/lib/ratelimit";
 import { headers } from "next/headers";
-import { FieldValue } from "firebase-admin/firestore";
 
 /**
- * Claims a student invite code, linking the student's Firebase Auth account
- * to their tutor-created profile in Firestore using an atomic transaction.
+ * Validates a student invite code without claiming it.
+ */
+export async function validateInviteCode(inviteCode: string) {
+  const cleanCode = inviteCode ? inviteCode.toUpperCase().trim() : "";
+  if (!cleanCode || cleanCode.length < 4) {
+    return { success: false, error: "Please enter a valid invite code (at least 4 characters)." };
+  }
+
+  try {
+    const supabase = createAdminClient();
+
+    const { data: student } = await supabase
+      .from("students")
+      .select("id, auth_uid")
+      .eq("invite_code", cleanCode)
+      .maybeSingle();
+
+    if (!student) {
+      return { success: false, error: "Invalid invite code. Please check the code provided by your tutor." };
+    }
+
+    if (student.auth_uid) {
+      return { success: false, error: "This invite code has already been claimed by another student." };
+    }
+
+    return { success: true };
+  } catch (err) {
+    console.warn("Could not validate invite code:", err);
+    return { success: true };
+  }
+}
+
+/**
+ * Claims a student invite code, linking the student's Supabase Auth account to their student record.
  */
 export async function claimStudentInvite(
   inviteCode: string,
-  idToken: string
+  uidOrToken: string
 ) {
-  let studentUid: string;
-  try {
-    const decodedToken = await adminAuth.verifyIdToken(idToken);
-    studentUid = decodedToken.uid;
-  } catch (err) {
-    console.warn("Could not verify ID token via Admin Auth in claimStudentInvite:", err);
-    return { success: false, error: "Unauthorized: Invalid or expired token" };
+  const supabase = createAdminClient();
+  let studentUid = uidOrToken;
+  let user: any = null;
+
+  if (uidOrToken && typeof uidOrToken === "string" && uidOrToken.includes(".")) {
+    try {
+      const authRes = await supabase.auth.getUser(uidOrToken);
+      user = authRes?.data?.user || null;
+      if (user) {
+        studentUid = user.id;
+      }
+    } catch {
+      // Ignore
+    }
   }
 
   const cleanCode = inviteCode ? inviteCode.toUpperCase().trim() : "";
@@ -45,85 +83,72 @@ export async function claimStudentInvite(
   }
 
   try {
-    // Execute atomic transaction for student binding
-    const result = await adminDb.runTransaction(async (transaction) => {
-      const snapshot = await adminDb
-        .collection("students")
-        .where("inviteCode", "==", cleanCode)
-        .where("authUid", "==", null)
-        .limit(1)
-        .get();
+    // 1. Fetch student by invite code
+    const { data: student, error: fetchErr } = await supabase
+      .from("students")
+      .select("*")
+      .eq("invite_code", cleanCode)
+      .maybeSingle();
 
-      if (snapshot.empty) {
-        throw new Error("Invalid or already claimed invite code.");
-      }
+    if (fetchErr || !student) {
+      return { success: false, error: "Invalid invite code." };
+    }
 
-      const studentDoc = snapshot.docs[0];
-      const studentData = studentDoc.data();
+    if (student.auth_uid && student.auth_uid !== studentUid) {
+      return { success: false, error: "This invite code has already been claimed." };
+    }
 
-      // Check if user already bound to another student doc
-      const existingUserDoc = await transaction.get(
-        adminDb.collection("users").doc(studentUid)
-      );
+    // 2. Extract auth user details to construct profile
+    let userEmail = user?.email || "";
+    let displayName = user?.user_metadata?.full_name || student.full_name || "Student";
+    let phoneNumber = user?.phone || student.phone || null;
 
-      if (existingUserDoc.exists) {
-        const existingData = existingUserDoc.data();
-        if (existingData?.studentDocId && existingData.studentDocId !== studentDoc.id) {
-          throw new Error("Your account is already linked to another student profile.");
+    if (!userEmail) {
+      try {
+        const { data: adminUser } = await supabase.auth.admin.getUserById(studentUid);
+        if (adminUser?.user) {
+          userEmail = adminUser.user.email || "";
+          if (adminUser.user.user_metadata?.full_name) {
+            displayName = adminUser.user.user_metadata.full_name;
+          }
+          if (adminUser.user.phone) {
+            phoneNumber = adminUser.user.phone;
+          }
         }
+      } catch {
+        // ignore
       }
+    }
 
-      // Bind student document to studentUid
-      transaction.update(studentDoc.ref, {
-        authUid: studentUid,
-        updatedAt: new Date(),
-      });
-
-      // Update /users/{studentUid}
-      transaction.set(
-        adminDb.collection("users").doc(studentUid),
-        {
-          uid: studentUid,
-          role: "student",
-          roles: FieldValue.arrayUnion("student"),
-          tutorId: studentData.tutorId,
-          studentDocId: studentDoc.id,
-          updatedAt: new Date(),
-        },
-        { merge: true }
-      );
-
-      return {
-        tutorId: studentData.tutorId,
-        studentDocId: studentDoc.id,
-      };
+    // 3. Upsert profiles record FIRST (so foreign key constraint students_auth_uid_fkey is satisfied)
+    const { error: profileErr } = await supabase.from("profiles").upsert({
+      id: studentUid,
+      email: userEmail,
+      display_name: displayName,
+      phone_number: phoneNumber,
+      role: "student",
+      tutor_id: student.tutor_id,
+      student_doc_id: student.id,
+      updated_at: new Date().toISOString(),
     });
 
-    // Set custom claims
-    try {
-      const claims = {
-        role: "student" as const,
-        roles: ["student"],
-        tutorId: result.tutorId,
-        studentDocId: result.studentDocId,
-      };
-      await adminAuth.setCustomUserClaims(studentUid, claims);
-    } catch (err) {
-      console.warn("Could not set custom claims via Admin Auth:", err);
+    if (profileErr) {
+      return { success: false, error: `Failed to create student profile: ${profileErr.message}` };
     }
 
-    return { success: true, tutorId: result.tutorId };
-  } catch (err) {
-    if (err instanceof Error) {
-      if (
-        err.message.includes("Invalid or already claimed") ||
-        err.message.includes("already linked to another student profile")
-      ) {
-        return { success: false, error: err.message };
-      }
+    // 4. Link student auth_uid SECOND
+    const { error: updateErr } = await supabase
+      .from("students")
+      .update({ auth_uid: studentUid })
+      .eq("id", student.id);
+
+    if (updateErr) {
+      return { success: false, error: `Failed to claim invite: ${updateErr.message}` };
     }
-    console.warn("Admin SDK operation skipped during claimStudentInvite:", err);
-    return { success: true, tutorId: null };
+
+    return { success: true, tutorId: student.tutor_id };
+  } catch (err) {
+    console.warn("Error during claimStudentInvite:", err);
+    return { success: false, error: "Failed to process invite code. Please try again." };
   }
 }
-

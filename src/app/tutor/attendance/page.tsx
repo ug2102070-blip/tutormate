@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { collection, query, where, getDocs, doc, getDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase/config";
+import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { saveAttendance } from "@/actions/attendanceActions";
 import type { BatchDoc, StudentDoc, AttendanceRecord } from "@/types";
@@ -23,22 +22,34 @@ export default function AttendancePage() {
   const [saving, setSaving] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [error, setError] = useState("");
+  const supabase = createClient();
 
   // Load tutor's batches
   useEffect(() => {
     if (!user) return;
     async function loadBatches() {
-      const q = query(
-        collection(db, "batches"),
-        where("tutorId", "==", user!.uid),
-        where("isArchived", "==", false)
-      );
-      const snap = await getDocs(q);
-      const list: BatchDoc[] = [];
-      snap.forEach((d) => list.push({ ...d.data(), id: d.id } as BatchDoc));
-      setBatches(list);
-      if (list.length > 0) {
-        setSelectedBatchId(list[0].id);
+      const { data } = await supabase
+        .from("batches")
+        .select("*")
+        .eq("is_archived", false);
+
+      if (data) {
+        const list: BatchDoc[] = data.map((b) => ({
+          id: b.id,
+          tutorId: b.tutor_id,
+          name: b.name,
+          subject: b.subject,
+          gradeClass: b.grade_class,
+          monthlyFee: Number(b.monthly_fee),
+          schedule: b.schedule || [],
+          studentCount: b.student_count,
+          isArchived: b.is_archived,
+          createdAt: b.created_at,
+        }));
+        setBatches(list);
+        if (list.length > 0) {
+          setSelectedBatchId(list[0].id);
+        }
       }
     }
     loadBatches();
@@ -51,30 +62,39 @@ export default function AttendancePage() {
     setError("");
 
     try {
-      // 1. Fetch active students in this batch
-      const studentsQuery = query(
-        collection(db, "students"),
-        where("tutorId", "==", user.uid),
-        where("status", "==", "active"),
-        where("enrolledBatchIds", "array-contains", selectedBatchId)
-      );
-      const studentsSnap = await getDocs(studentsQuery);
-      const studentList: StudentDoc[] = [];
-      studentsSnap.forEach((d) =>
-        studentList.push({ ...d.data(), id: d.id } as StudentDoc)
-      );
+      // 1. Fetch active enrolled students
+      const { data: studentData } = await supabase
+        .from("students")
+        .select("*")
+        .eq("status", "active")
+        .contains("enrolled_batch_ids", [selectedBatchId]);
+
+      const studentList: StudentDoc[] = (studentData || []).map((s) => ({
+        id: s.id,
+        tutorId: s.tutor_id,
+        authUid: s.auth_uid,
+        inviteCode: s.invite_code,
+        fullName: s.full_name,
+        phone: s.phone,
+        guardianPhone: s.guardian_phone,
+        institution: s.institution,
+        enrolledBatchIds: s.enrolled_batch_ids || [],
+        status: s.status,
+        createdAt: s.created_at,
+      }));
       setStudents(studentList);
 
-      // 2. Fetch existing attendance record doc for batchId_date
-      const docId = `${selectedBatchId}_${selectedDate}`;
-      const attendanceRef = doc(db, "attendance", docId);
-      const attendanceSnap = await getDoc(attendanceRef);
+      // 2. Fetch existing attendance record
+      const { data: att } = await supabase
+        .from("attendance")
+        .select("records")
+        .eq("batch_id", selectedBatchId)
+        .eq("date", selectedDate)
+        .maybeSingle();
 
-      if (attendanceSnap.exists()) {
-        const data = attendanceSnap.data();
-        setAttendanceRecords(data.records || {});
+      if (att && att.records) {
+        setAttendanceRecords(att.records as Record<string, AttendanceRecord>);
       } else {
-        // Initialize default record (all present)
         const initialMap: Record<string, AttendanceRecord> = {};
         studentList.forEach((s) => {
           initialMap[s.id] = { status: "present", remarks: null };
@@ -118,14 +138,13 @@ export default function AttendancePage() {
     setError("");
 
     try {
-      const token = await user.getIdToken();
       await saveAttendance(
         {
           batchId: selectedBatchId,
           date: selectedDate,
           records: attendanceRecords,
         },
-        token
+        user.id
       );
       setSavedSuccess(true);
       setTimeout(() => setSavedSuccess(false), 3000);

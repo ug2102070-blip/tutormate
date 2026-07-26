@@ -2,20 +2,20 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { collection, query, where, onSnapshot } from "firebase/firestore";
-import { db } from "@/lib/firebase/config";
+import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import type { StudentDoc, BatchDoc } from "@/types";
+import type { StudentDoc } from "@/types";
 import { Plus, UserPlus, Search, Copy, Check, Phone } from "lucide-react";
 
 export default function StudentsPage() {
-  const { user, claims } = useAuth();
+  const { user } = useAuth();
   const [students, setStudents] = useState<StudentDoc[]>([]);
   const [batches, setBatches] = useState<Record<string, string>>({});
   const [search, setSearch] = useState("");
   const [selectedBatchId, setSelectedBatchId] = useState<string>("all");
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const supabase = createClient();
 
   useEffect(() => {
     if (!user) {
@@ -23,45 +23,46 @@ export default function StudentsPage() {
       return;
     }
 
-    // Fetch batches map for batch names
-    const batchesQuery = query(
-      collection(db, "batches"),
-      where("tutorId", "==", user.uid)
-    );
-    const unsubBatches = onSnapshot(batchesQuery, (snap) => {
+    async function loadData() {
+      // 1. Load Batches Map
+      const { data: batchList } = await supabase
+        .from("batches")
+        .select("id, name");
+
       const map: Record<string, string> = {};
-      snap.forEach((doc) => {
-        const data = doc.data() as BatchDoc;
-        map[doc.id] = data.name;
-      });
-      setBatches(map);
-    });
-
-    // Fetch students
-    const studentsQuery = query(
-      collection(db, "students"),
-      where("tutorId", "==", user.uid)
-    );
-    const unsubStudents = onSnapshot(
-      studentsQuery,
-      (snap) => {
-        const list: StudentDoc[] = [];
-        snap.forEach((doc) => {
-          list.push({ ...doc.data(), id: doc.id } as StudentDoc);
+      if (batchList) {
+        batchList.forEach((b) => {
+          map[b.id] = b.name;
         });
-        setStudents(list);
-        setLoading(false);
-      },
-      (err) => {
-        console.error(err);
-        setLoading(false);
       }
-    );
+      setBatches(map);
 
-    return () => {
-      unsubBatches();
-      unsubStudents();
-    };
+      // 2. Load Students List
+      const { data: studentList } = await supabase
+        .from("students")
+        .select("*");
+
+      if (studentList) {
+        setStudents(
+          studentList.map((s) => ({
+            id: s.id,
+            tutorId: s.tutor_id,
+            authUid: s.auth_uid,
+            inviteCode: s.invite_code,
+            fullName: s.full_name,
+            phone: s.phone,
+            guardianPhone: s.guardian_phone,
+            institution: s.institution,
+            enrolledBatchIds: s.enrolled_batch_ids || [],
+            status: s.status,
+            createdAt: s.created_at,
+          }))
+        );
+      }
+      setLoading(false);
+    }
+
+    loadData();
   }, [user]);
 
   const filteredStudents = students.filter((s) => {

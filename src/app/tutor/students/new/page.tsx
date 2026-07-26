@@ -3,11 +3,9 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { collection, query, where, getDocs, doc, setDoc, updateDoc, increment, serverTimestamp } from "firebase/firestore";
-import { db } from "@/lib/firebase/config";
+import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { createStudent } from "@/actions/tutorStudentActions";
-import { generateInviteCode } from "@/lib/utils";
 import type { BatchDoc } from "@/types";
 import { ArrowLeft, Copy, Check } from "lucide-react";
 
@@ -24,21 +22,34 @@ export default function AddStudentPage() {
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const supabase = createClient();
 
   useEffect(() => {
     if (!user) return;
     async function loadBatches() {
-      const q = query(
-        collection(db, "batches"),
-        where("tutorId", "==", user!.uid),
-        where("isArchived", "==", false)
-      );
-      const snap = await getDocs(q);
-      const list: BatchDoc[] = [];
-      snap.forEach((doc) => list.push({ ...doc.data(), id: doc.id } as BatchDoc));
-      setBatches(list);
-      if (list.length > 0) {
-        setSelectedBatchIds([list[0].id]);
+      const { data } = await supabase
+        .from("batches")
+        .select("*")
+        .eq("tutor_id", user!.id)
+        .eq("is_archived", false);
+
+      if (data) {
+        const list: BatchDoc[] = data.map((b) => ({
+          id: b.id,
+          tutorId: b.tutor_id,
+          name: b.name,
+          subject: b.subject,
+          gradeClass: b.grade_class,
+          monthlyFee: b.monthly_fee,
+          schedule: b.schedule || [],
+          studentCount: b.student_count,
+          isArchived: b.is_archived,
+          createdAt: b.created_at,
+        }));
+        setBatches(list);
+        if (list.length > 0) {
+          setSelectedBatchIds([list[0].id]);
+        }
       }
     }
     loadBatches();
@@ -63,53 +74,17 @@ export default function AddStudentPage() {
     setLoading(true);
 
     try {
-      try {
-        const token = await user.getIdToken();
-        const result = await createStudent(
-          {
-            fullName,
-            phone,
-            guardianPhone: guardianPhone || null,
-            institution: institution || null,
-            enrolledBatchIds: selectedBatchIds,
-          },
-          token
-        );
-        setCreatedInviteCode(result.inviteCode);
-      } catch {
-        // Fallback: Save student directly via Client SDK if Server Action Admin SDK key is missing
-        const inviteCode = generateInviteCode(8);
-        const studentRef = doc(collection(db, "students"));
-        await setDoc(studentRef, {
-          id: studentRef.id,
-          tutorId: user.uid,
-          authUid: null,
-          inviteCode,
+      const result = await createStudent(
+        {
           fullName,
           phone,
           guardianPhone: guardianPhone || null,
           institution: institution || null,
           enrolledBatchIds: selectedBatchIds,
-          status: "active",
-          createdAt: serverTimestamp(),
-        });
-
-        for (const batchId of selectedBatchIds) {
-          const batchRef = doc(db, "batches", batchId);
-          await updateDoc(batchRef, {
-            studentCount: increment(1),
-          }).catch(() => {});
-        }
-
-        const tutorRef = doc(db, "tutors", user.uid);
-        await updateDoc(tutorRef, {
-          "stats.totalStudents": increment(1),
-        }).catch(() => {
-          setDoc(tutorRef, { stats: { totalStudents: 1 } }, { merge: true });
-        });
-
-        setCreatedInviteCode(inviteCode);
-      }
+        },
+        user.id
+      );
+      setCreatedInviteCode(result.inviteCode);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to add student.";
       setError(msg);

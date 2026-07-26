@@ -7,23 +7,16 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import {
-  onAuthStateChanged,
-  type User,
-  type IdTokenResult,
-} from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
-import { auth, db } from "@/lib/firebase/config";
+import { createClient } from "@/lib/supabase/client";
 import type { UserRole, CustomClaims } from "@/types";
+import type { User } from "@supabase/supabase-js";
 
 interface AuthState {
   user: User | null;
   claims: CustomClaims | null;
   role: UserRole | null;
   loading: boolean;
-  /** Force refresh the ID token to pick up new custom claims */
   refreshClaims: () => Promise<void>;
-  /** Reload Firebase Auth user & refresh local state */
   refreshUser: () => Promise<void>;
 }
 
@@ -40,97 +33,107 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [claims, setClaims] = useState<CustomClaims | null>(null);
   const [loading, setLoading] = useState(true);
+  const supabase = createClient();
 
-  async function extractClaims(firebaseUser: User): Promise<CustomClaims | null> {
+  async function fetchUserClaims(supabaseUser: User): Promise<CustomClaims | null> {
     try {
-      const tokenResult: IdTokenResult = await firebaseUser.getIdTokenResult();
-      const c = tokenResult.claims;
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", supabaseUser.id)
+        .single();
 
-      if (c.role === "tutor") {
-        return {
-          role: "tutor",
-          tutorId: (c.tutorId as string) ?? firebaseUser.uid,
-        };
-      }
-      if (c.role === "student") {
-        return {
-          role: "student",
-          tutorId: c.tutorId as string,
-          studentDocId: c.studentDocId as string,
-        };
-      }
-      if (c.role === "admin") {
-        return { role: "admin" };
-      }
-
-      // Fallback: Fetch role from Firestore /users/{uid} document
-      const userSnap = await getDoc(doc(db, "users", firebaseUser.uid));
-      if (userSnap.exists()) {
-        const u = userSnap.data();
-        if (u.role === "student") {
-          return {
-            role: "student",
-            tutorId: u.tutorId as string,
-            studentDocId: u.studentDocId as string,
-          };
-        }
-        if (u.role === "tutor") {
+      if (profile) {
+        if (profile.role === "tutor") {
           return {
             role: "tutor",
-            tutorId: (u.tutorId as string) || firebaseUser.uid,
+            tutorId: profile.tutor_id || supabaseUser.id,
           };
         }
+        if (profile.role === "student") {
+          return {
+            role: "student",
+            tutorId: profile.tutor_id || "",
+            studentDocId: profile.student_doc_id || "",
+          };
+        }
+        if (profile.role === "admin") {
+          return { role: "admin" };
+        }
       }
-
-      return null;
+      const defaultRole = (supabaseUser.user_metadata?.role as UserRole) || "tutor";
+      return {
+        role: defaultRole,
+        tutorId: supabaseUser.id,
+      } as CustomClaims;
     } catch {
-      return null;
+      return {
+        role: "tutor",
+        tutorId: supabaseUser.id,
+      } as CustomClaims;
     }
   }
 
   async function refreshClaims() {
     if (!user) return;
-    // Force-refresh the ID token to pick up newly set custom claims
-    await user.getIdToken(true);
-    const newClaims = await extractClaims(user);
+    const newClaims = await fetchUserClaims(user);
     setClaims(newClaims);
   }
 
   async function refreshUser() {
-    if (auth.currentUser) {
-      await auth.currentUser.reload();
-      setUser({ ...auth.currentUser });
+    const { data } = await supabase.auth.getUser();
+    const currentUser = data?.user ?? null;
+    setUser(currentUser);
+    if (currentUser) {
+      const newClaims = await fetchUserClaims(currentUser);
+      setClaims(newClaims);
     }
   }
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      setUser(firebaseUser);
-      if (firebaseUser) {
-        const extractedClaims = await extractClaims(firebaseUser);
-        setClaims(extractedClaims);
-      } else {
-        setClaims(null);
+    async function initAuth() {
+      const { data } = await supabase.auth.getUser();
+      const currentUser = data?.user ?? null;
+      setUser(currentUser);
+      if (currentUser) {
+        const initialClaims = await fetchUserClaims(currentUser);
+        setClaims(initialClaims);
       }
       setLoading(false);
-    });
+    }
 
-    return unsubscribe;
+    initAuth();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        const currentUser = session?.user ?? null;
+        setUser(currentUser);
+        if (currentUser) {
+          const newClaims = await fetchUserClaims(currentUser);
+          setClaims(newClaims);
+        } else {
+          setClaims(null);
+        }
+        setLoading(false);
+      }
+    );
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   const role = claims?.role ?? null;
 
   return (
-    <AuthContext.Provider value={{ user, claims, role, loading, refreshClaims, refreshUser }}>
+    <AuthContext.Provider
+      value={{ user, claims, role, loading, refreshClaims, refreshUser }}
+    >
       {children}
     </AuthContext.Provider>
   );
 }
 
-/**
- * Hook to access auth state and custom claims.
- * Must be used within an AuthProvider.
- */
 export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) {

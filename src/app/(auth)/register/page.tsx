@@ -3,18 +3,9 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import {
-  createUserWithEmailAndPassword,
-  updateProfile,
-  GoogleAuthProvider,
-  signInWithPopup,
-  type ConfirmationResult,
-} from "firebase/auth";
-import { doc, setDoc, serverTimestamp } from "firebase/firestore";
-import { auth, db } from "@/lib/firebase/config";
-import { setupRecaptcha, sendPhoneVerificationCode } from "@/lib/firebase/auth";
+import { createClient } from "@/lib/supabase/client";
 import { setTutorClaims, onboardTutorUser } from "@/actions/authActions";
-import { claimStudentInvite } from "@/actions/studentActions";
+import { claimStudentInvite, validateInviteCode } from "@/actions/studentActions";
 import { formatAuthError } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { Mail, Phone } from "lucide-react";
@@ -22,6 +13,7 @@ import { Mail, Phone } from "lucide-react";
 export default function RegisterPage() {
   const router = useRouter();
   const { refreshClaims } = useAuth();
+  const supabase = createClient();
 
   // Registration Mode & Role
   const [authMethod, setAuthMethod] = useState<"email" | "phone">("email");
@@ -37,7 +29,6 @@ export default function RegisterPage() {
 
   // Phone Auth State
   const [otpCode, setOtpCode] = useState("");
-  const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
   const [otpSent, setOtpSent] = useState(false);
 
   // Common UI State
@@ -58,79 +49,47 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
-      // 1. Create Firebase Auth user
-      const userCredential = await createUserWithEmailAndPassword(
-        auth,
-        email,
-        password
-      );
-      const user = userCredential.user;
-
-      // 2. Set Firebase Auth display name
-      await updateProfile(user, { displayName: fullName });
-
-      if (role === "tutor") {
-        // Create initial /users document
-        await setDoc(doc(db, "users", user.uid), {
-          uid: user.uid,
-          email,
-          displayName: fullName,
-          phoneNumber: contactPhone || null,
-          photoURL: null,
-          role: "tutor",
-          tutorId: user.uid,
-          studentDocId: null,
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-        });
-
-        // Create initial /tutors document
-        await setDoc(doc(db, "tutors", user.uid), {
-          id: user.uid,
-          fullName,
-          institution: institution || "Independent",
-          contactPhone,
-          bkashNumber: null,
-          nagadNumber: null,
-          subscription: {
-            plan: "free_trial",
-            status: "active",
-            validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-            maxStudents: 50,
-          },
-          stats: {
-            totalStudents: 0,
-            activeBatches: 0,
-            pendingDoubtsCount: 0,
-          },
-          createdAt: serverTimestamp(),
-        });
-
-        // Get ID token for verified server actions
-        const idToken = await user.getIdToken();
-
-        // Set custom claims via Server Action if available
-        await setTutorClaims(idToken).catch(() => {});
-      } else {
+      if (role === "student") {
         if (!inviteCode) {
-          throw new Error("Invite code is required for student registration.");
+          setError("Invite code is required for student registration.");
+          setLoading(false);
+          return;
         }
 
-        await setDoc(doc(db, "users", user.uid), {
-          uid: user.uid,
-          email,
-          displayName: fullName,
-          phoneNumber: contactPhone || null,
-          photoURL: null,
-          role: "student",
-          tutorId: null,
-          studentDocId: null,
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-        });
+        const valRes = await validateInviteCode(inviteCode);
+        if (valRes && !valRes.success && valRes.error) {
+          setError(valRes.error);
+          setLoading(false);
+          return;
+        }
+      }
 
-        const idToken = await user.getIdToken();
-        const claimRes = await claimStudentInvite(inviteCode, idToken);
+      const { data, error: signUpErr } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            full_name: fullName,
+          },
+        },
+      });
+
+      if (signUpErr) throw signUpErr;
+
+      const user = data.user;
+      if (!user) {
+        throw new Error("Registration failed.");
+      }
+
+      if (role === "tutor") {
+        await onboardTutorUser({
+          email: user.email || email,
+          displayName: fullName,
+          phoneNumber: contactPhone || undefined,
+          institution: institution || "Independent",
+        }, user.id).catch(() => {});
+      } else {
+        const claimRes = await claimStudentInvite(inviteCode, user.id);
         if (claimRes && !claimRes.success && claimRes.error) {
           setError(claimRes.error);
           setLoading(false);
@@ -151,75 +110,30 @@ export default function RegisterPage() {
   async function handleGoogleRegister() {
     setError("");
 
-    if (role === "student" && !inviteCode) {
-      setError("Please enter your Invite Code before signing up with Google.");
-      return;
+    if (role === "student") {
+      if (!inviteCode) {
+        setError("Please enter your Invite Code before signing up with Google.");
+        return;
+      }
+      const valRes = await validateInviteCode(inviteCode);
+      if (valRes && !valRes.success && valRes.error) {
+        setError(valRes.error);
+        return;
+      }
     }
 
     setLoading(true);
 
     try {
-      const provider = new GoogleAuthProvider();
-      const cred = await signInWithPopup(auth, provider);
-      const user = cred.user;
-      const idToken = await user.getIdToken();
-
-      if (role === "tutor") {
-        await setDoc(doc(db, "users", user.uid), {
-          uid: user.uid,
-          email: user.email || null,
-          displayName: user.displayName || fullName || "Tutor",
-          phoneNumber: user.phoneNumber || contactPhone || null,
-          photoURL: user.photoURL || null,
-          role: "tutor",
-          tutorId: user.uid,
-          studentDocId: null,
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-        });
-
-        await setDoc(doc(db, "tutors", user.uid), {
-          id: user.uid,
-          fullName: user.displayName || fullName || "Tutor",
-          institution: institution || "Independent",
-          contactPhone: contactPhone || user.phoneNumber || "",
-          bkashNumber: null,
-          nagadNumber: null,
-          subscription: {
-            plan: "free_trial",
-            status: "active",
-            validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-            maxStudents: 50,
-          },
-          stats: {
-            totalStudents: 0,
-            activeBatches: 0,
-            pendingDoubtsCount: 0,
-          },
-          createdAt: serverTimestamp(),
-        });
-
-        await onboardTutorUser({
-          email: user.email,
-          displayName: user.displayName || fullName || "Tutor",
-          phoneNumber: user.phoneNumber || contactPhone || undefined,
-          institution: institution || "Independent",
-        }, idToken).catch(() => {});
-      } else {
-        const claimRes = await claimStudentInvite(inviteCode, idToken);
-        if (claimRes && !claimRes.success && claimRes.error) {
-          setError(claimRes.error);
-          setLoading(false);
-          return;
-        }
-      }
-
-      await refreshClaims().catch(() => {});
-      document.cookie = "__session=1; path=/; max-age=2592000; SameSite=Lax";
-      router.push(role === "tutor" ? "/tutor/dashboard" : "/student/dashboard");
+      const { error: oauthErr } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: `${window.location.origin}/login`,
+        },
+      });
+      if (oauthErr) throw oauthErr;
     } catch (err: unknown) {
       setError(formatAuthError(err));
-    } finally {
       setLoading(false);
     }
   }
@@ -238,18 +152,31 @@ export default function RegisterPage() {
       return;
     }
 
-    if (role === "student" && !inviteCode) {
-      setError("Invite code is required for student registration.");
-      return;
+    if (role === "student") {
+      if (!inviteCode) {
+        setError("Invite code is required for student registration.");
+        return;
+      }
+      const valRes = await validateInviteCode(inviteCode);
+      if (valRes && !valRes.success && valRes.error) {
+        setError(valRes.error);
+        return;
+      }
     }
 
     setLoading(true);
 
     try {
       const formatted = formatPhoneNumber(contactPhone.trim());
-      const verifier = setupRecaptcha("recaptcha-container-reg");
-      const result = await sendPhoneVerificationCode(formatted, verifier);
-      setConfirmationResult(result);
+      const { error: otpErr } = await supabase.auth.signInWithOtp({
+        phone: formatted,
+        options: {
+          data: {
+            full_name: fullName,
+          },
+        },
+      });
+      if (otpErr) throw otpErr;
       setOtpSent(true);
     } catch (err: unknown) {
       setError(formatAuthError(err));
@@ -262,7 +189,7 @@ export default function RegisterPage() {
     e.preventDefault();
     setError("");
 
-    if (!confirmationResult || !otpCode) {
+    if (!otpCode) {
       setError("Please enter the 6-digit OTP code.");
       return;
     }
@@ -270,54 +197,26 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
-      const cred = await confirmationResult.confirm(otpCode.trim());
-      const user = cred.user;
-      await updateProfile(user, { displayName: fullName });
-      const idToken = await user.getIdToken();
+      const formatted = formatPhoneNumber(contactPhone.trim());
+      const { data, error: verifyErr } = await supabase.auth.verifyOtp({
+        phone: formatted,
+        token: otpCode.trim(),
+        type: "sms",
+      });
+
+      if (verifyErr) throw verifyErr;
+      const user = data.user;
+      if (!user) throw new Error("Verification failed.");
 
       if (role === "tutor") {
-        await setDoc(doc(db, "users", user.uid), {
-          uid: user.uid,
+        await onboardTutorUser({
           email: user.email || null,
           displayName: fullName,
-          phoneNumber: user.phoneNumber || contactPhone || null,
-          photoURL: user.photoURL || null,
-          role: "tutor",
-          tutorId: user.uid,
-          studentDocId: null,
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-        });
-
-        await setDoc(doc(db, "tutors", user.uid), {
-          id: user.uid,
-          fullName,
+          phoneNumber: contactPhone,
           institution: institution || "Independent",
-          contactPhone: contactPhone || user.phoneNumber || "",
-          bkashNumber: null,
-          nagadNumber: null,
-          subscription: {
-            plan: "free_trial",
-            status: "active",
-            validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-            maxStudents: 50,
-          },
-          stats: {
-            totalStudents: 0,
-            activeBatches: 0,
-            pendingDoubtsCount: 0,
-          },
-          createdAt: serverTimestamp(),
-        });
-
-        await onboardTutorUser({
-          email: user.email,
-          displayName: fullName,
-          phoneNumber: user.phoneNumber || contactPhone,
-          institution: institution || "Independent",
-        }, idToken).catch(() => {});
+        }, user.id).catch(() => {});
       } else {
-        const claimRes = await claimStudentInvite(inviteCode, idToken);
+        const claimRes = await claimStudentInvite(inviteCode, user.id);
         if (claimRes && !claimRes.success && claimRes.error) {
           setError(claimRes.error);
           setLoading(false);
@@ -337,9 +236,6 @@ export default function RegisterPage() {
 
   return (
     <div>
-      {/* Invisible reCAPTCHA container for Phone Auth on Registration */}
-      <div id="recaptcha-container-reg"></div>
-
       {/* Mobile branding */}
       <div className="lg:hidden mb-8 text-center">
         <h1
@@ -753,7 +649,6 @@ export default function RegisterPage() {
         </div>
 
         <button
-          type="button"
           onClick={handleGoogleRegister}
           disabled={loading}
           className="mt-4 w-full py-2.5 px-4 text-sm font-medium rounded-lg transition-all duration-200 hover:opacity-80 disabled:opacity-50 flex items-center justify-center gap-2"

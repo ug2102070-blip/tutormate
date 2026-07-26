@@ -19,8 +19,7 @@ export default function StudentAttendancePage() {
 
     async function loadAttendance() {
       try {
-        const token = await user!.getIdToken();
-        const logs = await getStudentAttendanceHistory(token);
+        const logs = await getStudentAttendanceHistory(user!.id);
         setAttendanceLogs(logs);
       } catch (err) {
         console.error("Error loading attendance:", err);

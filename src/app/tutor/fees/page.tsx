@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { collection, query, where, getDocs } from "firebase/firestore";
-import { db } from "@/lib/firebase/config";
+import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { generateMonthlyFees, updateFeeStatus } from "@/actions/feeActions";
 import { formatBDT } from "@/lib/utils";
@@ -22,6 +21,7 @@ export default function FeesPage() {
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
+  const supabase = createClient();
 
   const months = [
     "January", "February", "March", "April", "May", "June",
@@ -32,17 +32,28 @@ export default function FeesPage() {
   useEffect(() => {
     if (!user) return;
     async function loadBatches() {
-      const q = query(
-        collection(db, "batches"),
-        where("tutorId", "==", user!.uid),
-        where("isArchived", "==", false)
-      );
-      const snap = await getDocs(q);
-      const list: BatchDoc[] = [];
-      snap.forEach((d) => list.push({ ...d.data(), id: d.id } as BatchDoc));
-      setBatches(list);
-      if (list.length > 0) {
-        setSelectedBatchId(list[0].id);
+      const { data } = await supabase
+        .from("batches")
+        .select("*")
+        .eq("is_archived", false);
+
+      if (data) {
+        const list: BatchDoc[] = data.map((b) => ({
+          id: b.id,
+          tutorId: b.tutor_id,
+          name: b.name,
+          subject: b.subject,
+          gradeClass: b.grade_class,
+          monthlyFee: Number(b.monthly_fee),
+          schedule: b.schedule || [],
+          studentCount: b.student_count,
+          isArchived: b.is_archived,
+          createdAt: b.created_at,
+        }));
+        setBatches(list);
+        if (list.length > 0) {
+          setSelectedBatchId(list[0].id);
+        }
       }
     }
     loadBatches();
@@ -55,30 +66,57 @@ export default function FeesPage() {
     setError("");
 
     try {
-      // 1. Load active students map for names
-      const studentsQuery = query(
-        collection(db, "students"),
-        where("tutorId", "==", user.uid)
-      );
-      const studentsSnap = await getDocs(studentsQuery);
+      // 1. Load active students map
+      const { data: studentList } = await supabase
+        .from("students")
+        .select("*");
+
       const sMap: Record<string, StudentDoc> = {};
-      studentsSnap.forEach((d) => {
-        sMap[d.id] = { ...d.data(), id: d.id } as StudentDoc;
-      });
+      if (studentList) {
+        studentList.forEach((s) => {
+          sMap[s.id] = {
+            id: s.id,
+            tutorId: s.tutor_id,
+            authUid: s.auth_uid,
+            inviteCode: s.invite_code,
+            fullName: s.full_name,
+            phone: s.phone,
+            guardianPhone: s.guardian_phone,
+            institution: s.institution,
+            enrolledBatchIds: s.enrolled_batch_ids || [],
+            status: s.status,
+            createdAt: s.created_at,
+          };
+        });
+      }
       setStudentsMap(sMap);
 
       // 2. Fetch fees for selected batch, year, month
-      const feesQuery = query(
-        collection(db, "fees"),
-        where("tutorId", "==", user.uid),
-        where("batchId", "==", selectedBatchId),
-        where("year", "==", selectedYear),
-        where("month", "==", selectedMonth)
-      );
-      const feesSnap = await getDocs(feesQuery);
-      const fList: FeeDoc[] = [];
-      feesSnap.forEach((d) => fList.push({ ...d.data(), id: d.id } as FeeDoc));
-      setFeesList(fList);
+      const { data: feesData } = await supabase
+        .from("fees")
+        .select("*")
+        .eq("batch_id", selectedBatchId)
+        .eq("year", selectedYear)
+        .eq("month", selectedMonth);
+
+      if (feesData) {
+        setFeesList(
+          feesData.map((f) => ({
+            id: f.id,
+            tutorId: f.tutor_id,
+            studentId: f.student_id,
+            batchId: f.batch_id,
+            year: f.year,
+            month: f.month,
+            amountDue: Number(f.amount_due),
+            amountPaid: Number(f.amount_paid),
+            status: f.status,
+            paymentMethod: f.payment_method,
+            paidAt: f.paid_at,
+            updatedAt: f.updated_at,
+          }))
+        );
+      }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to load fee ledger.";
       setError(msg);
@@ -98,14 +136,13 @@ export default function FeesPage() {
     setSuccessMsg("");
 
     try {
-      const token = await user.getIdToken();
       const res = await generateMonthlyFees(
         {
           batchId: selectedBatchId,
           year: selectedYear,
           month: selectedMonth,
         },
-        token
+        user.id
       );
 
       setSuccessMsg(`Generated ${res.count} new fee ledger entries for ${months[selectedMonth - 1]} ${selectedYear}.`);
@@ -126,7 +163,6 @@ export default function FeesPage() {
     if (!user) return;
 
     try {
-      const token = await user.getIdToken();
       await updateFeeStatus(
         {
           feeId: fee.id,
@@ -134,7 +170,7 @@ export default function FeesPage() {
           amountPaid: newStatus === "paid" ? fee.amountDue : 0,
           paymentMethod: newStatus === "paid" ? method : null,
         },
-        token
+        user.id
       );
       loadFeeLedger();
     } catch (err: unknown) {

@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { collection, query, where, getDocs } from "firebase/firestore";
-import { db } from "@/lib/firebase/config";
+import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { formatBDT } from "@/lib/utils";
 import type { FeeDoc } from "@/types";
@@ -12,6 +11,7 @@ export default function StudentFeesPage() {
   const { user, claims } = useAuth();
   const [fees, setFees] = useState<FeeDoc[]>([]);
   const [loading, setLoading] = useState(true);
+  const supabase = createClient();
 
   const months = [
     "January", "February", "March", "April", "May", "June",
@@ -29,27 +29,42 @@ export default function StudentFeesPage() {
         let studentDocId = claims?.role === "student" ? claims.studentDocId : "";
 
         if (!studentDocId) {
-          const sQuery = query(
-            collection(db, "students"),
-            where("authUid", "==", user!.uid)
-          );
-          const sSnap = await getDocs(sQuery);
-          if (!sSnap.empty) {
-            studentDocId = sSnap.docs[0].id;
+          const { data: student } = await supabase
+            .from("students")
+            .select("id")
+            .eq("auth_uid", user!.id)
+            .maybeSingle();
+
+          if (student) {
+            studentDocId = student.id;
           }
         }
 
         if (studentDocId) {
-          const q = query(
-            collection(db, "fees"),
-            where("studentId", "==", studentDocId)
-          );
-          const snap = await getDocs(q);
-          const list: FeeDoc[] = [];
-          snap.forEach((d) => list.push({ ...d.data(), id: d.id } as FeeDoc));
-          
-          list.sort((a, b) => b.year - a.year || b.month - a.month);
-          setFees(list);
+          const { data: feesData } = await supabase
+            .from("fees")
+            .select("*")
+            .eq("student_id", studentDocId);
+
+          if (feesData) {
+            const list: FeeDoc[] = feesData.map((f) => ({
+              id: f.id,
+              tutorId: f.tutor_id,
+              studentId: f.student_id,
+              batchId: f.batch_id,
+              year: f.year,
+              month: f.month,
+              amountDue: Number(f.amount_due),
+              amountPaid: Number(f.amount_paid),
+              status: f.status,
+              paymentMethod: f.payment_method,
+              paidAt: f.paid_at,
+              updatedAt: f.updated_at,
+            }));
+
+            list.sort((a, b) => b.year - a.year || b.month - a.month);
+            setFees(list);
+          }
         }
       } catch (err) {
         console.error("Error loading fees:", err);

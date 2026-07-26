@@ -1,15 +1,14 @@
 "use client";
 
-import { useEffect, useState, useRef, use } from "react";
-import { collection, query, where, onSnapshot, getDocs, doc, getDoc } from "firebase/firestore";
-import { ref, uploadBytes } from "firebase/storage";
-import { db, storage } from "@/lib/firebase/config";
+import { useEffect, useState, useRef, useCallback, use } from "react";
+import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { usePresence, useUserPresence } from "@/hooks/usePresence";
 import { createDoubt, postMessage, markDoubtAsRead, updateDoubtStatus } from "@/actions/doubtActions";
 import { getMediaSignedUrl } from "@/actions/mediaActions";
 import { AudioPlayer } from "@/components/chat/AudioPlayer";
 import { VoiceRecorder } from "@/components/chat/VoiceRecorder";
+import { ImageLightbox } from "@/components/chat/ImageLightbox";
 import type { DoubtDoc, MessageDoc, BatchDoc, StudentDoc, AttachmentType } from "@/types";
 import {
   Plus,
@@ -36,9 +35,9 @@ export default function StudentDoubtsPage({
   const initialSelectedId = unwrappedSearchParams?.id;
 
   const { user, claims } = useAuth();
-  usePresence(user?.uid);
+  usePresence(user?.id);
+  const supabase = createClient();
 
-  // Presence for Tutor
   const tutorId = claims && claims.role === "student" ? claims.tutorId : null;
   const tutorPresence = useUserPresence(tutorId);
 
@@ -47,8 +46,8 @@ export default function StudentDoubtsPage({
   const [selectedDoubtId, setSelectedDoubtId] = useState<string | null>(initialSelectedId || null);
   const [messages, setMessages] = useState<MessageDoc[]>([]);
   const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
+  const [lightboxImage, setLightboxImage] = useState<string | null>(null);
 
-  // UI state
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [showNewModal, setShowNewModal] = useState(false);
@@ -56,7 +55,6 @@ export default function StudentDoubtsPage({
   const [sending, setSending] = useState(false);
   const [showVoiceRecorder, setShowVoiceRecorder] = useState(false);
 
-  // Form & Attachment State
   const [newMessageText, setNewMessageText] = useState("");
   const [selectedAttachment, setSelectedAttachment] = useState<{
     file: File;
@@ -64,7 +62,6 @@ export default function StudentDoubtsPage({
     previewUrl?: string;
   } | null>(null);
 
-  // New Topic Form
   const [title, setTitle] = useState("");
   const [initialQuestion, setInitialQuestion] = useState("");
   const [batchId, setBatchId] = useState("");
@@ -73,6 +70,42 @@ export default function StudentDoubtsPage({
   const [error, setError] = useState("");
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const activeChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const chatContainerRef = useRef<HTMLDivElement | null>(null);
+  const isAtBottomRef = useRef<boolean>(true);
+  const prevDoubtIdRef = useRef<string | null>(null);
+  const prevMessageCountRef = useRef<number>(0);
+
+  function handleScroll() {
+    const container = chatContainerRef.current;
+    if (!container) return;
+    const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
+    isAtBottomRef.current = distanceFromBottom <= 100;
+  }
+
+  const fetchMessagesForThread = useCallback(async (doubtId: string) => {
+    const { data } = await supabase
+      .from("doubt_messages")
+      .select("*")
+      .eq("doubt_id", doubtId)
+      .order("created_at", { ascending: true });
+
+    if (data) {
+      setMessages(
+        data.map((m) => ({
+          id: m.id,
+          senderUid: m.sender_uid,
+          senderRole: m.sender_role,
+          text: m.text,
+          attachmentPath: m.attachment_path,
+          attachmentType: m.attachment_type as AttachmentType,
+          attachmentName: m.attachment_name,
+          attachmentSize: m.attachment_size,
+          createdAt: m.created_at,
+        }))
+      );
+    }
+  }, [supabase]);
 
   // Load student doubts
   useEffect(() => {
@@ -81,96 +114,93 @@ export default function StudentDoubtsPage({
       return;
     }
 
-    const q = query(
-      collection(db, "doubts"),
-      where("studentAuthUid", "==", user.uid)
-    );
+    const currentUserId = user.id;
 
-    const unsubscribe = onSnapshot(
-      q,
-      (snapshot) => {
-        const list: DoubtDoc[] = [];
-        snapshot.forEach((d) => list.push({ id: d.id, ...d.data() } as DoubtDoc));
-        list.sort((a, b) => (b.lastMessageAt?.toMillis() || 0) - (a.lastMessageAt?.toMillis() || 0));
+    async function fetchDoubts() {
+      const { data } = await supabase
+        .from("doubts")
+        .select("*")
+        .eq("student_auth_uid", currentUserId)
+        .order("last_message_at", { ascending: false });
+
+      if (data) {
+        const list: DoubtDoc[] = data.map((d) => ({
+          id: d.id,
+          tutorId: d.tutor_id,
+          studentDocId: d.student_doc_id,
+          studentAuthUid: d.student_auth_uid,
+          studentName: d.student_name,
+          batchId: d.batch_id,
+          title: d.title,
+          initialQuestion: d.initial_question,
+          attachmentPath: d.attachment_path,
+          attachmentType: d.attachment_type as AttachmentType,
+          attachmentName: d.attachment_name,
+          attachmentSize: d.attachment_size,
+          status: d.status,
+          lastMessageAt: d.last_message_at,
+          unreadByTutor: d.unread_by_tutor,
+          unreadByStudent: d.unread_by_student,
+          createdAt: d.created_at,
+        }));
         setDoubts(list);
-        setLoading(false);
 
-        // Auto select first thread if none selected
         if (!selectedDoubtId && list.length > 0) {
           setSelectedDoubtId(list[0].id);
         }
-      },
-      (err) => {
-        console.error("Doubts snapshot error:", err);
-        setLoading(false);
       }
-    );
+      setLoading(false);
+    }
+
+    fetchDoubts();
+
+    const channel = supabase
+      .channel(`doubts_student_${currentUserId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "doubts",
+          filter: `student_auth_uid=eq.${currentUserId}`,
+        },
+        () => {
+          fetchDoubts();
+        }
+      )
+      .subscribe();
 
     async function loadBatches() {
-      if (!user) return;
-      try {
-        let effectiveTutorId = claims?.role === "student" ? claims.tutorId : null;
-        let effectiveStudentDocId = claims?.role === "student" ? claims.studentDocId : null;
-        let enrolledBatchIds: string[] = [];
+      const { data: bData } = await supabase
+        .from("batches")
+        .select("*");
 
-        // Fallback 1: Fetch user doc if claims not populated
-        if (!effectiveTutorId) {
-          const userSnap = await getDoc(doc(db, "users", user.uid));
-          if (userSnap.exists()) {
-            const uData = userSnap.data();
-            effectiveTutorId = uData.tutorId || null;
-            effectiveStudentDocId = uData.studentDocId || null;
-          }
-        }
-
-        // Fallback 2: Fetch student doc by studentDocId or authUid
-        if (effectiveStudentDocId) {
-          const sSnap = await getDoc(doc(db, "students", effectiveStudentDocId));
-          if (sSnap.exists()) {
-            const sData = sSnap.data() as StudentDoc;
-            enrolledBatchIds = sData.enrolledBatchIds || [];
-            if (!effectiveTutorId) effectiveTutorId = sData.tutorId;
-          }
-        } else {
-          const sQuery = query(collection(db, "students"), where("authUid", "==", user.uid));
-          const sSnap = await getDocs(sQuery);
-          if (!sSnap.empty) {
-            const sData = sSnap.docs[0].data() as StudentDoc;
-            enrolledBatchIds = sData.enrolledBatchIds || [];
-            if (!effectiveTutorId) effectiveTutorId = sData.tutorId;
-          }
-        }
-
-        if (!effectiveTutorId) return;
-
-        // Fetch batches for tutorId
-        const bSnap = await getDocs(
-          query(collection(db, "batches"), where("tutorId", "==", effectiveTutorId))
-        );
-        let bList: BatchDoc[] = [];
-        bSnap.forEach((d) => bList.push({ id: d.id, ...d.data() } as BatchDoc));
-
-        // Filter by enrolledBatchIds if defined
-        if (enrolledBatchIds.length > 0) {
-          const enrolledSet = new Set(enrolledBatchIds);
-          const filtered = bList.filter((b) => enrolledSet.has(b.id));
-          if (filtered.length > 0) {
-            bList = filtered;
-          }
-        }
-
+      if (bData) {
+        const bList: BatchDoc[] = bData.map((b) => ({
+          id: b.id,
+          tutorId: b.tutor_id,
+          name: b.name,
+          subject: b.subject,
+          gradeClass: b.grade_class,
+          monthlyFee: Number(b.monthly_fee),
+          schedule: b.schedule || [],
+          studentCount: b.student_count,
+          isArchived: b.is_archived,
+          createdAt: b.created_at,
+        }));
         setBatches(bList);
         if (bList.length > 0) {
           setBatchId((prev) => (prev ? prev : bList[0].id));
         }
-      } catch (err) {
-        console.error("Error loading batches for student:", err);
       }
     }
+
     loadBatches();
 
-    return unsubscribe;
-  }, [user, claims, selectedDoubtId]);
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, claims, selectedDoubtId, supabase]);
 
   // Active doubt thread listener
   useEffect(() => {
@@ -179,35 +209,70 @@ export default function StudentDoubtsPage({
       return;
     }
 
-    // Mark as read
-    user.getIdToken().then((token) => markDoubtAsRead(selectedDoubtId, token));
-
-    const unsubMessages = onSnapshot(
-      collection(db, "doubts", selectedDoubtId, "messages"),
-      (snap) => {
-        const list: MessageDoc[] = [];
-        snap.forEach((d) => list.push({ id: d.id, ...d.data() } as MessageDoc));
-        list.sort((a, b) => (a.createdAt?.toMillis() || 0) - (b.createdAt?.toMillis() || 0));
-        setMessages(list);
-      }
+    // Optimistically mark unread flag as cleared locally
+    setDoubts((prev) =>
+      prev.map((d) => (d.id === selectedDoubtId ? { ...d, unreadByStudent: false } : d))
     );
 
-    return unsubMessages;
-  }, [user, selectedDoubtId]);
+    markDoubtAsRead(selectedDoubtId, user.id);
 
-  // Scroll to bottom when messages update
+    fetchMessagesForThread(selectedDoubtId);
+
+    const channel = supabase
+      .channel(`doubt_chat_${selectedDoubtId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "doubt_messages",
+          filter: `doubt_id=eq.${selectedDoubtId}`,
+        },
+        () => {
+          fetchMessagesForThread(selectedDoubtId);
+        }
+      )
+      .on(
+        "broadcast",
+        { event: "new_message" },
+        () => {
+          fetchMessagesForThread(selectedDoubtId);
+        }
+      )
+      .subscribe();
+
+    activeChannelRef.current = channel;
+
+    // 4s polling fallback to guarantee real-time updates even on network/subscription hiccups
+    const pollInterval = setInterval(() => {
+      fetchMessagesForThread(selectedDoubtId);
+    }, 4000);
+
+    return () => {
+      clearInterval(pollInterval);
+      supabase.removeChannel(channel);
+      activeChannelRef.current = null;
+    };
+  }, [user, selectedDoubtId, supabase, fetchMessagesForThread]);
+
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    const isThreadChanged = prevDoubtIdRef.current !== selectedDoubtId;
+    const hasNewMessages = messages.length > prevMessageCountRef.current;
+
+    prevDoubtIdRef.current = selectedDoubtId;
+    prevMessageCountRef.current = messages.length;
+
+    if (isThreadChanged || (hasNewMessages && isAtBottomRef.current)) {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
   }, [messages, selectedDoubtId]);
 
-  // Fetch Signed URLs for media attachments
   const activeDoubt = doubts.find((d) => d.id === selectedDoubtId);
 
   useEffect(() => {
     if (!user || (!activeDoubt && messages.length === 0)) return;
 
     async function fetchSignedUrls() {
-      const token = await user!.getIdToken();
       const pathsToFetch: string[] = [];
 
       if (activeDoubt?.attachmentPath) pathsToFetch.push(activeDoubt.attachmentPath);
@@ -219,7 +284,7 @@ export default function StudentDoubtsPage({
       for (const path of pathsToFetch) {
         if (!signedUrls[path]) {
           try {
-            const url = await getMediaSignedUrl(path, token);
+            const url = await getMediaSignedUrl(path, user!.id);
             if (url) newUrls[path] = url;
           } catch (err) {
             console.error("Signed URL error:", err);
@@ -254,16 +319,18 @@ export default function StudentDoubtsPage({
         const file = selectedAttachment.file;
         const tempId = `m_${Date.now()}`;
         const cleanName = file.name.replace(/[^a-zA-Z0-9._-]/g, "");
-        attachmentPath = `doubts/${tutorId}/${user.uid}/${selectedDoubtId}/${tempId}_${cleanName}`;
+        attachmentPath = `${tutorId}/${user.id}/${selectedDoubtId}/${tempId}_${cleanName}`;
         attachmentType = selectedAttachment.type;
         attachmentName = file.name;
         attachmentSize = file.size;
 
-        const storageRef = ref(storage, attachmentPath);
-        await uploadBytes(storageRef, file);
+        const { error: uploadErr } = await supabase.storage
+          .from("attachments")
+          .upload(attachmentPath, file);
+
+        if (uploadErr) throw uploadErr;
       }
 
-      const token = await user.getIdToken();
       await postMessage(
         selectedDoubtId,
         {
@@ -273,11 +340,23 @@ export default function StudentDoubtsPage({
           attachmentName,
           attachmentSize,
         },
-        token
+        user.id
       );
 
       setNewMessageText("");
       setSelectedAttachment(null);
+
+      // Instant local refetch so sender sees message immediately
+      await fetchMessagesForThread(selectedDoubtId);
+
+      // Broadcast to other participant over WebSockets
+      if (activeChannelRef.current) {
+        activeChannelRef.current.send({
+          type: "broadcast",
+          event: "new_message",
+          payload: { doubtId: selectedDoubtId },
+        });
+      }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to send message.";
       setError(msg);
@@ -294,11 +373,17 @@ export default function StudentDoubtsPage({
 
     try {
       const fileName = `voice_${Date.now()}.webm`;
-      const attachmentPath = `doubts/${tutorId}/${user.uid}/${selectedDoubtId}/${fileName}`;
-      const storageRef = ref(storage, attachmentPath);
-      await uploadBytes(storageRef, audioBlob);
+      const attachmentPath = `${tutorId}/${user.id}/${selectedDoubtId}/${fileName}`;
 
-      const token = await user.getIdToken();
+      const { error: uploadErr } = await supabase.storage
+        .from("attachments")
+        .upload(attachmentPath, audioBlob, {
+          contentType: audioBlob.type || "audio/webm",
+          upsert: true,
+        });
+
+      if (uploadErr) throw uploadErr;
+
       await postMessage(
         selectedDoubtId,
         {
@@ -308,10 +393,22 @@ export default function StudentDoubtsPage({
           attachmentName: fileName,
           attachmentSize: audioBlob.size,
         },
-        token
+        user.id
       );
 
       setShowVoiceRecorder(false);
+
+      // Instant local refetch so sender sees voice note immediately
+      await fetchMessagesForThread(selectedDoubtId);
+
+      // Broadcast to other participant over WebSockets
+      if (activeChannelRef.current) {
+        activeChannelRef.current.send({
+          type: "broadcast",
+          event: "new_message",
+          payload: { doubtId: selectedDoubtId },
+        });
+      }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to send voice note.";
       setError(msg);
@@ -323,7 +420,7 @@ export default function StudentDoubtsPage({
   // Create New Topic Handler
   async function handleCreateDoubt(e: React.FormEvent) {
     e.preventDefault();
-    if (!user || !claims || claims.role !== "student") return;
+    if (!user) return;
     setError("");
     setSubmittingModal(true);
 
@@ -336,16 +433,18 @@ export default function StudentDoubtsPage({
       if (modalFile) {
         const doubtTempId = `d_${Date.now()}`;
         const cleanName = modalFile.name.replace(/[^a-zA-Z0-9._-]/g, "");
-        attachmentPath = `doubts/${claims.tutorId}/${user.uid}/${doubtTempId}/${cleanName}`;
+        attachmentPath = `${tutorId}/${user.id}/${doubtTempId}/${cleanName}`;
         attachmentType = modalFile.type.startsWith("image/") ? "image" : "file";
         attachmentName = modalFile.name;
         attachmentSize = modalFile.size;
 
-        const storageRef = ref(storage, attachmentPath);
-        await uploadBytes(storageRef, modalFile);
+        const { error: uploadErr } = await supabase.storage
+          .from("attachments")
+          .upload(attachmentPath, modalFile);
+
+        if (uploadErr) throw uploadErr;
       }
 
-      const token = await user.getIdToken();
       const res = await createDoubt(
         {
           title,
@@ -356,8 +455,8 @@ export default function StudentDoubtsPage({
           attachmentName,
           attachmentSize,
         },
-        user.displayName || "Student",
-        token
+        user.user_metadata?.full_name || user.email?.split("@")[0] || "Student",
+        user.id
       );
 
       setTitle("");
@@ -376,8 +475,7 @@ export default function StudentDoubtsPage({
   async function handleMarkResolved() {
     if (!user || !selectedDoubtId) return;
     try {
-      const token = await user.getIdToken();
-      await updateDoubtStatus(selectedDoubtId, "resolved", token);
+      await updateDoubtStatus(selectedDoubtId, "resolved", user.id);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to mark resolved.";
       setError(msg);
@@ -500,7 +598,7 @@ export default function StudentDoubtsPage({
                         <h4 className="text-xs font-bold text-slate-900 truncate">{d.title}</h4>
                         <span className="text-[10px] text-slate-400 shrink-0">
                           {d.lastMessageAt
-                            ? new Date(d.lastMessageAt.toMillis()).toLocaleTimeString([], {
+                            ? new Date(d.lastMessageAt).toLocaleTimeString([], {
                                 hour: "2-digit",
                                 minute: "2-digit",
                               })
@@ -543,7 +641,7 @@ export default function StudentDoubtsPage({
 
         {/* RIGHT PANEL: Active Messenger Chat Area */}
         <div
-          className={`md:col-span-8 flex flex-col h-full bg-white ${
+          className={`md:col-span-8 flex flex-col h-full min-h-0 bg-white ${
             selectedDoubtId ? "flex" : "hidden md:flex"
           }`}
         >
@@ -602,7 +700,11 @@ export default function StudentDoubtsPage({
               </div>
 
               {/* Chat Messages Body */}
-              <div className="flex-1 p-4 overflow-y-auto space-y-4 bg-slate-50/40">
+              <div
+                ref={chatContainerRef}
+                onScroll={handleScroll}
+                className="flex-1 p-4 overflow-y-auto min-h-0 space-y-4 bg-slate-50/40"
+              >
                 {/* Initial Question Bubble */}
                 <div className="max-w-xl mx-auto p-4 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-2">
                   <div className="text-[10px] font-extrabold uppercase tracking-wider text-indigo-600">
@@ -620,7 +722,8 @@ export default function StudentDoubtsPage({
                         <img
                           src={signedUrls[activeDoubt.attachmentPath]}
                           alt="Initial Attachment"
-                          className="max-h-64 rounded-xl border border-slate-200 object-contain bg-black/5"
+                          onClick={() => setLightboxImage(signedUrls[activeDoubt.attachmentPath!])}
+                          className="max-h-64 rounded-xl border border-slate-200 object-contain bg-black/5 cursor-zoom-in hover:opacity-90 transition-opacity"
                         />
                       ) : (
                         <a
@@ -643,7 +746,7 @@ export default function StudentDoubtsPage({
                 </div>
 
                 {messages.map((msg) => {
-                  const isMe = msg.senderUid === user?.uid;
+                  const isMe = msg.senderUid === user?.id;
                   const attachmentUrl = msg.attachmentPath ? signedUrls[msg.attachmentPath] : null;
 
                   return (
@@ -666,7 +769,7 @@ export default function StudentDoubtsPage({
                           <span>{isMe ? "You" : "Teacher"}</span>
                           <span>
                             {msg.createdAt
-                              ? new Date(msg.createdAt.toMillis()).toLocaleTimeString([], {
+                              ? new Date(msg.createdAt).toLocaleTimeString([], {
                                   hour: "2-digit",
                                   minute: "2-digit",
                                 })
@@ -690,7 +793,8 @@ export default function StudentDoubtsPage({
                               <img
                                 src={attachmentUrl}
                                 alt="Image Attachment"
-                                className="max-h-60 rounded-xl border border-black/10 object-contain bg-black/5"
+                                onClick={() => setLightboxImage(attachmentUrl)}
+                                className="max-h-60 rounded-xl border border-black/10 object-contain bg-black/5 cursor-zoom-in hover:opacity-90 transition-opacity"
                               />
                             ) : (
                               <a
@@ -811,7 +915,7 @@ export default function StudentDoubtsPage({
                       type="text"
                       value={newMessageText}
                       onChange={(e) => setNewMessageText(e.target.value)}
-                      placeholder="Type a message..."
+                      placeholder="Type a message to your teacher..."
                       className="flex-1 px-4 py-2.5 text-xs rounded-xl border border-slate-200 bg-slate-50 outline-none focus:border-indigo-500 text-slate-900 font-medium"
                     />
 
@@ -830,42 +934,39 @@ export default function StudentDoubtsPage({
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-slate-50/50">
               <MessageSquare className="w-12 h-12 text-slate-300 mb-3" />
-              <h3 className="text-sm font-bold text-slate-800">Select a conversation thread</h3>
+              <h3 className="text-sm font-bold text-slate-800">No active chat selected</h3>
               <p className="text-xs text-slate-500 max-w-sm mt-1">
-                Choose a topic from the left sidebar or click &quot;New Topic&quot; to start chatting with your teacher.
+                Choose a conversation topic from the left sidebar or click &quot;New Topic&quot; to ask your teacher a question.
               </p>
             </div>
           )}
         </div>
       </div>
 
-      {/* New Topic Modal */}
+      {/* NEW TOPIC MODAL */}
       {showNewModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-fade-in">
-          <div className="w-full max-w-lg p-6 rounded-2xl bg-white border border-slate-200 shadow-xl space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-base font-bold text-slate-900">Start New Chat Topic</h2>
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-xl max-w-lg w-full p-6 space-y-4 animate-scale-up">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <h3 className="text-base font-bold text-slate-900">Ask Your Teacher</h3>
               <button
                 onClick={() => setShowNewModal(false)}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-600"
+                className="p-1 text-slate-400 hover:text-slate-600 rounded-lg"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
             </div>
 
-            {error && (
-              <div className="p-2.5 text-xs rounded-lg bg-red-50 text-red-600 border border-red-200">
-                {error}
-              </div>
-            )}
-
-            <form onSubmit={handleCreateDoubt} className="space-y-3">
+            <form onSubmit={handleCreateDoubt} className="space-y-4">
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Select Batch</label>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+                  Select Batch / Subject
+                </label>
                 <select
+                  required
                   value={batchId}
                   onChange={(e) => setBatchId(e.target.value)}
-                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50 outline-none text-slate-800"
+                  className="w-full px-3.5 py-2.5 text-xs font-bold rounded-xl border border-slate-200 bg-slate-50 outline-none focus:border-indigo-600 text-slate-900"
                 >
                   {batches.map((b) => (
                     <option key={b.id} value={b.id}>
@@ -876,41 +977,45 @@ export default function StudentDoubtsPage({
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Topic Title</label>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+                  Topic Title
+                </label>
                 <input
                   type="text"
                   required
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  placeholder="e.g. Physics Math Doubt Chapter 3"
-                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50 outline-none text-slate-800 font-medium"
+                  placeholder="e.g. Chapter 4 Integration Problem 5"
+                  className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-200 bg-slate-50 outline-none focus:border-indigo-600 font-medium text-slate-900"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Question / Message</label>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+                  Question Description
+                </label>
                 <textarea
                   required
-                  rows={3}
+                  rows={4}
                   value={initialQuestion}
                   onChange={(e) => setInitialQuestion(e.target.value)}
-                  placeholder="Explain your doubt or question..."
-                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50 outline-none text-slate-800 font-medium"
+                  placeholder="Explain where you got stuck or what you didn't understand..."
+                  className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-200 bg-slate-50 outline-none focus:border-indigo-600 font-medium text-slate-900"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Optional Photo or File Attachment
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+                  Attach Photo / Document (Optional)
                 </label>
                 <input
                   type="file"
                   onChange={(e) => setModalFile(e.target.files?.[0] || null)}
-                  className="w-full text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-indigo-50 file:text-indigo-600 hover:file:bg-indigo-100"
+                  className="w-full text-xs text-slate-500 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
                 />
               </div>
 
-              <div className="pt-3 border-t border-slate-100 flex justify-end gap-2">
+              <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-3">
                 <button
                   type="button"
                   onClick={() => setShowNewModal(false)}
@@ -920,15 +1025,19 @@ export default function StudentDoubtsPage({
                 </button>
                 <button
                   type="submit"
-                  disabled={submittingModal || !title || !initialQuestion}
+                  disabled={submittingModal}
                   className="px-5 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-xs transition-all disabled:opacity-50"
                 >
-                  {submittingModal ? "Starting..." : "Start Chat"}
+                  {submittingModal ? "Submitting..." : "Send Question"}
                 </button>
               </div>
             </form>
           </div>
         </div>
+      )}
+
+      {lightboxImage && (
+        <ImageLightbox src={lightboxImage} onClose={() => setLightboxImage(null)} />
       )}
     </div>
   );

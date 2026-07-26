@@ -16,13 +16,15 @@ export default function TutorDashboardPage() {
     { label: "Pending Doubts", value: "0", icon: HelpCircle, color: "text-amber-500", bg: "bg-amber-50" },
   ];
 
+  const tutorName = user?.user_metadata?.full_name || user?.email?.split("@")[0] || "Tutor";
+
   return (
     <div className="space-y-6">
       {/* Welcome Banner */}
       <div className="p-6 sm:p-8 rounded-2xl text-white bg-gradient-to-r from-indigo-600 via-indigo-500 to-cyan-500 shadow-md relative overflow-hidden">
         <div className="relative z-10">
           <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
-            Welcome back, {user?.displayName || "Tutor"} 👋
+            Welcome back, {tutorName} 👋
           </h1>
           <p className="mt-1.5 text-white/90 text-sm max-w-xl leading-relaxed">
             Here is an overview of your batches, attendance logs, and student questions for today.
@@ -31,7 +33,7 @@ export default function TutorDashboardPage() {
       </div>
 
       {/* Onboarding Checklist for Pilot Tutors */}
-      <OnboardingChecklist tutorName={user?.displayName || "Tutor"} />
+      <OnboardingChecklist tutorName={tutorName} />
 
       {/* Metrics Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
@@ -98,7 +100,7 @@ export default function TutorDashboardPage() {
       </div>
 
       {/* Floating Pilot Feedback Widget */}
-      {user && <FeedbackWidget userId={user.uid} userRole="tutor" />}
+      {user && <FeedbackWidget userId={user.id} userRole="tutor" />}
     </div>
   );
 }

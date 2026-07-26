@@ -3,25 +3,18 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import {
-  signInWithEmailAndPassword,
-  GoogleAuthProvider,
-  signInWithPopup,
-  type ConfirmationResult,
-  type User,
-} from "firebase/auth";
-import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
-import { auth, db } from "@/lib/firebase/config";
-import { setupRecaptcha, sendPhoneVerificationCode } from "@/lib/firebase/auth";
+import { createClient } from "@/lib/supabase/client";
 import { onboardTutorUser } from "@/actions/authActions";
 import { claimStudentInvite } from "@/actions/studentActions";
 import { formatAuthError } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { Phone, Mail, Sparkles, ArrowRight } from "lucide-react";
+import type { User } from "@supabase/supabase-js";
 
 export default function LoginPage() {
   const router = useRouter();
   const { refreshClaims } = useAuth();
+  const supabase = createClient();
 
   // Auth Modes & Form States
   const [authMethod, setAuthMethod] = useState<"email" | "phone">("email");
@@ -31,32 +24,32 @@ export default function LoginPage() {
   // Phone Auth State
   const [phoneNumber, setPhoneNumber] = useState("");
   const [otpCode, setOtpCode] = useState("");
-  const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
   const [otpSent, setOtpSent] = useState(false);
 
   // Common UX States
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Onboarding modal for new Google/Phone users
+  // Onboarding modal for new users
   const [pendingUser, setPendingUser] = useState<User | null>(null);
   const [onboardRole, setOnboardRole] = useState<"tutor" | "student">("tutor");
   const [onboardName, setOnboardName] = useState("");
   const [onboardInstitution, setOnboardInstitution] = useState("");
   const [onboardInviteCode, setOnboardInviteCode] = useState("");
 
-  /**
-   * Check user role and redirect to dashboard, or prompt for onboarding if new.
-   */
   async function handlePostSignIn(user: User) {
     document.cookie = "__session=1; path=/; max-age=2592000; SameSite=Lax";
 
     try {
-      const userSnap = await getDoc(doc(db, "users", user.uid));
-      if (userSnap.exists() && userSnap.data()) {
-        const uData = userSnap.data();
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", user.id)
+        .single();
+
+      if (profile) {
         await refreshClaims().catch(() => {});
-        if (uData.role === "student") {
+        if (profile.role === "student") {
           router.push("/student/dashboard");
         } else {
           router.push("/tutor/dashboard");
@@ -64,12 +57,11 @@ export default function LoginPage() {
         return;
       }
     } catch {
-      // Fallback if read fails
+      // Fallback
     }
 
-    // New user detected! Open Onboarding Modal
     setPendingUser(user);
-    setOnboardName(user.displayName || "");
+    setOnboardName(user.user_metadata?.full_name || user.user_metadata?.displayName || "");
   }
 
   async function handleEmailLogin(e: React.FormEvent) {
@@ -78,8 +70,15 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const cred = await signInWithEmailAndPassword(auth, email, password);
-      await handlePostSignIn(cred.user);
+      const { data, error: signInErr } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (signInErr) throw signInErr;
+      if (data.user) {
+        await handlePostSignIn(data.user);
+      }
     } catch (err: unknown) {
       setError(formatAuthError(err));
     } finally {
@@ -92,12 +91,15 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const provider = new GoogleAuthProvider();
-      const cred = await signInWithPopup(auth, provider);
-      await handlePostSignIn(cred.user);
+      const { error: oauthErr } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: `${window.location.origin}/login`,
+        },
+      });
+      if (oauthErr) throw oauthErr;
     } catch (err: unknown) {
       setError(formatAuthError(err));
-    } finally {
       setLoading(false);
     }
   }
@@ -122,9 +124,10 @@ export default function LoginPage() {
     setLoading(true);
     try {
       const formatted = formatPhoneNumber(phoneNumber.trim());
-      const verifier = setupRecaptcha("recaptcha-container");
-      const result = await sendPhoneVerificationCode(formatted, verifier);
-      setConfirmationResult(result);
+      const { error: otpErr } = await supabase.auth.signInWithOtp({
+        phone: formatted,
+      });
+      if (otpErr) throw otpErr;
       setOtpSent(true);
     } catch (err: unknown) {
       setError(formatAuthError(err));
@@ -137,15 +140,24 @@ export default function LoginPage() {
     e.preventDefault();
     setError("");
 
-    if (!confirmationResult || !otpCode) {
+    if (!otpCode) {
       setError("Please enter the 6-digit verification code.");
       return;
     }
 
     setLoading(true);
     try {
-      const cred = await confirmationResult.confirm(otpCode.trim());
-      await handlePostSignIn(cred.user);
+      const formatted = formatPhoneNumber(phoneNumber.trim());
+      const { data, error: verifyErr } = await supabase.auth.verifyOtp({
+        phone: formatted,
+        token: otpCode.trim(),
+        type: "sms",
+      });
+
+      if (verifyErr) throw verifyErr;
+      if (data.user) {
+        await handlePostSignIn(data.user);
+      }
     } catch (err: unknown) {
       setError(formatAuthError(err));
     } finally {
@@ -162,56 +174,22 @@ export default function LoginPage() {
 
     try {
       if (onboardRole === "tutor") {
-        // Client-side Firestore doc writes
-        await setDoc(doc(db, "users", pendingUser.uid), {
-          uid: pendingUser.uid,
-          email: pendingUser.email || null,
-          displayName: onboardName || pendingUser.displayName || "Tutor",
-          phoneNumber: pendingUser.phoneNumber || null,
-          photoURL: pendingUser.photoURL || null,
-          role: "tutor",
-          tutorId: pendingUser.uid,
-          studentDocId: null,
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-        });
-
-        await setDoc(doc(db, "tutors", pendingUser.uid), {
-          id: pendingUser.uid,
-          fullName: onboardName || pendingUser.displayName || "Tutor",
-          institution: onboardInstitution || "Independent",
-          contactPhone: pendingUser.phoneNumber || "",
-          bkashNumber: null,
-          nagadNumber: null,
-          subscription: {
-            plan: "free_trial",
-            status: "active",
-            validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-            maxStudents: 50,
+        await onboardTutorUser(
+          {
+            email: pendingUser.email || null,
+            displayName: onboardName || "Tutor",
+            phoneNumber: pendingUser.phone || undefined,
+            institution: onboardInstitution || "Independent",
           },
-          stats: {
-            totalStudents: 0,
-            activeBatches: 0,
-            pendingDoubtsCount: 0,
-          },
-          createdAt: serverTimestamp(),
-        });
-
-        const idToken = await pendingUser.getIdToken();
-        await onboardTutorUser({
-          email: pendingUser.email,
-          displayName: onboardName || "Tutor",
-          phoneNumber: pendingUser.phoneNumber || undefined,
-          institution: onboardInstitution || "Independent",
-        }, idToken).catch(() => {});
+          pendingUser.id
+        );
       } else {
         if (!onboardInviteCode) {
           setError("Invite code is required for student registration.");
           setLoading(false);
           return;
         }
-        const idToken = await pendingUser.getIdToken();
-        const claimRes = await claimStudentInvite(onboardInviteCode, idToken);
+        const claimRes = await claimStudentInvite(onboardInviteCode, pendingUser.id);
         if (claimRes && !claimRes.success && claimRes.error) {
           setError(claimRes.error);
           setLoading(false);
@@ -231,9 +209,6 @@ export default function LoginPage() {
 
   return (
     <div>
-      {/* Invisible reCAPTCHA container for Phone Auth */}
-      <div id="recaptcha-container"></div>
-
       {/* Mobile branding */}
       <div className="lg:hidden mb-8 text-center">
         <h1

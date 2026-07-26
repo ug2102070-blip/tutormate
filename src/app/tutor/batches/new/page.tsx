@@ -3,8 +3,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { collection, doc, setDoc, updateDoc, increment, serverTimestamp } from "firebase/firestore";
-import { db } from "@/lib/firebase/config";
 import { useAuth } from "@/hooks/useAuth";
 import { createBatch } from "@/actions/batchActions";
 import { ArrowLeft, Plus, Trash2 } from "lucide-react";
@@ -47,41 +45,16 @@ export default function CreateBatchPage() {
     setLoading(true);
 
     try {
-      try {
-        const token = await user.getIdToken();
-        await createBatch(
-          {
-            name,
-            subject,
-            gradeClass,
-            monthlyFee: Number(monthlyFee),
-            schedule,
-          },
-          token
-        );
-      } catch {
-        // Fallback: Save directly via Client SDK if Server Action Admin SDK is not configured
-        const batchRef = doc(collection(db, "batches"));
-        await setDoc(batchRef, {
-          id: batchRef.id,
-          tutorId: user.uid,
+      await createBatch(
+        {
           name,
           subject,
           gradeClass,
           monthlyFee: Number(monthlyFee),
           schedule,
-          studentCount: 0,
-          isArchived: false,
-          createdAt: serverTimestamp(),
-        });
-
-        const tutorRef = doc(db, "tutors", user.uid);
-        await updateDoc(tutorRef, {
-          "stats.activeBatches": increment(1),
-        }).catch(() => {
-          setDoc(tutorRef, { stats: { activeBatches: 1 } }, { merge: true });
-        });
-      }
+        },
+        user.id
+      );
       router.push("/tutor/batches");
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to create batch.";

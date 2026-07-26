@@ -1,23 +1,14 @@
 "use server";
 
-import { adminAuth, adminDb } from "@/lib/firebase/admin";
+import { createAdminClient } from "@/lib/supabase/server";
 import { authRateLimiter } from "@/lib/ratelimit";
 import { headers } from "next/headers";
-import { FieldValue } from "firebase-admin/firestore";
 
 /**
- * Sets custom claims for a newly registered tutor.
- * Verifies caller identity using Firebase Auth ID token.
+ * Sets tutor role and profile for a registered user.
  */
-export async function setTutorClaims(idToken: string) {
-  let uid: string;
-  try {
-    const decodedToken = await adminAuth.verifyIdToken(idToken);
-    uid = decodedToken.uid;
-  } catch (err) {
-    console.warn("Could not verify ID token via Admin Auth:", err);
-    return { success: false, error: "Unauthorized: Invalid or expired token" };
-  }
+export async function setTutorClaims(uidOrToken: string) {
+  const supabase = createAdminClient();
 
   try {
     const headersList = await headers();
@@ -27,66 +18,69 @@ export async function setTutorClaims(idToken: string) {
     // Continue silently if rate limiter instance fails
   }
 
-  try {
-    const userRecord = await adminAuth.getUser(uid);
-    const existingClaims = userRecord.customClaims || {};
-    const existingRoles: string[] = Array.isArray(existingClaims.roles)
-      ? existingClaims.roles
-      : existingClaims.role
-      ? [existingClaims.role as string]
-      : [];
+  let uid = uidOrToken;
+  let user: any = null;
 
-    const updatedRoles = Array.from(new Set([...existingRoles, "tutor"]));
-
-    const claims = {
-      ...existingClaims,
-      role: "tutor" as const,
-      roles: updatedRoles,
-      tutorId: uid,
-    };
-
-    await adminAuth.setCustomUserClaims(uid, claims);
-  } catch (err) {
-    console.warn("Could not set custom claims via Admin Auth:", err);
+  if (uidOrToken && typeof uidOrToken === "string" && uidOrToken.includes(".")) {
+    try {
+      const authRes = await supabase.auth.getUser(uidOrToken);
+      user = authRes?.data?.user || null;
+      if (user) {
+        uid = user.id;
+      }
+    } catch {
+      // Ignore
+    }
   }
 
   try {
-    await adminDb.collection("users").doc(uid).set(
-      {
-        uid,
-        role: "tutor",
-        roles: FieldValue.arrayUnion("tutor"),
-        tutorId: uid,
-        updatedAt: new Date(),
-      },
-      { merge: true }
-    );
+    // Upsert into profiles table
+    await supabase.from("profiles").upsert({
+      id: uid,
+      role: "tutor",
+      tutor_id: uid,
+      updated_at: new Date().toISOString(),
+    });
+
+    // Upsert into tutors table
+    await supabase.from("tutors").upsert({
+      id: uid,
+      user_id: uid,
+      full_name: user?.user_metadata?.full_name || "Tutor",
+      institution: "Independent",
+      contact_phone: user?.phone || "",
+    });
   } catch (err) {
-    console.warn("Could not write to Admin DB:", err);
+    console.warn("Could not write to Supabase profiles/tutors:", err);
   }
 
   return { success: true };
 }
 
 /**
- * Checks if user profile exists in Firestore /users collection via Admin DB.
- * Returns exists: false if Admin DB is not configured.
+ * Checks if user profile exists in Supabase `profiles` table.
  */
 export async function getUserProfile(uid: string) {
   try {
-    const userDoc = await adminDb.collection("users").doc(uid).get();
-    if (userDoc.exists) {
-      return { exists: true, data: userDoc.data() };
+    const supabase = createAdminClient();
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", uid)
+      .single();
+
+    if (error || !data) {
+      return { exists: false, data: null };
     }
-    return { exists: false, data: null };
+    return { exists: true, data };
   } catch (err) {
-    console.warn("Could not fetch user profile via Admin DB:", err);
+    console.warn("Could not fetch user profile via Supabase:", err);
     return { exists: false, data: null };
   }
 }
 
 /**
- * Onboard a Google or Phone user as a Tutor via Admin DB after verifying ID token.
+ * Onboard a Google or Phone user as a Tutor via Supabase Admin Client.
  */
 export async function onboardTutorUser(
   data: {
@@ -95,15 +89,22 @@ export async function onboardTutorUser(
     phoneNumber?: string | null;
     institution?: string;
   },
-  idToken: string
+  uidOrToken: string
 ) {
-  let uid: string;
-  try {
-    const decodedToken = await adminAuth.verifyIdToken(idToken);
-    uid = decodedToken.uid;
-  } catch (err) {
-    console.warn("Could not verify ID token via Admin Auth:", err);
-    return { success: false, error: "Unauthorized: Invalid or expired token" };
+  const supabase = createAdminClient();
+  let uid = uidOrToken;
+  let user: any = null;
+
+  if (uidOrToken && typeof uidOrToken === "string" && uidOrToken.includes(".")) {
+    try {
+      const authRes = await supabase.auth.getUser(uidOrToken);
+      user = authRes?.data?.user || null;
+      if (user) {
+        uid = user.id;
+      }
+    } catch {
+      // Ignore
+    }
   }
 
   try {
@@ -117,69 +118,28 @@ export async function onboardTutorUser(
   const { email, displayName, phoneNumber, institution } = data;
 
   try {
-    // 1. Create or update /users doc
-    await adminDb.collection("users").doc(uid).set(
-      {
-        uid,
-        email: email || null,
-        displayName: displayName || "Tutor",
-        phoneNumber: phoneNumber || null,
-        photoURL: null,
-        role: "tutor",
-        roles: FieldValue.arrayUnion("tutor"),
-        tutorId: uid,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
-      { merge: true }
-    );
-
-    // 2. Create or update /tutors doc
-    await adminDb.collection("tutors").doc(uid).set(
-      {
-        id: uid,
-        fullName: displayName || "Tutor",
-        institution: institution || "Independent",
-        contactPhone: phoneNumber || "",
-        bkashNumber: null,
-        nagadNumber: null,
-        subscription: {
-          plan: "free_trial",
-          status: "active",
-          validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days trial
-          maxStudents: 50,
-        },
-        stats: {
-          totalStudents: 0,
-          activeBatches: 0,
-          pendingDoubtsCount: 0,
-        },
-        createdAt: new Date(),
-      },
-      { merge: true }
-    );
-
-    // 3. Set custom claims
-    const userRecord = await adminAuth.getUser(uid);
-    const existingClaims = userRecord.customClaims || {};
-    const existingRoles: string[] = Array.isArray(existingClaims.roles)
-      ? existingClaims.roles
-      : existingClaims.role
-      ? [existingClaims.role as string]
-      : [];
-
-    const updatedRoles = Array.from(new Set([...existingRoles, "tutor"]));
-
-    await adminAuth.setCustomUserClaims(uid, {
-      ...existingClaims,
+    // 1. Create or update profile
+    await supabase.from("profiles").upsert({
+      id: uid,
+      email: email || "",
+      display_name: displayName || "Tutor",
+      phone_number: phoneNumber || null,
       role: "tutor",
-      roles: updatedRoles,
-      tutorId: uid,
+      tutor_id: uid,
+      updated_at: new Date().toISOString(),
+    });
+
+    // 2. Create or update tutor record
+    await supabase.from("tutors").upsert({
+      id: uid,
+      user_id: uid,
+      full_name: displayName || "Tutor",
+      institution: institution || "Independent",
+      contact_phone: phoneNumber || "",
     });
   } catch (err) {
-    console.warn("Could not complete onboardTutorUser via Admin SDK:", err);
+    console.warn("Could not complete onboardTutorUser via Supabase:", err);
   }
 
   return { success: true, role: "tutor" };
 }
-

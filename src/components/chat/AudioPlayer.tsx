@@ -18,30 +18,58 @@ export function AudioPlayer({ src, isMe }: AudioPlayerProps) {
     const audio = audioRef.current;
     if (!audio) return;
 
-    const updateTime = () => setCurrentTime(audio.currentTime);
-    const updateDuration = () => setDuration(audio.duration || 0);
+    setIsPlaying(false);
+    setCurrentTime(0);
+
+    const updateTime = () => {
+      setCurrentTime(audio.currentTime);
+      if (isFinite(audio.duration) && audio.duration > 0) {
+        setDuration(audio.duration);
+      }
+    };
+
+    const updateDuration = () => {
+      if (isFinite(audio.duration) && audio.duration > 0) {
+        setDuration(audio.duration);
+      }
+    };
+
     const onEnded = () => setIsPlaying(false);
+    const onError = (e: Event) => {
+      console.warn("Audio element error for src:", src, e);
+      setIsPlaying(false);
+    };
 
     audio.addEventListener("timeupdate", updateTime);
     audio.addEventListener("loadedmetadata", updateDuration);
+    audio.addEventListener("durationchange", updateDuration);
     audio.addEventListener("ended", onEnded);
+    audio.addEventListener("error", onError);
 
     return () => {
       audio.removeEventListener("timeupdate", updateTime);
       audio.removeEventListener("loadedmetadata", updateDuration);
+      audio.removeEventListener("durationchange", updateDuration);
       audio.removeEventListener("ended", onEnded);
+      audio.removeEventListener("error", onError);
     };
   }, [src]);
 
   function togglePlay() {
     const audio = audioRef.current;
-    if (!audio) return;
+    if (!audio || !src) return;
 
     if (isPlaying) {
       audio.pause();
       setIsPlaying(false);
     } else {
-      audio.play().then(() => setIsPlaying(true)).catch((err) => console.error(err));
+      audio
+        .play()
+        .then(() => setIsPlaying(true))
+        .catch((err) => {
+          console.error("Audio playback error:", err);
+          setIsPlaying(false);
+        });
     }
   }
 
@@ -54,11 +82,13 @@ export function AudioPlayer({ src, isMe }: AudioPlayerProps) {
   }
 
   const formatTime = (secs: number) => {
-    if (isNaN(secs) || secs === Infinity) return "0:00";
+    if (isNaN(secs) || !isFinite(secs) || secs < 0) return "0:00";
     const mins = Math.floor(secs / 60);
     const s = Math.floor(secs % 60);
     return `${mins}:${s < 10 ? "0" : ""}${s}`;
   };
+
+  const maxSeekValue = isFinite(duration) && duration > 0 ? duration : (currentTime > 0 ? currentTime : 1);
 
   return (
     <div
@@ -68,7 +98,7 @@ export function AudioPlayer({ src, isMe }: AudioPlayerProps) {
           : "bg-slate-100 text-slate-900 border-slate-200"
       }`}
     >
-      <audio ref={audioRef} src={src} preload="metadata" />
+      <audio ref={audioRef} src={src} preload="auto" />
 
       <button
         type="button"
@@ -95,7 +125,8 @@ export function AudioPlayer({ src, isMe }: AudioPlayerProps) {
         <input
           type="range"
           min={0}
-          max={duration || 100}
+          max={maxSeekValue}
+          step={0.1}
           value={currentTime}
           onChange={handleSeek}
           className="w-full h-1 bg-black/20 rounded-lg appearance-none cursor-pointer accent-indigo-500"

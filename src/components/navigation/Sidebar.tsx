@@ -11,6 +11,7 @@ import {
   HelpCircle,
   Settings,
   BookOpen,
+  FileText,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -28,6 +29,7 @@ export function Sidebar({ role }: SidebarProps) {
     { href: "/tutor/fees", label: "Fee Ledger", icon: CreditCard },
     { href: "/tutor/doubts", label: "Student Doubts", icon: HelpCircle },
     { href: "/tutor/materials", label: "Study Materials", icon: BookOpen },
+    { href: "/tutor/assignments", label: "Assignments", icon: FileText },
     { href: "/tutor/settings", label: "Settings", icon: Settings },
   ];
 
@@ -37,6 +39,7 @@ export function Sidebar({ role }: SidebarProps) {
     { href: "/student/fees", label: "Payment History", icon: CreditCard },
     { href: "/student/doubts", label: "Ask Doubts", icon: HelpCircle },
     { href: "/student/materials", label: "Study Materials", icon: BookOpen },
+    { href: "/student/assignments", label: "Assignments", icon: FileText },
   ];
 
   const items = role === "tutor" ? tutorNavItems : studentNavItems;

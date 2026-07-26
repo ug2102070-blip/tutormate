@@ -176,3 +176,27 @@ export interface MaterialDoc {
   isPublished: boolean;
   createdAt: string;
 }
+
+export interface AssignmentDoc {
+  id: string;
+  tutorId: string;
+  batchId: string;
+  title: string;
+  description: string | null;
+  deadline: string;
+  maxMarks: number;
+  isPublished: boolean;
+  createdAt: string;
+}
+
+export interface SubmissionDoc {
+  id: string;
+  assignmentId: string;
+  studentId: string;
+  filePath: string | null;
+  submittedAt: string | null;
+  marksObtained: number | null;
+  feedback: string | null;
+  status: "pending" | "submitted" | "graded" | "late";
+  updatedAt: string;
+}

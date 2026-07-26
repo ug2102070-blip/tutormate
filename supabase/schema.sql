@@ -210,3 +210,41 @@ ALTER TABLE public.materials ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Public all materials" ON public.materials;
 CREATE POLICY "Public materials" ON public.materials FOR ALL USING (true) WITH CHECK (true);
 ALTER PUBLICATION supabase_realtime ADD TABLE public.materials;
+
+-- 12. Create Assignments Table
+CREATE TABLE IF NOT EXISTS public.assignments (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tutor_id UUID NOT NULL REFERENCES public.tutors(id) ON DELETE CASCADE,
+  batch_id UUID NOT NULL REFERENCES public.batches(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  description TEXT,
+  deadline TIMESTAMPTZ NOT NULL,
+  max_marks NUMERIC NOT NULL DEFAULT 100,
+  is_published BOOLEAN NOT NULL DEFAULT false,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 13. Create Assignment Submissions Table
+CREATE TABLE IF NOT EXISTS public.assignment_submissions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  assignment_id UUID NOT NULL REFERENCES public.assignments(id) ON DELETE CASCADE,
+  student_id UUID NOT NULL REFERENCES public.students(id) ON DELETE CASCADE,
+  file_path TEXT,                 -- Supabase Storage path (null until submitted)
+  submitted_at TIMESTAMPTZ,
+  marks_obtained NUMERIC,
+  feedback TEXT,
+  status TEXT NOT NULL DEFAULT 'pending'
+    CHECK (status IN ('pending', 'submitted', 'graded', 'late')),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE (assignment_id, student_id)
+);
+
+ALTER TABLE public.assignments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.assignment_submissions ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Public assignments" ON public.assignments;
+CREATE POLICY "Public assignments" ON public.assignments FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Public assignment_submissions" ON public.assignment_submissions;
+CREATE POLICY "Public assignment_submissions" ON public.assignment_submissions FOR ALL USING (true) WITH CHECK (true);
+

@@ -61,13 +61,13 @@ export function PwaInstallPrompt() {
   if (!showPrompt) return null;
 
   return (
-    <div className="fixed bottom-20 md:bottom-6 right-4 left-4 md:left-auto md:w-96 z-40 bg-white border border-indigo-100 p-4 rounded-2xl shadow-xl animate-fade-in flex items-start gap-3">
+    <div className="fixed bottom-20 md:bottom-6 right-4 left-4 md:left-auto md:w-96 z-40 bg-white dark:bg-[#1e1e2e] border border-indigo-100 p-4 rounded-2xl shadow-xl animate-fade-in flex items-start gap-3">
       <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-extrabold shrink-0 shadow-xs text-base">
         TM
       </div>
       <div className="flex-1 min-w-0">
-        <h4 className="text-xs font-extrabold text-slate-900">Install TutorMate App</h4>
-        <p className="text-[11px] text-slate-500 font-medium mt-0.5">
+        <h4 className="text-xs font-extrabold text-slate-900 dark:text-slate-100">Install TutorMate App</h4>
+        <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium mt-0.5">
           {isIos
             ? "Tap Share and select 'Add to Home Screen' for quick access."
             : "Install TutorMate on your device for a fast, app-like experience."}
@@ -85,14 +85,14 @@ export function PwaInstallPrompt() {
           )}
 
           {isIos && (
-            <span className="px-2.5 py-1 text-[11px] font-bold text-indigo-700 bg-indigo-50 rounded-lg flex items-center gap-1 border border-indigo-100">
+            <span className="px-2.5 py-1 text-[11px] font-bold text-indigo-700 bg-indigo-50 dark:bg-indigo-500/10 rounded-lg flex items-center gap-1 border border-indigo-100">
               <Share className="w-3.5 h-3.5" /> Share → Add to Home Screen
             </span>
           )}
 
           <button
             onClick={handleDismiss}
-            className="px-2.5 py-1.5 text-xs font-semibold text-slate-500 hover:text-slate-800 transition-colors"
+            className="px-2.5 py-1.5 text-xs font-semibold text-slate-500 dark:text-slate-400 hover:text-slate-800 transition-colors"
           >
             Not now
           </button>

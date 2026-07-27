@@ -307,7 +307,7 @@ export default function RegisterPage() {
       </div>
 
       {/* Method Switcher Tabs */}
-      <div className="mt-4 flex border-b border-slate-200 text-xs font-medium text-slate-500">
+      <div className="mt-4 flex border-b border-slate-200 dark:border-white/10 text-xs font-medium text-slate-500 dark:text-slate-400">
         <button
           type="button"
           onClick={() => {
@@ -523,7 +523,7 @@ export default function RegisterPage() {
           {!otpSent ? (
             <form onSubmit={handleSendPhoneOtp} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium mb-1.5 text-slate-700">
+                <label className="block text-sm font-medium mb-1.5 text-slate-700 dark:text-slate-300">
                   Full Name
                 </label>
                 <input
@@ -532,12 +532,12 @@ export default function RegisterPage() {
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   placeholder="e.g. Tanvir Hossain"
-                  className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-slate-200 outline-none focus:border-indigo-600"
+                  className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-slate-200 dark:border-white/10 outline-none focus:border-indigo-600"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-1.5 text-slate-700">
+                <label className="block text-sm font-medium mb-1.5 text-slate-700 dark:text-slate-300">
                   Mobile Phone Number
                 </label>
                 <input
@@ -546,13 +546,13 @@ export default function RegisterPage() {
                   value={contactPhone}
                   onChange={(e) => setContactPhone(e.target.value)}
                   placeholder="01712345678"
-                  className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-slate-200 outline-none focus:border-indigo-600"
+                  className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-slate-200 dark:border-white/10 outline-none focus:border-indigo-600"
                 />
               </div>
 
               {role === "tutor" ? (
                 <div>
-                  <label className="block text-sm font-medium mb-1.5 text-slate-700">
+                  <label className="block text-sm font-medium mb-1.5 text-slate-700 dark:text-slate-300">
                     Institution / Coaching Name
                   </label>
                   <input
@@ -560,12 +560,12 @@ export default function RegisterPage() {
                     value={institution}
                     onChange={(e) => setInstitution(e.target.value)}
                     placeholder="e.g. BUET / Excellence Academy"
-                    className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-slate-200 outline-none focus:border-indigo-600"
+                    className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-slate-200 dark:border-white/10 outline-none focus:border-indigo-600"
                   />
                 </div>
               ) : (
                 <div>
-                  <label className="block text-sm font-medium mb-1.5 text-slate-700">
+                  <label className="block text-sm font-medium mb-1.5 text-slate-700 dark:text-slate-300">
                     Invite Code (from your tutor)
                   </label>
                   <input
@@ -574,7 +574,7 @@ export default function RegisterPage() {
                     value={inviteCode}
                     onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
                     placeholder="e.g. AB12CD34"
-                    className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-slate-200 outline-none uppercase font-mono tracking-wider focus:border-indigo-600"
+                    className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-slate-200 dark:border-white/10 outline-none uppercase font-mono tracking-wider focus:border-indigo-600"
                   />
                 </div>
               )}
@@ -589,7 +589,7 @@ export default function RegisterPage() {
             </form>
           ) : (
             <form onSubmit={handleVerifyPhoneOtp} className="space-y-4">
-              <div className="p-3 rounded-lg bg-indigo-50 border border-indigo-100 text-xs text-indigo-700 flex justify-between items-center">
+              <div className="p-3 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-100 text-xs text-indigo-700 flex justify-between items-center">
                 <span>Code sent to: <strong>{formatPhoneNumber(contactPhone)}</strong></span>
                 <button
                   type="button"
@@ -601,7 +601,7 @@ export default function RegisterPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-1.5 text-slate-700">
+                <label className="block text-sm font-medium mb-1.5 text-slate-700 dark:text-slate-300">
                   Enter 6-Digit OTP Code
                 </label>
                 <input
@@ -611,7 +611,7 @@ export default function RegisterPage() {
                   value={otpCode}
                   onChange={(e) => setOtpCode(e.target.value)}
                   placeholder="123456"
-                  className="w-full px-3.5 py-2.5 text-center text-lg tracking-widest font-mono rounded-lg border border-slate-200 outline-none focus:border-indigo-600"
+                  className="w-full px-3.5 py-2.5 text-center text-lg tracking-widest font-mono rounded-lg border border-slate-200 dark:border-white/10 outline-none focus:border-indigo-600"
                 />
               </div>
 

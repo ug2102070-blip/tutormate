@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase/client";
 import { LogOut, Settings, ChevronDown, User } from "lucide-react";
 import { HeaderCalendar } from "@/components/HeaderCalendar";
 import { NotificationBell } from "@/components/NotificationBell";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 export function Header() {
   const router = useRouter();
@@ -79,6 +80,9 @@ export function Header() {
         <div className="hidden md:block">
           {role && <HeaderCalendar role={role as "tutor" | "student"} />}
         </div>
+
+        {/* Theme Toggle */}
+        <ThemeToggle />
 
         {/* Notification Bell */}
         <NotificationBell />

@@ -450,7 +450,7 @@ export default function LoginPage() {
                 </form>
               ) : (
                 <form onSubmit={handleVerifyOtp} className="space-y-4">
-                  <div className="p-3 rounded-lg bg-indigo-50 border border-indigo-100 text-xs text-indigo-700 flex justify-between items-center">
+                  <div className="p-3 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-100 text-xs text-indigo-700 flex justify-between items-center">
                     <span>Code sent to: <strong>{formatPhoneNumber(phoneNumber)}</strong></span>
                     <button
                       type="button"
@@ -583,12 +583,12 @@ export default function LoginPage() {
             <Sparkles className="w-5 h-5" />
             <h2 className="text-xl font-bold">Complete your Profile</h2>
           </div>
-          <p className="text-sm text-slate-500">
+          <p className="text-sm text-slate-500 dark:text-slate-400">
             Welcome to TutorMate! Please choose your account type to finalize registration.
           </p>
 
           {error && (
-            <div className="p-3 text-sm rounded-lg bg-red-50 text-red-600 border border-red-200">
+            <div className="p-3 text-sm rounded-lg bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-500/20">
               {error}
             </div>
           )}
@@ -601,11 +601,11 @@ export default function LoginPage() {
               className={`p-3 rounded-xl border text-left transition-all ${
                 onboardRole === "tutor"
                   ? "border-indigo-600 bg-indigo-50/50 text-indigo-900 shadow-xs"
-                  : "border-slate-200 hover:border-slate-300 text-slate-700"
+                  : "border-slate-200 dark:border-white/10 hover:border-slate-300 text-slate-700 dark:text-slate-300"
               }`}
             >
               <div className="font-bold text-sm">👨‍🏫 I am a Tutor</div>
-              <div className="text-xs text-slate-500 mt-1">Manage students, batches & fee collection</div>
+              <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">Manage students, batches & fee collection</div>
             </button>
 
             <button
@@ -614,17 +614,17 @@ export default function LoginPage() {
               className={`p-3 rounded-xl border text-left transition-all ${
                 onboardRole === "student"
                   ? "border-indigo-600 bg-indigo-50/50 text-indigo-900 shadow-xs"
-                  : "border-slate-200 hover:border-slate-300 text-slate-700"
+                  : "border-slate-200 dark:border-white/10 hover:border-slate-300 text-slate-700 dark:text-slate-300"
               }`}
             >
               <div className="font-bold text-sm">🎓 I am a Student</div>
-              <div className="text-xs text-slate-500 mt-1">View attendance, fees & ask doubts</div>
+              <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">View attendance, fees & ask doubts</div>
             </button>
           </div>
 
           <form onSubmit={handleCompleteOnboarding} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium mb-1.5 text-slate-700">
+              <label className="block text-sm font-medium mb-1.5 text-slate-700 dark:text-slate-300">
                 Full Name
               </label>
               <input
@@ -633,13 +633,13 @@ export default function LoginPage() {
                 value={onboardName}
                 onChange={(e) => setOnboardName(e.target.value)}
                 placeholder="e.g. Tanvir Hossain"
-                className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-slate-200 outline-none focus:border-indigo-600"
+                className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-slate-200 dark:border-white/10 outline-none focus:border-indigo-600"
               />
             </div>
 
             {onboardRole === "tutor" ? (
               <div>
-                <label className="block text-sm font-medium mb-1.5 text-slate-700">
+                <label className="block text-sm font-medium mb-1.5 text-slate-700 dark:text-slate-300">
                   Institution / Coaching Name
                 </label>
                 <input
@@ -647,12 +647,12 @@ export default function LoginPage() {
                   value={onboardInstitution}
                   onChange={(e) => setOnboardInstitution(e.target.value)}
                   placeholder="e.g. BUET / Excellence Academy"
-                  className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-slate-200 outline-none focus:border-indigo-600"
+                  className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-slate-200 dark:border-white/10 outline-none focus:border-indigo-600"
                 />
               </div>
             ) : (
               <div>
-                <label className="block text-sm font-medium mb-1.5 text-slate-700">
+                <label className="block text-sm font-medium mb-1.5 text-slate-700 dark:text-slate-300">
                   Invite Code (from your tutor)
                 </label>
                 <input
@@ -661,7 +661,7 @@ export default function LoginPage() {
                   value={onboardInviteCode}
                   onChange={(e) => setOnboardInviteCode(e.target.value.toUpperCase())}
                   placeholder="e.g. AB12CD34"
-                  className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-slate-200 outline-none uppercase font-mono tracking-wider focus:border-indigo-600"
+                  className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-slate-200 dark:border-white/10 outline-none uppercase font-mono tracking-wider focus:border-indigo-600"
                 />
               </div>
             )}

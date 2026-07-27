@@ -98,53 +98,53 @@ export default function AssignmentDetailsPage() {
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
-      <Link href="/tutor/assignments" className="inline-flex items-center text-sm font-medium text-slate-500 hover:text-indigo-600 transition-colors">
+      <Link href="/tutor/assignments" className="inline-flex items-center text-sm font-medium text-slate-500 dark:text-slate-400 hover:text-indigo-600 transition-colors">
         <ArrowLeft className="w-4 h-4 mr-1" /> Back to Assignments
       </Link>
 
-      <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+      <div className="bg-white dark:bg-[#1e1e2e] rounded-2xl border border-slate-200 dark:border-white/10 p-6 shadow-sm">
         <div className="flex justify-between items-start mb-4">
           <div>
-            <h1 className="text-2xl font-bold text-slate-900">{assignment.title}</h1>
-            <p className="text-sm text-slate-500 mt-1">Due: {new Date(assignment.deadline).toLocaleString()}</p>
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{assignment.title}</h1>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Due: {new Date(assignment.deadline).toLocaleString()}</p>
           </div>
           <div className="text-right">
             <span className="text-xl font-bold text-indigo-600">{assignment.maxMarks}</span>
-            <p className="text-xs text-slate-500 uppercase tracking-wider font-semibold">Max Marks</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wider font-semibold">Max Marks</p>
           </div>
         </div>
         
         {assignment.description && (
-          <p className="text-slate-700 bg-slate-50 p-4 rounded-xl text-sm border border-slate-100">
+          <p className="text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-[#13131f] p-4 rounded-xl text-sm border border-slate-100 dark:border-white/5">
             {assignment.description}
           </p>
         )}
 
-        <div className="grid grid-cols-3 gap-4 mt-6 pt-6 border-t border-slate-100">
-          <div className="bg-slate-50 rounded-xl p-3 text-center border border-slate-100">
-            <div className="text-xl font-bold text-slate-700">{pendingCount}</div>
-            <div className="text-xs text-slate-500 font-medium uppercase mt-1">Pending</div>
+        <div className="grid grid-cols-3 gap-4 mt-6 pt-6 border-t border-slate-100 dark:border-white/5">
+          <div className="bg-slate-50 dark:bg-[#13131f] rounded-xl p-3 text-center border border-slate-100 dark:border-white/5">
+            <div className="text-xl font-bold text-slate-700 dark:text-slate-300">{pendingCount}</div>
+            <div className="text-xs text-slate-500 dark:text-slate-400 font-medium uppercase mt-1">Pending</div>
           </div>
-          <div className="bg-amber-50 rounded-xl p-3 text-center border border-amber-100">
-            <div className="text-xl font-bold text-amber-700">{submittedCount}</div>
+          <div className="bg-amber-50 dark:bg-amber-500/10 rounded-xl p-3 text-center border border-amber-100">
+            <div className="text-xl font-bold text-amber-700 dark:text-amber-400">{submittedCount}</div>
             <div className="text-xs text-amber-600 font-medium uppercase mt-1">To Grade</div>
           </div>
-          <div className="bg-emerald-50 rounded-xl p-3 text-center border border-emerald-100">
-            <div className="text-xl font-bold text-emerald-700">{gradedCount}</div>
+          <div className="bg-emerald-50 dark:bg-emerald-500/10 rounded-xl p-3 text-center border border-emerald-100">
+            <div className="text-xl font-bold text-emerald-700 dark:text-emerald-400">{gradedCount}</div>
             <div className="text-xs text-emerald-600 font-medium uppercase mt-1">Graded</div>
           </div>
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
-          <h3 className="font-bold text-slate-800">Student Submissions</h3>
+      <div className="bg-white dark:bg-[#1e1e2e] rounded-2xl border border-slate-200 dark:border-white/10 shadow-sm overflow-hidden">
+        <div className="px-6 py-4 border-b border-slate-100 dark:border-white/5 bg-slate-50/50 dark:bg-[#13131f]/50">
+          <h3 className="font-bold text-slate-800 dark:text-slate-200">Student Submissions</h3>
         </div>
         
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-slate-50/80 border-b border-slate-100 text-xs uppercase tracking-wider text-slate-500 font-semibold">
+              <tr className="bg-slate-50/80 border-b border-slate-100 dark:border-white/5 text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold">
                 <th className="p-4">Student</th>
                 <th className="p-4">Status</th>
                 <th className="p-4">Submitted At</th>
@@ -155,7 +155,7 @@ export default function AssignmentDetailsPage() {
             <tbody className="divide-y divide-slate-100 text-sm">
               {submissions.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="p-8 text-center text-slate-500">
+                  <td colSpan={5} className="p-8 text-center text-slate-500 dark:text-slate-400">
                     No submissions yet.
                   </td>
                 </tr>
@@ -163,21 +163,21 @@ export default function AssignmentDetailsPage() {
                 submissions.map((sub) => (
                   <tr key={sub.id} className="hover:bg-slate-50/50 transition-colors group">
                     <td className="p-4">
-                      <div className="font-semibold text-slate-900">{sub.studentName}</div>
-                      <div className="text-xs text-slate-500">{sub.studentPhone}</div>
+                      <div className="font-semibold text-slate-900 dark:text-slate-100">{sub.studentName}</div>
+                      <div className="text-xs text-slate-500 dark:text-slate-400">{sub.studentPhone}</div>
                     </td>
                     <td className="p-4">
-                      {sub.status === 'pending' && <span className="inline-flex items-center gap-1 text-slate-500 bg-slate-100 px-2 py-1 rounded-md text-xs font-semibold"><Clock className="w-3 h-3" /> Pending</span>}
-                      {sub.status === 'submitted' && <span className="inline-flex items-center gap-1 text-amber-600 bg-amber-50 px-2 py-1 rounded-md text-xs font-semibold border border-amber-200"><FileDown className="w-3 h-3" /> Submitted</span>}
-                      {sub.status === 'graded' && <span className="inline-flex items-center gap-1 text-emerald-600 bg-emerald-50 px-2 py-1 rounded-md text-xs font-semibold border border-emerald-200"><CheckCircle className="w-3 h-3" /> Graded</span>}
-                      {sub.status === 'late' && <span className="inline-flex items-center gap-1 text-red-600 bg-red-50 px-2 py-1 rounded-md text-xs font-semibold border border-red-200"><XCircle className="w-3 h-3" /> Late</span>}
+                      {sub.status === 'pending' && <span className="inline-flex items-center gap-1 text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-[#252535] px-2 py-1 rounded-md text-xs font-semibold"><Clock className="w-3 h-3" /> Pending</span>}
+                      {sub.status === 'submitted' && <span className="inline-flex items-center gap-1 text-amber-600 bg-amber-50 dark:bg-amber-500/10 px-2 py-1 rounded-md text-xs font-semibold border border-amber-200 dark:border-amber-500/20"><FileDown className="w-3 h-3" /> Submitted</span>}
+                      {sub.status === 'graded' && <span className="inline-flex items-center gap-1 text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10 px-2 py-1 rounded-md text-xs font-semibold border border-emerald-200 dark:border-emerald-500/20"><CheckCircle className="w-3 h-3" /> Graded</span>}
+                      {sub.status === 'late' && <span className="inline-flex items-center gap-1 text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-500/10 px-2 py-1 rounded-md text-xs font-semibold border border-red-200 dark:border-red-500/20"><XCircle className="w-3 h-3" /> Late</span>}
                     </td>
-                    <td className="p-4 text-slate-500">
+                    <td className="p-4 text-slate-500 dark:text-slate-400">
                       {sub.submittedAt ? new Date(sub.submittedAt).toLocaleString() : '-'}
                     </td>
                     <td className="p-4 text-center font-medium">
                       {sub.status === 'graded' ? (
-                        <span className="text-slate-900">{sub.marksObtained} <span className="text-slate-400 text-xs">/ {assignment.maxMarks}</span></span>
+                        <span className="text-slate-900 dark:text-slate-100">{sub.marksObtained} <span className="text-slate-400 text-xs">/ {assignment.maxMarks}</span></span>
                       ) : '-'}
                     </td>
                     <td className="p-4">
@@ -186,25 +186,25 @@ export default function AssignmentDetailsPage() {
                           {sub.filePath && (
                             <button
                               onClick={() => handleDownload(sub.filePath)}
-                              className="text-xs font-semibold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-2.5 py-1.5 rounded-lg transition-colors flex items-center gap-1"
+                              className="text-xs font-semibold text-indigo-600 bg-indigo-50 dark:bg-indigo-500/10 hover:bg-indigo-100 px-2.5 py-1.5 rounded-lg transition-colors flex items-center gap-1"
                             >
                               <FileDown className="w-3.5 h-3.5" /> View File
                             </button>
                           )}
                           
                           {gradingId === sub.id ? (
-                            <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg p-1 shadow-sm absolute right-12 z-10">
+                            <div className="flex items-center gap-2 bg-white dark:bg-[#1e1e2e] border border-slate-200 dark:border-white/10 rounded-lg p-1 shadow-sm absolute right-12 z-10">
                               <input 
                                 type="number" 
                                 min={0} max={assignment.maxMarks}
-                                className="w-16 px-2 py-1 text-sm border border-slate-200 rounded outline-none"
+                                className="w-16 px-2 py-1 text-sm border border-slate-200 dark:border-white/10 rounded outline-none"
                                 value={marks}
                                 onChange={(e) => setMarks(Number(e.target.value))}
                                 placeholder="Marks"
                               />
                               <input 
                                 type="text"
-                                className="w-32 px-2 py-1 text-sm border border-slate-200 rounded outline-none"
+                                className="w-32 px-2 py-1 text-sm border border-slate-200 dark:border-white/10 rounded outline-none"
                                 value={feedback}
                                 onChange={(e) => setFeedback(e.target.value)}
                                 placeholder="Feedback..."
@@ -218,7 +218,7 @@ export default function AssignmentDetailsPage() {
                               </button>
                               <button
                                 onClick={() => setGradingId(null)}
-                                className="px-2 py-1 bg-slate-100 text-slate-600 text-xs font-semibold rounded hover:bg-slate-200"
+                                className="px-2 py-1 bg-slate-100 dark:bg-[#252535] text-slate-600 dark:text-slate-400 text-xs font-semibold rounded hover:bg-slate-200"
                               >
                                 Cancel
                               </button>
@@ -230,7 +230,7 @@ export default function AssignmentDetailsPage() {
                                 setMarks(sub.marksObtained || 0);
                                 setFeedback(sub.feedback || "");
                               }}
-                              className="text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 px-2.5 py-1.5 rounded-lg transition-colors"
+                              className="text-xs font-semibold text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-[#252535] hover:bg-slate-200 px-2.5 py-1.5 rounded-lg transition-colors"
                             >
                               {sub.status === 'graded' ? 'Edit Grade' : 'Grade'}
                             </button>

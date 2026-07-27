@@ -99,25 +99,25 @@ export function HeaderCalendar({ role }: { role: "tutor" | "student" }) {
     <div className="relative" ref={popoverRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className={`p-2 rounded-xl transition-colors border hover:border-slate-200 ${isOpen ? 'bg-indigo-50 border-indigo-200 text-indigo-600' : 'border-transparent text-slate-500 hover:bg-slate-50'}`}
+        className={`p-2 rounded-xl transition-colors border hover:border-slate-200 ${isOpen ? 'bg-indigo-50 dark:bg-indigo-500/10 border-indigo-200 text-indigo-600' : 'border-transparent text-slate-500 dark:text-slate-400 hover:bg-slate-50'}`}
         aria-label="Calendar"
       >
         <CalendarDays className="w-5 h-5" />
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 top-12 w-80 sm:w-96 bg-white rounded-2xl border border-slate-200 shadow-xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2">
+        <div className="absolute right-0 top-12 w-80 sm:w-96 bg-white dark:bg-[#1e1e2e] rounded-2xl border border-slate-200 dark:border-white/10 shadow-xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2">
           {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 bg-slate-50/50">
-            <h3 className="font-bold text-slate-800">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 dark:border-white/5 bg-slate-50/50 dark:bg-[#13131f]/50">
+            <h3 className="font-bold text-slate-800 dark:text-slate-200">
               {format(currentDate, "MMMM yyyy")}
             </h3>
             <div className="flex items-center gap-1">
               {loading && <Loader2 className="w-4 h-4 text-indigo-500 animate-spin mr-2" />}
-              <button onClick={handlePrevMonth} className="p-1 hover:bg-slate-200 rounded-md transition-colors text-slate-600">
+              <button onClick={handlePrevMonth} className="p-1 hover:bg-slate-200 rounded-md transition-colors text-slate-600 dark:text-slate-400">
                 <ChevronLeft className="w-4 h-4" />
               </button>
-              <button onClick={handleNextMonth} className="p-1 hover:bg-slate-200 rounded-md transition-colors text-slate-600">
+              <button onClick={handleNextMonth} className="p-1 hover:bg-slate-200 rounded-md transition-colors text-slate-600 dark:text-slate-400">
                 <ChevronRight className="w-4 h-4" />
               </button>
             </div>
@@ -149,7 +149,7 @@ export function HeaderCalendar({ role }: { role: "tutor" | "student" }) {
                     className={`relative aspect-square flex items-center justify-center text-sm font-medium rounded-full transition-all hover:bg-indigo-50 hover:text-indigo-600
                       ${isSelected ? 'bg-indigo-600 text-white hover:bg-indigo-700 hover:text-white shadow-sm' : ''}
                       ${isToday && !isSelected ? 'text-indigo-600 font-bold bg-indigo-50/50' : ''}
-                      ${!isSelected && !isToday ? 'text-slate-700' : ''}
+                      ${!isSelected && !isToday ? 'text-slate-700 dark:text-slate-300' : ''}
                     `}
                   >
                     {format(day, "d")}
@@ -163,9 +163,9 @@ export function HeaderCalendar({ role }: { role: "tutor" | "student" }) {
           </div>
 
           {/* Events List for Selected Date */}
-          <div className="border-t border-slate-100 bg-slate-50 p-4 max-h-48 overflow-y-auto">
+          <div className="border-t border-slate-100 dark:border-white/5 bg-slate-50 dark:bg-[#13131f] p-4 max-h-48 overflow-y-auto">
             <div className="flex items-center justify-between mb-3">
-              <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+              <h4 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                 {selectedDate ? format(selectedDate, "MMM d, yyyy") : "Select a date"}
               </h4>
               {role === "tutor" && selectedDate && (
@@ -181,12 +181,12 @@ export function HeaderCalendar({ role }: { role: "tutor" | "student" }) {
             {selectedDateEvents.length > 0 ? (
               <div className="space-y-2">
                 {selectedDateEvents.map(event => (
-                  <div key={event.id} className="group flex items-start gap-3 bg-white p-2.5 rounded-xl border border-slate-100 shadow-sm">
+                  <div key={event.id} className="group flex items-start gap-3 bg-white dark:bg-[#1e1e2e] p-2.5 rounded-xl border border-slate-100 dark:border-white/5 shadow-sm">
                     <div className={`w-1.5 h-1.5 rounded-full mt-1.5 shrink-0 ${event.type === 'exam' ? 'bg-orange-500' : event.type === 'assignment' ? 'bg-blue-500' : event.type === 'class' ? 'bg-green-500' : 'bg-purple-500'}`} />
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-slate-800 leading-tight">{event.title}</p>
+                      <p className="text-sm font-semibold text-slate-800 dark:text-slate-200 leading-tight">{event.title}</p>
                       {event.batchName && (
-                        <p className="text-[10px] font-medium text-slate-500 mt-0.5">{event.batchName}</p>
+                        <p className="text-[10px] font-medium text-slate-500 dark:text-slate-400 mt-0.5">{event.batchName}</p>
                       )}
                     </div>
                     {role === "tutor" && event.type === "event" && (
@@ -210,29 +210,29 @@ export function HeaderCalendar({ role }: { role: "tutor" | "student" }) {
           {showCreateModal && (
             <div className="absolute inset-0 bg-white/95 backdrop-blur-sm z-10 flex flex-col p-4 animate-in fade-in">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="font-bold text-slate-800">New Event</h3>
+                <h3 className="font-bold text-slate-800 dark:text-slate-200">New Event</h3>
                 <button onClick={() => setShowCreateModal(false)} className="text-slate-400 hover:text-slate-600 text-xl font-medium">&times;</button>
               </div>
               <form onSubmit={handleCreateSubmit} className="space-y-3 flex-1 overflow-y-auto">
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Title</label>
-                  <input type="text" name="title" required placeholder="e.g. Eid Holiday" className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500" />
+                  <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">Title</label>
+                  <input type="text" name="title" required placeholder="e.g. Eid Holiday" className="w-full px-3 py-2 bg-slate-50 dark:bg-[#13131f] border border-slate-200 dark:border-white/10 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500" />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Date</label>
-                  <input type="date" name="eventDate" required defaultValue={selectedDate ? format(selectedDate, "yyyy-MM-dd") : ""} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500" />
+                  <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">Date</label>
+                  <input type="date" name="eventDate" required defaultValue={selectedDate ? format(selectedDate, "yyyy-MM-dd") : ""} className="w-full px-3 py-2 bg-slate-50 dark:bg-[#13131f] border border-slate-200 dark:border-white/10 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500" />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Type</label>
-                  <select name="type" required className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500">
+                  <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">Type</label>
+                  <select name="type" required className="w-full px-3 py-2 bg-slate-50 dark:bg-[#13131f] border border-slate-200 dark:border-white/10 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500">
                     <option value="announcement">Announcement</option>
                     <option value="holiday">Holiday</option>
                     <option value="other">Other</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Batch (Optional ID)</label>
-                  <input type="text" name="batchId" placeholder="UUID or leave empty for all" className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500" />
+                  <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">Batch (Optional ID)</label>
+                  <input type="text" name="batchId" placeholder="UUID or leave empty for all" className="w-full px-3 py-2 bg-slate-50 dark:bg-[#13131f] border border-slate-200 dark:border-white/10 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500" />
                 </div>
                 <div className="pt-2">
                   <button type="submit" disabled={isSubmitting} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 rounded-lg text-sm transition-colors disabled:opacity-50">

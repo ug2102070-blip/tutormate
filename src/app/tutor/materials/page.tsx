@@ -181,7 +181,7 @@ export default function MaterialsPage() {
       case "image": return <ImageIcon className="w-8 h-8 text-green-500" />;
       case "docx": return <File className="w-8 h-8 text-blue-700" />;
       case "ppt": return <FileArchive className="w-8 h-8 text-orange-500" />;
-      default: return <File className="w-8 h-8 text-slate-500" />;
+      default: return <File className="w-8 h-8 text-slate-500 dark:text-slate-400" />;
     }
   };
 
@@ -199,59 +199,59 @@ export default function MaterialsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
             <BookOpen className="w-6 h-6 text-indigo-600" />
             Study Materials
           </h1>
-          <p className="text-slate-500 text-sm mt-1">Upload and share notes, videos, and slides with your students.</p>
+          <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">Upload and share notes, videos, and slides with your students.</p>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Upload Form (Side) */}
         <div className="lg:col-span-1">
-          <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm sticky top-6">
-            <h2 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+          <div className="bg-white dark:bg-[#1e1e2e] rounded-2xl border border-slate-200 dark:border-white/10 p-5 shadow-sm sticky top-6">
+            <h2 className="text-lg font-bold text-slate-800 dark:text-slate-200 mb-4 flex items-center gap-2">
               <Upload className="w-5 h-5 text-indigo-500" />
               Upload Material
             </h2>
             
             {uploadError && (
-              <div className="p-3 bg-red-50 text-red-700 text-sm rounded-xl mb-4">
+              <div className="p-3 bg-red-50 dark:bg-red-500/10 text-red-700 text-sm rounded-xl mb-4">
                 {uploadError}
               </div>
             )}
 
             <form onSubmit={handleFileSubmit} className="space-y-4">
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1">Title *</label>
+                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">Title *</label>
                 <input 
                   type="text" 
                   required
                   value={formData.title}
                   onChange={e => setFormData({...formData, title: e.target.value})}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none"
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-[#13131f] border border-slate-200 dark:border-white/10 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none"
                   placeholder="e.g., Chapter 1 Notes"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1">Description (Optional)</label>
+                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">Description (Optional)</label>
                 <textarea 
                   value={formData.description}
                   onChange={e => setFormData({...formData, description: e.target.value})}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none resize-none"
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-[#13131f] border border-slate-200 dark:border-white/10 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none resize-none"
                   placeholder="Brief context about this material..."
                   rows={2}
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1">Target Batch</label>
+                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">Target Batch</label>
                 <select 
                   value={formData.batchId}
                   onChange={e => setFormData({...formData, batchId: e.target.value})}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none"
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-[#13131f] border border-slate-200 dark:border-white/10 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none"
                 >
                   <option value="all">Global (All Students)</option>
                   {batches.map(b => (
@@ -261,12 +261,12 @@ export default function MaterialsPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1">File *</label>
+                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">File *</label>
                 <input 
                   type="file" 
                   ref={fileInputRef}
                   required
-                  className="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
+                  className="w-full text-sm text-slate-500 dark:text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
                 />
               </div>
               
@@ -278,7 +278,7 @@ export default function MaterialsPage() {
                   onChange={e => setFormData({...formData, isPublished: e.target.checked})}
                   className="w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500 border-gray-300"
                 />
-                <label htmlFor="publish" className="text-sm font-medium text-slate-700">Publish immediately</label>
+                <label htmlFor="publish" className="text-sm font-medium text-slate-700 dark:text-slate-300">Publish immediately</label>
               </div>
 
               <button 
@@ -298,15 +298,15 @@ export default function MaterialsPage() {
 
         {/* Materials List (Main) */}
         <div className="lg:col-span-2">
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col h-full min-h-[500px]">
+          <div className="bg-white dark:bg-[#1e1e2e] rounded-2xl border border-slate-200 dark:border-white/10 shadow-sm overflow-hidden flex flex-col h-full min-h-[500px]">
             {/* Filter Bar */}
-            <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex flex-wrap gap-3 items-center justify-between">
+            <div className="p-4 border-b border-slate-100 dark:border-white/5 bg-slate-50/50 dark:bg-[#13131f]/50 flex flex-wrap gap-3 items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-slate-600">Filter by Batch:</span>
+                <span className="text-sm font-medium text-slate-600 dark:text-slate-400">Filter by Batch:</span>
                 <select 
                   value={selectedBatchId}
                   onChange={(e) => setSelectedBatchId(e.target.value)}
-                  className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500/20"
+                  className="px-3 py-1.5 bg-white dark:bg-[#1e1e2e] border border-slate-200 dark:border-white/10 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-300 outline-none focus:ring-2 focus:ring-indigo-500/20"
                 >
                   <option value="all">All Materials</option>
                   {batches.map(b => (
@@ -325,11 +325,11 @@ export default function MaterialsPage() {
                 </div>
               ) : materials.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-64 text-center px-4">
-                  <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-3">
+                  <div className="w-16 h-16 bg-slate-50 dark:bg-[#13131f] rounded-full flex items-center justify-center mb-3">
                     <BookOpen className="w-8 h-8 text-slate-300" />
                   </div>
-                  <h3 className="text-slate-800 font-bold mb-1">No Materials Found</h3>
-                  <p className="text-slate-500 text-sm max-w-sm">
+                  <h3 className="text-slate-800 dark:text-slate-200 font-bold mb-1">No Materials Found</h3>
+                  <p className="text-slate-500 dark:text-slate-400 text-sm max-w-sm">
                     {selectedBatchId === "all" 
                       ? "You haven't uploaded any study materials yet." 
                       : "No materials uploaded for this specific batch."}
@@ -348,15 +348,15 @@ export default function MaterialsPage() {
                         <div className="flex-1 min-w-0">
                           <div className="flex justify-between items-start gap-2">
                             <div>
-                              <h4 className="font-bold text-slate-900 text-base truncate">
+                              <h4 className="font-bold text-slate-900 dark:text-slate-100 text-base truncate">
                                 {mat.title}
                               </h4>
                               <div className="flex flex-wrap items-center gap-2 mt-1 text-xs font-medium">
-                                <span className="text-slate-500">{formatSize(mat.fileSize)}</span>
+                                <span className="text-slate-500 dark:text-slate-400">{formatSize(mat.fileSize)}</span>
                                 <span className="text-slate-300">•</span>
-                                <span className="text-slate-500">{new Date(mat.createdAt).toLocaleDateString()}</span>
+                                <span className="text-slate-500 dark:text-slate-400">{new Date(mat.createdAt).toLocaleDateString()}</span>
                                 <span className="text-slate-300">•</span>
-                                <span className={`px-2 py-0.5 rounded-full ${mat.batchId ? 'bg-indigo-50 text-indigo-700' : 'bg-emerald-50 text-emerald-700'}`}>
+                                <span className={`px-2 py-0.5 rounded-full ${mat.batchId ? 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700' : 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400'}`}>
                                   {mat.batchId && batch ? batch.name : "Global (All)"}
                                 </span>
                               </div>
@@ -389,13 +389,13 @@ export default function MaterialsPage() {
                           </div>
                           
                           {mat.description && (
-                            <p className="text-sm text-slate-600 mt-2 line-clamp-2">
+                            <p className="text-sm text-slate-600 dark:text-slate-400 mt-2 line-clamp-2">
                               {mat.description}
                             </p>
                           )}
                           
                           {!mat.isPublished && (
-                            <div className="mt-2 inline-flex items-center gap-1 px-2 py-1 bg-amber-50 text-amber-700 text-xs font-semibold rounded-md border border-amber-200">
+                            <div className="mt-2 inline-flex items-center gap-1 px-2 py-1 bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 text-xs font-semibold rounded-md border border-amber-200 dark:border-amber-500/20">
                               <EyeOff className="w-3 h-3" /> Draft (Hidden from students)
                             </div>
                           )}

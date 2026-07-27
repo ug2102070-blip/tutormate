@@ -25,17 +25,17 @@ export default function StudentDashboardPage() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         <Link
           href="/student/attendance"
-          className="p-5 rounded-2xl border border-slate-200 bg-white flex items-center justify-between transition-all duration-200 hover:shadow-md hover:border-indigo-500 group shadow-xs"
+          className="p-5 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1e1e2e] flex items-center justify-between transition-all duration-200 hover:shadow-md hover:border-indigo-500 group shadow-xs"
         >
           <div className="flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-indigo-50 text-indigo-600">
+            <div className="p-3 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600">
               <CalendarCheck className="w-6 h-6" />
             </div>
             <div>
-              <div className="text-base font-bold text-slate-900">
+              <div className="text-base font-bold text-slate-900 dark:text-slate-100">
                 My Attendance
               </div>
-              <div className="text-xs text-slate-500 mt-0.5 font-medium">
+              <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 font-medium">
                 View your class attendance logs
               </div>
             </div>
@@ -45,17 +45,17 @@ export default function StudentDashboardPage() {
 
         <Link
           href="/student/fees"
-          className="p-5 rounded-2xl border border-slate-200 bg-white flex items-center justify-between transition-all duration-200 hover:shadow-md hover:border-emerald-500 group shadow-xs"
+          className="p-5 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1e1e2e] flex items-center justify-between transition-all duration-200 hover:shadow-md hover:border-emerald-500 group shadow-xs"
         >
           <div className="flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-emerald-50 text-emerald-600">
+            <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600">
               <CreditCard className="w-6 h-6" />
             </div>
             <div>
-              <div className="text-base font-bold text-slate-900">
+              <div className="text-base font-bold text-slate-900 dark:text-slate-100">
                 Payment History
               </div>
-              <div className="text-xs text-slate-500 mt-0.5 font-medium">
+              <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 font-medium">
                 Check your monthly fee statuses
               </div>
             </div>
@@ -65,17 +65,17 @@ export default function StudentDashboardPage() {
 
         <Link
           href="/student/doubts"
-          className="p-5 rounded-2xl border border-slate-200 bg-white flex items-center justify-between transition-all duration-200 hover:shadow-md hover:border-amber-500 group shadow-xs"
+          className="p-5 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1e1e2e] flex items-center justify-between transition-all duration-200 hover:shadow-md hover:border-amber-500 group shadow-xs"
         >
           <div className="flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-amber-50 text-amber-500">
+            <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-500/10 text-amber-500">
               <HelpCircle className="w-6 h-6" />
             </div>
             <div>
-              <div className="text-base font-bold text-slate-900">
+              <div className="text-base font-bold text-slate-900 dark:text-slate-100">
                 Ask Your Teacher
               </div>
-              <div className="text-xs text-slate-500 mt-0.5 font-medium">
+              <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 font-medium">
                 Ask doubts with image attachments
               </div>
             </div>

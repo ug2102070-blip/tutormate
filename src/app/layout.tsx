@@ -60,6 +60,8 @@ export const metadata: Metadata = {
   },
 };
 
+import { ThemeProvider } from "@/components/ThemeProvider";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -73,12 +75,19 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col relative" suppressHydrationWarning>
-        <AuthProvider>
-          <NetworkStatus />
-          <PwaRegister />
-          <PwaInstallPrompt />
-          {children}
-        </AuthProvider>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <AuthProvider>
+            <NetworkStatus />
+            <PwaRegister />
+            <PwaInstallPrompt />
+            {children}
+          </AuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

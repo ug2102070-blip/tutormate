@@ -502,10 +502,10 @@ export default function StudentDoubtsPage({
       {/* Page Header */}
       <div className="flex items-center justify-between px-1 shrink-0">
         <div>
-          <h1 className="text-xl font-bold tracking-tight text-slate-900">
+          <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
             Inbox & Teacher Chat
           </h1>
-          <p className="text-xs text-slate-500 font-medium">
+          <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
             Direct real-time chat with your teacher, send voice notes, images & study files
           </p>
         </div>
@@ -523,15 +523,15 @@ export default function StudentDoubtsPage({
       </div>
 
       {/* Main Inbox Dual Panel Layout */}
-      <div className="flex-1 grid grid-cols-1 md:grid-cols-12 gap-4 bg-white border border-slate-200 rounded-2xl shadow-xs overflow-hidden min-h-0">
+      <div className="flex-1 grid grid-cols-1 md:grid-cols-12 gap-4 bg-white dark:bg-[#1e1e2e] border border-slate-200 dark:border-white/10 rounded-2xl shadow-xs overflow-hidden min-h-0">
         {/* LEFT SIDEBAR: Threads & Conversations List */}
         <div
-          className={`md:col-span-4 border-r border-slate-200 flex flex-col bg-slate-50/50 ${
+          className={`md:col-span-4 border-r border-slate-200 dark:border-white/10 flex flex-col bg-slate-50/50 dark:bg-[#13131f]/50 ${
             selectedDoubtId ? "hidden md:flex" : "flex"
           }`}
         >
           {/* Search & Filters */}
-          <div className="p-3 space-y-2 border-b border-slate-200 bg-white">
+          <div className="p-3 space-y-2 border-b border-slate-200 dark:border-white/10 bg-white dark:bg-[#1e1e2e]">
             <div className="relative">
               <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
@@ -539,7 +539,7 @@ export default function StudentDoubtsPage({
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search messages..."
-                className="w-full pl-9 pr-3 py-1.5 text-xs rounded-xl border border-slate-200 bg-slate-50 outline-none focus:border-indigo-500"
+                className="w-full pl-9 pr-3 py-1.5 text-xs rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#13131f] outline-none focus:border-indigo-500"
               />
             </div>
 
@@ -550,8 +550,8 @@ export default function StudentDoubtsPage({
                   onClick={() => setStatusFilter(st)}
                   className={`px-2.5 py-1 text-[11px] font-bold rounded-lg capitalize whitespace-nowrap transition-colors ${
                     statusFilter === st
-                      ? "bg-indigo-50 text-indigo-700"
-                      : "text-slate-500 hover:text-slate-900"
+                      ? "bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700"
+                      : "text-slate-500 dark:text-slate-400 hover:text-slate-900"
                   }`}
                 >
                   {st}
@@ -565,13 +565,13 @@ export default function StudentDoubtsPage({
             {loading ? (
               <div className="p-4 space-y-3">
                 {[1, 2, 3].map((i) => (
-                  <div key={i} className="h-16 rounded-xl animate-shimmer bg-slate-200/60" />
+                  <div key={i} className="h-16 rounded-xl animate-shimmer bg-slate-200/60 dark:bg-[#2d2d40]/60" />
                 ))}
               </div>
             ) : filteredDoubts.length === 0 ? (
               <div className="py-12 text-center px-4">
                 <HelpCircle className="w-8 h-8 mx-auto text-slate-300 mb-2" />
-                <p className="text-xs font-semibold text-slate-600">No conversation threads</p>
+                <p className="text-xs font-semibold text-slate-600 dark:text-slate-400">No conversation threads</p>
                 <p className="text-[11px] text-slate-400 mt-0.5">
                   Click &quot;New Topic&quot; to send a message to your tutor.
                 </p>
@@ -585,17 +585,17 @@ export default function StudentDoubtsPage({
                     onClick={() => setSelectedDoubtId(d.id)}
                     className={`w-full text-left p-3.5 transition-all flex items-start gap-3 relative ${
                       isSelected
-                        ? "bg-indigo-50/70 border-l-4 border-indigo-600"
+                        ? "bg-indigo-50/70 dark:bg-indigo-500/10 border-l-4 border-indigo-600"
                         : "hover:bg-slate-100/70"
                     }`}
                   >
-                    <div className="w-9 h-9 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center shrink-0 font-bold text-xs">
+                    <div className="w-9 h-9 rounded-full bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 flex items-center justify-center shrink-0 font-bold text-xs">
                       {d.studentName.charAt(0).toUpperCase()}
                     </div>
 
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between gap-1">
-                        <h4 className="text-xs font-bold text-slate-900 truncate">{d.title}</h4>
+                        <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate">{d.title}</h4>
                         <span className="text-[10px] text-slate-400 shrink-0">
                           {d.lastMessageAt
                             ? new Date(d.lastMessageAt).toLocaleTimeString([], {
@@ -606,23 +606,23 @@ export default function StudentDoubtsPage({
                         </span>
                       </div>
 
-                      <p className="text-[11px] text-slate-500 truncate mt-0.5">
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
                         {d.initialQuestion}
                       </p>
 
                       <div className="flex items-center gap-2 mt-1.5">
                         {d.status === "pending" && (
-                          <span className="px-2 py-0.5 rounded-md text-[9px] font-extrabold bg-amber-50 text-amber-700 border border-amber-200">
+                          <span className="px-2 py-0.5 rounded-md text-[9px] font-extrabold bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-500/20">
                             Pending Answer
                           </span>
                         )}
                         {d.status === "answered" && (
-                          <span className="px-2 py-0.5 rounded-md text-[9px] font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                          <span className="px-2 py-0.5 rounded-md text-[9px] font-extrabold bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20">
                             Answered
                           </span>
                         )}
                         {d.status === "resolved" && (
-                          <span className="px-2 py-0.5 rounded-md text-[9px] font-extrabold bg-slate-100 text-slate-600 border border-slate-200">
+                          <span className="px-2 py-0.5 rounded-md text-[9px] font-extrabold bg-slate-100 dark:bg-[#252535] text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-white/10">
                             Resolved
                           </span>
                         )}
@@ -641,18 +641,18 @@ export default function StudentDoubtsPage({
 
         {/* RIGHT PANEL: Active Messenger Chat Area */}
         <div
-          className={`md:col-span-8 flex flex-col h-full min-h-0 bg-white ${
+          className={`md:col-span-8 flex flex-col h-full min-h-0 bg-white dark:bg-[#1e1e2e] ${
             selectedDoubtId ? "flex" : "hidden md:flex"
           }`}
         >
           {activeDoubt ? (
             <>
               {/* Messenger Active Chat Header */}
-              <div className="p-3.5 border-b border-slate-200 flex items-center justify-between bg-white shrink-0">
+              <div className="p-3.5 border-b border-slate-200 dark:border-white/10 flex items-center justify-between bg-white dark:bg-[#1e1e2e] shrink-0">
                 <div className="flex items-center gap-3">
                   <button
                     onClick={() => setSelectedDoubtId(null)}
-                    className="md:hidden p-1.5 rounded-lg text-slate-500 hover:bg-slate-100"
+                    className="md:hidden p-1.5 rounded-lg text-slate-500 dark:text-slate-400 hover:bg-slate-100"
                   >
                     <ChevronLeft className="w-5 h-5" />
                   </button>
@@ -672,19 +672,19 @@ export default function StudentDoubtsPage({
 
                   <div>
                     <div className="flex items-center gap-2">
-                      <h3 className="text-sm font-bold text-slate-900">Your Teacher</h3>
+                      <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">Your Teacher</h3>
                       <span
                         className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
                           tutorPresence.isOnline
-                            ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                            : "bg-slate-100 text-slate-500"
+                            ? "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20"
+                            : "bg-slate-100 dark:bg-[#252535] text-slate-500 dark:text-slate-400"
                         }`}
                       >
                         {tutorPresence.lastSeenText}
                       </span>
                     </div>
-                    <p className="text-xs text-slate-500 truncate max-w-xs md:max-w-md font-medium">
-                      Topic: <strong className="text-slate-800">{activeDoubt.title}</strong>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 truncate max-w-xs md:max-w-md font-medium">
+                      Topic: <strong className="text-slate-800 dark:text-slate-200">{activeDoubt.title}</strong>
                     </p>
                   </div>
                 </div>
@@ -703,14 +703,14 @@ export default function StudentDoubtsPage({
               <div
                 ref={chatContainerRef}
                 onScroll={handleScroll}
-                className="flex-1 p-4 overflow-y-auto min-h-0 space-y-4 bg-slate-50/40"
+                className="flex-1 p-4 overflow-y-auto min-h-0 space-y-4 bg-slate-50/40 dark:bg-[#13131f]/40"
               >
                 {/* Initial Question Bubble */}
-                <div className="max-w-xl mx-auto p-4 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-2">
+                <div className="max-w-xl mx-auto p-4 rounded-2xl bg-white dark:bg-[#1e1e2e] border border-slate-200 dark:border-white/10 shadow-xs space-y-2">
                   <div className="text-[10px] font-extrabold uppercase tracking-wider text-indigo-600">
                     Topic Question Overview
                   </div>
-                  <p className="text-xs text-slate-800 leading-relaxed whitespace-pre-wrap font-medium">
+                  <p className="text-xs text-slate-800 dark:text-slate-200 leading-relaxed whitespace-pre-wrap font-medium">
                     {activeDoubt.initialQuestion}
                   </p>
 
@@ -723,14 +723,14 @@ export default function StudentDoubtsPage({
                           src={signedUrls[activeDoubt.attachmentPath]}
                           alt="Initial Attachment"
                           onClick={() => setLightboxImage(signedUrls[activeDoubt.attachmentPath!])}
-                          className="max-h-64 rounded-xl border border-slate-200 object-contain bg-black/5 cursor-zoom-in hover:opacity-90 transition-opacity"
+                          className="max-h-64 rounded-xl border border-slate-200 dark:border-white/10 object-contain bg-black/5 cursor-zoom-in hover:opacity-90 transition-opacity"
                         />
                       ) : (
                         <a
                           href={signedUrls[activeDoubt.attachmentPath]}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-2 p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-xs font-bold text-indigo-600 transition-colors"
+                          className="inline-flex items-center gap-2 p-2.5 rounded-xl bg-slate-100 dark:bg-[#252535] hover:bg-slate-200 text-xs font-bold text-indigo-600 transition-colors"
                         >
                           <FileText className="w-4 h-4" />
                           <span>{activeDoubt.attachmentName || "Attached File"}</span>
@@ -758,7 +758,7 @@ export default function StudentDoubtsPage({
                         className={`max-w-[80%] p-3.5 rounded-2xl text-xs space-y-2 shadow-xs ${
                           isMe
                             ? "bg-indigo-600 text-white rounded-br-xs"
-                            : "bg-white text-slate-800 border border-slate-200 rounded-bl-xs"
+                            : "bg-white dark:bg-[#1e1e2e] text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-white/10 rounded-bl-xs"
                         }`}
                       >
                         <div
@@ -804,7 +804,7 @@ export default function StudentDoubtsPage({
                                 className={`inline-flex items-center gap-2 p-2.5 rounded-xl text-xs font-bold transition-colors ${
                                   isMe
                                     ? "bg-indigo-700 text-white hover:bg-indigo-800"
-                                    : "bg-slate-100 text-indigo-600 hover:bg-slate-200"
+                                    : "bg-slate-100 dark:bg-[#252535] text-indigo-600 hover:bg-slate-200"
                                 }`}
                               >
                                 <FileText className="w-4 h-4" />
@@ -828,16 +828,16 @@ export default function StudentDoubtsPage({
               </div>
 
               {/* Input Bar Footer */}
-              <div className="p-3 border-t border-slate-200 bg-white shrink-0 space-y-2">
+              <div className="p-3 border-t border-slate-200 dark:border-white/10 bg-white dark:bg-[#1e1e2e] shrink-0 space-y-2">
                 {error && (
-                  <div className="p-2 text-xs rounded-lg bg-red-50 text-red-600 border border-red-200">
+                  <div className="p-2 text-xs rounded-lg bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-500/20">
                     {error}
                   </div>
                 )}
 
                 {/* Selected File Preview */}
                 {selectedAttachment && (
-                  <div className="flex items-center justify-between p-2 rounded-xl bg-indigo-50 border border-indigo-200 text-xs font-semibold text-indigo-700">
+                  <div className="flex items-center justify-between p-2 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 text-xs font-semibold text-indigo-700">
                     <div className="flex items-center gap-2 truncate">
                       {selectedAttachment.type === "image" ? (
                         <ImageIcon className="w-4 h-4 text-indigo-600 shrink-0" />
@@ -868,7 +868,7 @@ export default function StudentDoubtsPage({
                   <form onSubmit={handleSendMessage} className="flex items-center gap-2">
                     {/* Attach Image Button */}
                     <label
-                      className="p-2.5 rounded-xl text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 cursor-pointer transition-colors"
+                      className="p-2.5 rounded-xl text-slate-500 dark:text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 cursor-pointer transition-colors"
                       title="Attach Photo"
                     >
                       <ImageIcon className="w-5 h-5" />
@@ -885,7 +885,7 @@ export default function StudentDoubtsPage({
 
                     {/* Attach File Button */}
                     <label
-                      className="p-2.5 rounded-xl text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 cursor-pointer transition-colors"
+                      className="p-2.5 rounded-xl text-slate-500 dark:text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 cursor-pointer transition-colors"
                       title="Attach File/Document"
                     >
                       <Paperclip className="w-5 h-5" />
@@ -904,7 +904,7 @@ export default function StudentDoubtsPage({
                     <button
                       type="button"
                       onClick={() => setShowVoiceRecorder(true)}
-                      className="p-2.5 rounded-xl text-slate-500 hover:text-red-600 hover:bg-red-50 transition-colors"
+                      className="p-2.5 rounded-xl text-slate-500 dark:text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
                       title="Record Voice Note"
                     >
                       <Mic className="w-5 h-5" />
@@ -916,7 +916,7 @@ export default function StudentDoubtsPage({
                       value={newMessageText}
                       onChange={(e) => setNewMessageText(e.target.value)}
                       placeholder="Type a message to your teacher..."
-                      className="flex-1 px-4 py-2.5 text-xs rounded-xl border border-slate-200 bg-slate-50 outline-none focus:border-indigo-500 text-slate-900 font-medium"
+                      className="flex-1 px-4 py-2.5 text-xs rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#13131f] outline-none focus:border-indigo-500 text-slate-900 dark:text-slate-100 font-medium"
                     />
 
                     {/* Send Button */}
@@ -932,10 +932,10 @@ export default function StudentDoubtsPage({
               </div>
             </>
           ) : (
-            <div className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-slate-50/50">
+            <div className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-slate-50/50 dark:bg-[#13131f]/50">
               <MessageSquare className="w-12 h-12 text-slate-300 mb-3" />
-              <h3 className="text-sm font-bold text-slate-800">No active chat selected</h3>
-              <p className="text-xs text-slate-500 max-w-sm mt-1">
+              <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200">No active chat selected</h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mt-1">
                 Choose a conversation topic from the left sidebar or click &quot;New Topic&quot; to ask your teacher a question.
               </p>
             </div>
@@ -946,9 +946,9 @@ export default function StudentDoubtsPage({
       {/* NEW TOPIC MODAL */}
       {showNewModal && (
         <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-xl max-w-lg w-full p-6 space-y-4 animate-scale-up">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h3 className="text-base font-bold text-slate-900">Ask Your Teacher</h3>
+          <div className="bg-white dark:bg-[#1e1e2e] rounded-2xl border border-slate-200 dark:border-white/10 shadow-xl max-w-lg w-full p-6 space-y-4 animate-scale-up">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-white/5 pb-3">
+              <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">Ask Your Teacher</h3>
               <button
                 onClick={() => setShowNewModal(false)}
                 className="p-1 text-slate-400 hover:text-slate-600 rounded-lg"
@@ -959,14 +959,14 @@ export default function StudentDoubtsPage({
 
             <form onSubmit={handleCreateDoubt} className="space-y-4">
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1">
                   Select Batch / Subject
                 </label>
                 <select
                   required
                   value={batchId}
                   onChange={(e) => setBatchId(e.target.value)}
-                  className="w-full px-3.5 py-2.5 text-xs font-bold rounded-xl border border-slate-200 bg-slate-50 outline-none focus:border-indigo-600 text-slate-900"
+                  className="w-full px-3.5 py-2.5 text-xs font-bold rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#13131f] outline-none focus:border-indigo-600 text-slate-900 dark:text-slate-100"
                 >
                   {batches.map((b) => (
                     <option key={b.id} value={b.id}>
@@ -977,7 +977,7 @@ export default function StudentDoubtsPage({
               </div>
 
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1">
                   Topic Title
                 </label>
                 <input
@@ -986,12 +986,12 @@ export default function StudentDoubtsPage({
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="e.g. Chapter 4 Integration Problem 5"
-                  className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-200 bg-slate-50 outline-none focus:border-indigo-600 font-medium text-slate-900"
+                  className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#13131f] outline-none focus:border-indigo-600 font-medium text-slate-900 dark:text-slate-100"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1">
                   Question Description
                 </label>
                 <textarea
@@ -1000,26 +1000,26 @@ export default function StudentDoubtsPage({
                   value={initialQuestion}
                   onChange={(e) => setInitialQuestion(e.target.value)}
                   placeholder="Explain where you got stuck or what you didn't understand..."
-                  className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-200 bg-slate-50 outline-none focus:border-indigo-600 font-medium text-slate-900"
+                  className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#13131f] outline-none focus:border-indigo-600 font-medium text-slate-900 dark:text-slate-100"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1">
                   Attach Photo / Document (Optional)
                 </label>
                 <input
                   type="file"
                   onChange={(e) => setModalFile(e.target.files?.[0] || null)}
-                  className="w-full text-xs text-slate-500 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
+                  className="w-full text-xs text-slate-500 dark:text-slate-400 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
                 />
               </div>
 
-              <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-3">
+              <div className="pt-3 border-t border-slate-100 dark:border-white/5 flex items-center justify-end gap-3">
                 <button
                   type="button"
                   onClick={() => setShowNewModal(false)}
-                  className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl"
+                  className="px-4 py-2 text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 rounded-xl"
                 >
                   Cancel
                 </button>

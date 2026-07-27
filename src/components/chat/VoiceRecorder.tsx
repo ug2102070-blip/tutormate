@@ -107,24 +107,24 @@ export function VoiceRecorder({ onSendAudio, onCancel }: VoiceRecorderProps) {
   };
 
   return (
-    <div className="flex items-center gap-3 p-2 bg-red-50 text-red-700 rounded-xl border border-red-200 animate-fade-in w-full">
+    <div className="flex items-center gap-3 p-2 bg-red-50 dark:bg-red-500/10 text-red-700 rounded-xl border border-red-200 dark:border-red-500/20 animate-fade-in w-full">
       <div className="relative flex items-center justify-center">
         <span className="animate-ping absolute inline-flex h-4 w-4 rounded-full bg-red-400 opacity-75" />
-        <Mic className="w-4 h-4 text-red-600 relative z-10" />
+        <Mic className="w-4 h-4 text-red-600 dark:text-red-400 relative z-10" />
       </div>
 
       <span className="text-xs font-bold font-mono tracking-wider">
         {formatTime(duration)}
       </span>
 
-      <span className="text-xs font-semibold text-red-600 flex-1 animate-pulse">
+      <span className="text-xs font-semibold text-red-600 dark:text-red-400 flex-1 animate-pulse">
         Recording audio...
       </span>
 
       <button
         type="button"
         onClick={handleCancelRecording}
-        className="p-1.5 rounded-lg text-slate-500 hover:text-red-700 hover:bg-red-100 transition-colors"
+        className="p-1.5 rounded-lg text-slate-500 dark:text-slate-400 hover:text-red-700 hover:bg-red-100 transition-colors"
         title="Cancel voice message"
       >
         <Trash2 className="w-4 h-4" />

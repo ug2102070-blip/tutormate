@@ -68,7 +68,7 @@ export function FeedbackWidget({ userId, userRole }: FeedbackWidgetProps) {
       {/* Modal */}
       {isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl shadow-2xl border border-slate-100 max-w-md w-full p-6 relative">
+          <div className="bg-white dark:bg-[#1e1e2e] rounded-2xl shadow-2xl border border-slate-100 dark:border-white/5 max-w-md w-full p-6 relative">
             <button
               onClick={() => setIsOpen(false)}
               className="absolute top-4 right-4 p-1 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100 transition-colors"
@@ -79,16 +79,16 @@ export function FeedbackWidget({ userId, userRole }: FeedbackWidgetProps) {
             {isSubmitted ? (
               <div className="text-center py-8 space-y-3">
                 <CheckCircle className="w-12 h-12 text-emerald-500 mx-auto animate-bounce" />
-                <h3 className="text-lg font-bold text-slate-800">Feedback Submitted!</h3>
-                <p className="text-sm text-slate-600">
+                <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200">Feedback Submitted!</h3>
+                <p className="text-sm text-slate-600 dark:text-slate-400">
                   Thank you for helping us improve TutorMate.
                 </p>
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
-                  <h3 className="text-lg font-bold text-slate-900">Send Pilot Feedback</h3>
-                  <p className="text-xs text-slate-500 mt-0.5">
+                  <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">Send Pilot Feedback</h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                     Your feedback shapes the future of TutorMate.
                   </p>
                 </div>
@@ -101,7 +101,7 @@ export function FeedbackWidget({ userId, userRole }: FeedbackWidgetProps) {
 
                 {/* Rating */}
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                     Overall Experience
                   </label>
                   <div className="flex gap-1">
@@ -126,13 +126,13 @@ export function FeedbackWidget({ userId, userRole }: FeedbackWidgetProps) {
 
                 {/* Category */}
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                     Feedback Topic
                   </label>
                   <select
                     value={category}
                     onChange={(e) => setCategory(e.target.value as any)}
-                    className="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 font-medium focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:outline-hidden"
+                    className="w-full text-xs bg-slate-50 dark:bg-[#13131f] border border-slate-200 dark:border-white/10 rounded-xl p-2.5 text-slate-800 dark:text-slate-200 font-medium focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:outline-hidden"
                   >
                     <option value="ease_of_use">Ease of Use / UX</option>
                     <option value="missing_feature">Missing Feature Request</option>
@@ -144,7 +144,7 @@ export function FeedbackWidget({ userId, userRole }: FeedbackWidgetProps) {
 
                 {/* Message */}
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                     Your Thoughts
                   </label>
                   <textarea
@@ -153,13 +153,13 @@ export function FeedbackWidget({ userId, userRole }: FeedbackWidgetProps) {
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
                     placeholder="Tell us what was easy, confusing, or could be improved..."
-                    className="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 placeholder-slate-400 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:outline-hidden"
+                    className="w-full text-xs bg-slate-50 dark:bg-[#13131f] border border-slate-200 dark:border-white/10 rounded-xl p-2.5 text-slate-800 dark:text-slate-200 placeholder-slate-400 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:outline-hidden"
                   />
                 </div>
 
                 {/* Suggested Pricing (Optional) */}
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                     Reasonable Monthly Price (Optional)
                   </label>
                   <input
@@ -167,7 +167,7 @@ export function FeedbackWidget({ userId, userRole }: FeedbackWidgetProps) {
                     value={suggestedPrice}
                     onChange={(e) => setSuggestedPrice(e.target.value)}
                     placeholder="e.g. 500 BDT / month, $10 / month"
-                    className="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 placeholder-slate-400 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:outline-hidden"
+                    className="w-full text-xs bg-slate-50 dark:bg-[#13131f] border border-slate-200 dark:border-white/10 rounded-xl p-2.5 text-slate-800 dark:text-slate-200 placeholder-slate-400 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:outline-hidden"
                   />
                 </div>
 
@@ -176,7 +176,7 @@ export function FeedbackWidget({ userId, userRole }: FeedbackWidgetProps) {
                   <button
                     type="button"
                     onClick={() => setIsOpen(false)}
-                    className="text-xs font-semibold text-slate-600 hover:bg-slate-100 px-4 py-2 rounded-xl transition-colors"
+                    className="text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 px-4 py-2 rounded-xl transition-colors"
                   >
                     Cancel
                   </button>

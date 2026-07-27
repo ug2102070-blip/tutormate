@@ -171,10 +171,10 @@ export default function AttendancePage() {
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
             Daily Attendance
           </h1>
-          <p className="text-sm text-slate-500 font-medium mt-0.5">
+          <p className="text-sm text-slate-500 dark:text-slate-400 font-medium mt-0.5">
             Take 1-click attendance for your batches and save daily class logs
           </p>
         </div>
@@ -191,7 +191,7 @@ export default function AttendancePage() {
 
       {savedSuccess && (
         <div
-          className="p-4 text-sm font-semibold rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 animate-fade-in"
+          className="p-4 text-sm font-semibold rounded-xl bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20 animate-fade-in"
           role="status"
         >
           ✅ Attendance saved successfully for {selectedDate}!
@@ -208,7 +208,7 @@ export default function AttendancePage() {
       )}
 
       {/* Batch & Date Picker Bar */}
-      <div className="p-4 sm:p-5 rounded-2xl border border-slate-200 bg-white flex flex-col sm:flex-row items-center gap-4 justify-between shadow-xs">
+      <div className="p-4 sm:p-5 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1e1e2e] flex flex-col sm:flex-row items-center gap-4 justify-between shadow-xs">
         <div className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
           <div>
             <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">
@@ -217,7 +217,7 @@ export default function AttendancePage() {
             <select
               value={selectedBatchId}
               onChange={(e) => setSelectedBatchId(e.target.value)}
-              className="w-full sm:w-56 px-4 py-2 text-xs font-bold rounded-xl border border-slate-200 bg-slate-50 text-slate-900 outline-none"
+              className="w-full sm:w-56 px-4 py-2 text-xs font-bold rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#13131f] text-slate-900 dark:text-slate-100 outline-none"
             >
               {batches.map((b) => (
                 <option key={b.id} value={b.id}>
@@ -235,29 +235,29 @@ export default function AttendancePage() {
               type="date"
               value={selectedDate}
               onChange={(e) => setSelectedDate(e.target.value)}
-              className="w-full sm:w-44 px-4 py-2 text-xs font-bold rounded-xl border border-slate-200 bg-slate-50 text-slate-900 outline-none"
+              className="w-full sm:w-44 px-4 py-2 text-xs font-bold rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#13131f] text-slate-900 dark:text-slate-100 outline-none"
             />
           </div>
         </div>
 
         {/* Quick Summary & Bulk Actions */}
         {students.length > 0 && (
-          <div className="flex items-center gap-2 pt-3 sm:pt-0 border-t sm:border-t-0 border-slate-100 w-full sm:w-auto justify-between sm:justify-end">
+          <div className="flex items-center gap-2 pt-3 sm:pt-0 border-t sm:border-t-0 border-slate-100 dark:border-white/5 w-full sm:w-auto justify-between sm:justify-end">
             <div className="flex items-center gap-2 text-xs font-bold">
-              <span className="px-3 py-1 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200">
+              <span className="px-3 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20">
                 Present: {presentCount}
               </span>
               <span className="px-3 py-1 rounded-lg bg-rose-50 text-rose-700 border border-rose-200">
                 Absent: {absentCount}
               </span>
-              <span className="px-3 py-1 rounded-lg bg-amber-50 text-amber-700 border border-amber-200">
+              <span className="px-3 py-1 rounded-lg bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-500/20">
                 Late: {lateCount}
               </span>
             </div>
 
             <button
               onClick={() => setAllStatus("present")}
-              className="px-3 py-1.5 text-xs font-bold rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200 transition-colors"
+              className="px-3 py-1.5 text-xs font-bold rounded-xl bg-slate-100 dark:bg-[#252535] text-slate-700 dark:text-slate-300 hover:bg-slate-200 border border-slate-200 dark:border-white/10 transition-colors"
             >
               Mark All Present
             </button>
@@ -267,19 +267,19 @@ export default function AttendancePage() {
 
       {/* Attendance Sheet */}
       {loading ? (
-        <div className="h-64 rounded-2xl animate-shimmer border border-slate-200 bg-white" />
+        <div className="h-64 rounded-2xl animate-shimmer border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1e1e2e]" />
       ) : students.length === 0 ? (
-        <div className="py-16 text-center border border-dashed rounded-2xl border-slate-200 bg-white shadow-xs">
+        <div className="py-16 text-center border border-dashed rounded-2xl border-slate-200 dark:border-white/10 bg-white dark:bg-[#1e1e2e] shadow-xs">
           <CalendarCheck className="w-10 h-10 mx-auto text-slate-400 mb-3" />
-          <h3 className="text-base font-bold text-slate-900">
+          <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
             No active students in this batch
           </h3>
-          <p className="text-xs text-slate-500 font-medium mt-1 max-w-sm mx-auto">
+          <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-1 max-w-sm mx-auto">
             Enroll students into this batch first to start taking attendance.
           </p>
         </div>
       ) : (
-        <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-xs">
+        <div className="rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1e1e2e] overflow-hidden shadow-xs">
           <div className="divide-y divide-slate-100">
             {students.map((student, idx) => {
               const currentStatus =
@@ -295,10 +295,10 @@ export default function AttendancePage() {
                       {idx + 1}
                     </span>
                     <div>
-                      <div className="text-sm font-bold text-slate-900">
+                      <div className="text-sm font-bold text-slate-900 dark:text-slate-100">
                         {student.fullName}
                       </div>
-                      <div className="text-xs font-medium text-slate-500">
+                      <div className="text-xs font-medium text-slate-500 dark:text-slate-400">
                         Phone: {student.phone}
                       </div>
                     </div>
@@ -311,7 +311,7 @@ export default function AttendancePage() {
                       className={`flex-1 sm:flex-initial min-h-[42px] px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 ${
                         currentStatus === "present"
                           ? "bg-emerald-600 text-white shadow-xs"
-                          : "bg-slate-100 text-slate-600 border border-slate-200 hover:bg-emerald-50 hover:text-emerald-700"
+                          : "bg-slate-100 dark:bg-[#252535] text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-white/10 hover:bg-emerald-50 hover:text-emerald-700"
                       }`}
                     >
                       <Check className="w-4 h-4" /> Present
@@ -322,7 +322,7 @@ export default function AttendancePage() {
                       className={`flex-1 sm:flex-initial min-h-[42px] px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 ${
                         currentStatus === "absent"
                           ? "bg-rose-600 text-white shadow-xs"
-                          : "bg-slate-100 text-slate-600 border border-slate-200 hover:bg-rose-50 hover:text-rose-700"
+                          : "bg-slate-100 dark:bg-[#252535] text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-white/10 hover:bg-rose-50 hover:text-rose-700"
                       }`}
                     >
                       <X className="w-4 h-4" /> Absent
@@ -333,7 +333,7 @@ export default function AttendancePage() {
                       className={`flex-1 sm:flex-initial min-h-[42px] px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 ${
                         currentStatus === "late"
                           ? "bg-amber-500 text-white shadow-xs"
-                          : "bg-slate-100 text-slate-600 border border-slate-200 hover:bg-amber-50 hover:text-amber-700"
+                          : "bg-slate-100 dark:bg-[#252535] text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-white/10 hover:bg-amber-50 hover:text-amber-700"
                       }`}
                     >
                       <Clock className="w-4 h-4" /> Late
@@ -345,8 +345,8 @@ export default function AttendancePage() {
           </div>
 
           {/* Mobile Sticky Save Floating Bar */}
-          <div className="sticky bottom-16 sm:hidden p-3 bg-white/95 backdrop-blur-md border-t border-slate-200 flex items-center justify-between shadow-lg">
-            <span className="text-xs font-bold text-slate-600">
+          <div className="sticky bottom-16 sm:hidden p-3 bg-white/95 backdrop-blur-md border-t border-slate-200 dark:border-white/10 flex items-center justify-between shadow-lg">
+            <span className="text-xs font-bold text-slate-600 dark:text-slate-400">
               {students.length} Students Logged
             </span>
             <button

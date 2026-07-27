@@ -77,45 +77,45 @@ export default function StudentAssignmentsPage() {
     <div className="max-w-5xl mx-auto space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
             <FileText className="w-6 h-6 text-indigo-600" />
             My Assignments
           </h1>
-          <p className="text-slate-500 text-sm mt-1">Submit your homework and view your grades.</p>
+          <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">Submit your homework and view your grades.</p>
         </div>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
-          <div className="bg-indigo-50 text-indigo-600 p-3 rounded-lg">
+        <div className="bg-white dark:bg-[#1e1e2e] p-4 rounded-xl border border-slate-200 dark:border-white/10 shadow-sm flex items-center gap-4">
+          <div className="bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 p-3 rounded-lg">
             <FileText className="w-6 h-6" />
           </div>
           <div>
-            <div className="text-sm font-semibold text-slate-500">Total</div>
-            <div className="text-xl font-bold text-slate-900">{submissions.length}</div>
+            <div className="text-sm font-semibold text-slate-500 dark:text-slate-400">Total</div>
+            <div className="text-xl font-bold text-slate-900 dark:text-slate-100">{submissions.length}</div>
           </div>
         </div>
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
-          <div className="bg-amber-50 text-amber-600 p-3 rounded-lg">
+        <div className="bg-white dark:bg-[#1e1e2e] p-4 rounded-xl border border-slate-200 dark:border-white/10 shadow-sm flex items-center gap-4">
+          <div className="bg-amber-50 dark:bg-amber-500/10 text-amber-600 p-3 rounded-lg">
             <AlertCircle className="w-6 h-6" />
           </div>
           <div>
-            <div className="text-sm font-semibold text-slate-500">Pending</div>
-            <div className="text-xl font-bold text-amber-700">{pendingCount}</div>
+            <div className="text-sm font-semibold text-slate-500 dark:text-slate-400">Pending</div>
+            <div className="text-xl font-bold text-amber-700 dark:text-amber-400">{pendingCount}</div>
           </div>
         </div>
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
-          <div className="bg-emerald-50 text-emerald-600 p-3 rounded-lg">
+        <div className="bg-white dark:bg-[#1e1e2e] p-4 rounded-xl border border-slate-200 dark:border-white/10 shadow-sm flex items-center gap-4">
+          <div className="bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 p-3 rounded-lg">
             <CheckCircle className="w-6 h-6" />
           </div>
           <div>
-            <div className="text-sm font-semibold text-slate-500">Graded</div>
-            <div className="text-xl font-bold text-emerald-700">{gradedCount}</div>
+            <div className="text-sm font-semibold text-slate-500 dark:text-slate-400">Graded</div>
+            <div className="text-xl font-bold text-emerald-700 dark:text-emerald-400">{gradedCount}</div>
           </div>
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col min-h-[500px]">
+      <div className="bg-white dark:bg-[#1e1e2e] rounded-2xl border border-slate-200 dark:border-white/10 shadow-sm overflow-hidden flex flex-col min-h-[500px]">
         {/* List */}
         <div className="p-0 flex-1 overflow-y-auto">
           {loading ? (
@@ -125,11 +125,11 @@ export default function StudentAssignmentsPage() {
             </div>
           ) : submissions.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-64 text-center px-4">
-              <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-3">
+              <div className="w-16 h-16 bg-slate-50 dark:bg-[#13131f] rounded-full flex items-center justify-center mb-3">
                 <BookOpen className="w-8 h-8 text-slate-300" />
               </div>
-              <h3 className="text-slate-800 font-bold mb-1">No Assignments</h3>
-              <p className="text-slate-500 text-sm max-w-sm">
+              <h3 className="text-slate-800 dark:text-slate-200 font-bold mb-1">No Assignments</h3>
+              <p className="text-slate-500 dark:text-slate-400 text-sm max-w-sm">
                 You have no assignments at the moment.
               </p>
             </div>
@@ -144,22 +144,22 @@ export default function StudentAssignmentsPage() {
                       <div className="flex justify-between items-start gap-2">
                         <div>
                           <div className="flex items-center gap-2 mb-1">
-                            {sub.status === 'pending' && !isOverdue && <span className="inline-flex items-center gap-1 text-slate-500 bg-slate-100 px-2 py-0.5 rounded text-[10px] font-bold uppercase"><Clock className="w-3 h-3" /> Pending</span>}
-                            {sub.status === 'pending' && isOverdue && <span className="inline-flex items-center gap-1 text-red-600 bg-red-50 px-2 py-0.5 rounded text-[10px] font-bold uppercase border border-red-200"><AlertCircle className="w-3 h-3" /> Overdue</span>}
-                            {sub.status === 'submitted' && <span className="inline-flex items-center gap-1 text-amber-600 bg-amber-50 px-2 py-0.5 rounded text-[10px] font-bold uppercase border border-amber-200"><FileDown className="w-3 h-3" /> Submitted</span>}
-                            {sub.status === 'graded' && <span className="inline-flex items-center gap-1 text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded text-[10px] font-bold uppercase border border-emerald-200"><CheckCircle className="w-3 h-3" /> Graded</span>}
+                            {sub.status === 'pending' && !isOverdue && <span className="inline-flex items-center gap-1 text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-[#252535] px-2 py-0.5 rounded text-[10px] font-bold uppercase"><Clock className="w-3 h-3" /> Pending</span>}
+                            {sub.status === 'pending' && isOverdue && <span className="inline-flex items-center gap-1 text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-500/10 px-2 py-0.5 rounded text-[10px] font-bold uppercase border border-red-200 dark:border-red-500/20"><AlertCircle className="w-3 h-3" /> Overdue</span>}
+                            {sub.status === 'submitted' && <span className="inline-flex items-center gap-1 text-amber-600 bg-amber-50 dark:bg-amber-500/10 px-2 py-0.5 rounded text-[10px] font-bold uppercase border border-amber-200 dark:border-amber-500/20"><FileDown className="w-3 h-3" /> Submitted</span>}
+                            {sub.status === 'graded' && <span className="inline-flex items-center gap-1 text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10 px-2 py-0.5 rounded text-[10px] font-bold uppercase border border-emerald-200 dark:border-emerald-500/20"><CheckCircle className="w-3 h-3" /> Graded</span>}
                           </div>
                           
-                          <h4 className="font-bold text-slate-900 text-lg truncate">
+                          <h4 className="font-bold text-slate-900 dark:text-slate-100 text-lg truncate">
                             {sub.assignmentTitle}
                           </h4>
                           <div className="flex flex-wrap items-center gap-2 mt-1 text-xs font-medium">
-                            <span className={`flex items-center ${isOverdue ? 'text-red-500' : 'text-slate-500'}`}>
+                            <span className={`flex items-center ${isOverdue ? 'text-red-500' : 'text-slate-500 dark:text-slate-400'}`}>
                               <Clock className="w-3.5 h-3.5 mr-1" />
                               Due: {new Date(sub.assignmentDeadline).toLocaleString()}
                             </span>
                             <span className="text-slate-300">•</span>
-                            <span className="text-slate-500">Max Marks: {sub.assignmentMaxMarks}</span>
+                            <span className="text-slate-500 dark:text-slate-400">Max Marks: {sub.assignmentMaxMarks}</span>
                           </div>
                         </div>
                         

@@ -34,8 +34,8 @@ export default function AuthLayout({
       </div>
 
       {/* Right panel — auth form */}
-      <div className="flex-1 flex items-center justify-center p-6 sm:p-12 bg-slate-50">
-        <div className="w-full max-w-md animate-fade-in bg-white p-8 sm:p-10 rounded-2xl border border-slate-200 shadow-md">
+      <div className="flex-1 flex items-center justify-center p-6 sm:p-12 bg-slate-50 dark:bg-[#13131f]">
+        <div className="w-full max-w-md animate-fade-in bg-white dark:bg-[#1e1e2e] p-8 sm:p-10 rounded-2xl border border-slate-200 dark:border-white/10 shadow-md">
           {children}
         </div>
       </div>

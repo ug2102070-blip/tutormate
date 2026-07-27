@@ -125,29 +125,29 @@ export default function TutorExamsPage() {
     <div className="max-w-6xl mx-auto space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
             <Award className="w-6 h-6 text-indigo-600" />
             Exams & Results
           </h1>
-          <p className="text-slate-500 text-sm mt-1">Schedule exams, record marks, and publish results.</p>
+          <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">Schedule exams, record marks, and publish results.</p>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Create Form (Side) */}
         <div className="lg:col-span-1">
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-5 sticky top-6">
-            <h2 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+          <div className="bg-white dark:bg-[#1e1e2e] rounded-2xl border border-slate-200 dark:border-white/10 shadow-xs p-5 sticky top-6">
+            <h2 className="text-lg font-bold text-slate-800 dark:text-slate-200 mb-4 flex items-center gap-2">
               <Plus className="w-5 h-5 text-indigo-600" />
               Create New Exam
             </h2>
             <form onSubmit={handleCreateSubmit} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1 uppercase tracking-wider">Batch</label>
+                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1 uppercase tracking-wider">Batch</label>
                 <select
                   value={formData.batchId}
                   onChange={(e) => setFormData({ ...formData, batchId: e.target.value })}
-                  className="w-full rounded-xl border-slate-200 bg-slate-50 text-sm focus:border-indigo-500 focus:ring-indigo-500"
+                  className="w-full rounded-xl border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#13131f] text-sm focus:border-indigo-500 focus:ring-indigo-500"
                   required
                 >
                   {batches.map(b => (
@@ -157,65 +157,65 @@ export default function TutorExamsPage() {
               </div>
               
               <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1 uppercase tracking-wider">Exam Title</label>
+                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1 uppercase tracking-wider">Exam Title</label>
                 <input
                   type="text"
                   placeholder="e.g. Midterm Physics Exam"
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  className="w-full rounded-xl border-slate-200 bg-slate-50 text-sm focus:border-indigo-500 focus:ring-indigo-500"
+                  className="w-full rounded-xl border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#13131f] text-sm focus:border-indigo-500 focus:ring-indigo-500"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1 uppercase tracking-wider">Subject (Optional)</label>
+                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1 uppercase tracking-wider">Subject (Optional)</label>
                 <input
                   type="text"
                   placeholder="e.g. Vector Algebra"
                   value={formData.subject}
                   onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
-                  className="w-full rounded-xl border-slate-200 bg-slate-50 text-sm focus:border-indigo-500 focus:ring-indigo-500"
+                  className="w-full rounded-xl border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#13131f] text-sm focus:border-indigo-500 focus:ring-indigo-500"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1 uppercase tracking-wider">Exam Date</label>
+                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1 uppercase tracking-wider">Exam Date</label>
                 <input
                   type="date"
                   value={formData.examDate}
                   onChange={(e) => setFormData({ ...formData, examDate: e.target.value })}
-                  className="w-full rounded-xl border-slate-200 bg-slate-50 text-sm focus:border-indigo-500 focus:ring-indigo-500"
+                  className="w-full rounded-xl border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#13131f] text-sm focus:border-indigo-500 focus:ring-indigo-500"
                   required
                 />
               </div>
               
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1 uppercase tracking-wider">Total Marks</label>
+                  <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1 uppercase tracking-wider">Total Marks</label>
                   <input
                     type="number"
                     min="1"
                     value={formData.totalMarks}
                     onChange={(e) => setFormData({ ...formData, totalMarks: parseInt(e.target.value) })}
-                    className="w-full rounded-xl border-slate-200 bg-slate-50 text-sm focus:border-indigo-500 focus:ring-indigo-500"
+                    className="w-full rounded-xl border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#13131f] text-sm focus:border-indigo-500 focus:ring-indigo-500"
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1 uppercase tracking-wider">Pass Marks</label>
+                  <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1 uppercase tracking-wider">Pass Marks</label>
                   <input
                     type="number"
                     min="0"
                     value={formData.passMarks}
                     onChange={(e) => setFormData({ ...formData, passMarks: parseInt(e.target.value) })}
-                    className="w-full rounded-xl border-slate-200 bg-slate-50 text-sm focus:border-indigo-500 focus:ring-indigo-500"
+                    className="w-full rounded-xl border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#13131f] text-sm focus:border-indigo-500 focus:ring-indigo-500"
                   />
                 </div>
               </div>
 
               {createError && (
-                <div className="p-3 rounded-xl bg-red-50 border border-red-100 text-red-600 text-sm font-medium">
+                <div className="p-3 rounded-xl bg-red-50 dark:bg-red-500/10 border border-red-100 text-red-600 dark:text-red-400 text-sm font-medium">
                   {createError}
                 </div>
               )}
@@ -240,13 +240,13 @@ export default function TutorExamsPage() {
 
         {/* List View */}
         <div className="lg:col-span-2 space-y-4">
-          <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs flex flex-wrap gap-4 items-center justify-between">
+          <div className="bg-white dark:bg-[#1e1e2e] rounded-2xl border border-slate-200 dark:border-white/10 p-4 shadow-xs flex flex-wrap gap-4 items-center justify-between">
             <div className="flex items-center gap-2">
-              <label className="text-sm font-medium text-slate-700">Filter by Batch:</label>
+              <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Filter by Batch:</label>
               <select
                 value={selectedBatchId}
                 onChange={(e) => setSelectedBatchId(e.target.value)}
-                className="rounded-lg border-slate-200 text-sm py-1.5 pl-3 pr-8 focus:ring-indigo-500 focus:border-indigo-500"
+                className="rounded-lg border-slate-200 dark:border-white/10 text-sm py-1.5 pl-3 pr-8 focus:ring-indigo-500 focus:border-indigo-500"
               >
                 <option value="all">All Batches</option>
                 {batches.map(b => (
@@ -257,17 +257,17 @@ export default function TutorExamsPage() {
           </div>
 
           {loading ? (
-            <div className="flex flex-col items-center justify-center p-12 bg-white rounded-2xl border border-slate-200 shadow-xs">
+            <div className="flex flex-col items-center justify-center p-12 bg-white dark:bg-[#1e1e2e] rounded-2xl border border-slate-200 dark:border-white/10 shadow-xs">
               <Loader2 className="w-8 h-8 text-indigo-500 animate-spin mb-4" />
-              <p className="text-slate-500 font-medium">Loading exams...</p>
+              <p className="text-slate-500 dark:text-slate-400 font-medium">Loading exams...</p>
             </div>
           ) : exams.length === 0 ? (
-            <div className="text-center p-12 bg-white rounded-2xl border border-slate-200 shadow-xs">
-              <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">
+            <div className="text-center p-12 bg-white dark:bg-[#1e1e2e] rounded-2xl border border-slate-200 dark:border-white/10 shadow-xs">
+              <div className="w-16 h-16 bg-slate-50 dark:bg-[#13131f] rounded-full flex items-center justify-center mx-auto mb-4">
                 <Award className="w-8 h-8 text-slate-400" />
               </div>
-              <h3 className="text-lg font-bold text-slate-800">No exams found</h3>
-              <p className="text-slate-500 mt-1 max-w-sm mx-auto text-sm">
+              <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200">No exams found</h3>
+              <p className="text-slate-500 dark:text-slate-400 mt-1 max-w-sm mx-auto text-sm">
                 You haven't scheduled any exams yet. Create one using the form.
               </p>
             </div>
@@ -276,17 +276,17 @@ export default function TutorExamsPage() {
               {exams.map(exam => {
                 const batch = batches.find(b => b.id === exam.batchId);
                 return (
-                  <div key={exam.id} className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs hover:border-indigo-200 hover:shadow-md transition-all group">
+                  <div key={exam.id} className="bg-white dark:bg-[#1e1e2e] rounded-2xl border border-slate-200 dark:border-white/10 p-5 shadow-xs hover:border-indigo-200 hover:shadow-md transition-all group">
                     <div className="flex justify-between items-start mb-4">
                       <div>
                         <div className="flex items-center gap-2 mb-1">
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-100">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 border border-indigo-100">
                             {batch?.name || "Unknown Batch"}
                           </span>
                         </div>
-                        <h3 className="text-lg font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">{exam.title}</h3>
+                        <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 group-hover:text-indigo-600 transition-colors">{exam.title}</h3>
                         {exam.subject && (
-                          <p className="text-sm text-slate-500">{exam.subject}</p>
+                          <p className="text-sm text-slate-500 dark:text-slate-400">{exam.subject}</p>
                         )}
                       </div>
                       <button
@@ -298,18 +298,18 @@ export default function TutorExamsPage() {
                       </button>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-4 text-sm text-slate-600 mb-5 bg-slate-50 rounded-xl p-3 border border-slate-100">
+                    <div className="flex flex-wrap items-center gap-4 text-sm text-slate-600 dark:text-slate-400 mb-5 bg-slate-50 dark:bg-[#13131f] rounded-xl p-3 border border-slate-100 dark:border-white/5">
                       <div className="flex items-center gap-1.5">
                         <Calendar className="w-4 h-4 text-indigo-500" />
                         <span className="font-medium">{new Date(exam.examDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
                       </div>
-                      <div className="flex items-center gap-1.5 border-l border-slate-200 pl-4">
+                      <div className="flex items-center gap-1.5 border-l border-slate-200 dark:border-white/10 pl-4">
                         <Award className="w-4 h-4 text-emerald-500" />
                         <span className="font-medium">Total: {exam.totalMarks} Marks</span>
                       </div>
                     </div>
 
-                    <div className="flex justify-end pt-3 border-t border-slate-100">
+                    <div className="flex justify-end pt-3 border-t border-slate-100 dark:border-white/5">
                       <Link
                         href={`/tutor/exams/${exam.id}`}
                         className="flex items-center gap-2 text-sm font-semibold text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 px-4 py-2 rounded-xl transition-colors"

@@ -106,15 +106,15 @@ export default function AddStudentPage() {
       <div className="flex items-center gap-3">
         <Link
           href="/tutor/students"
-          className="p-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 transition-colors shadow-xs"
+          className="p-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1e1e2e] hover:bg-slate-50 transition-colors shadow-xs"
         >
-          <ArrowLeft className="w-4 h-4 text-slate-600" />
+          <ArrowLeft className="w-4 h-4 text-slate-600 dark:text-slate-400" />
         </Link>
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
             Add New Student
           </h1>
-          <p className="text-sm text-slate-500 font-medium mt-0.5">
+          <p className="text-sm text-slate-500 dark:text-slate-400 font-medium mt-0.5">
             Register a student profile and generate an invite code for self-registration
           </p>
         </div>
@@ -122,16 +122,16 @@ export default function AddStudentPage() {
 
       {/* Success Modal Card after Creation */}
       {createdInviteCode ? (
-        <div className="p-8 rounded-2xl border border-slate-200 bg-white text-center space-y-6 shadow-sm animate-fade-in">
-          <div className="w-14 h-14 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto text-2xl font-extrabold border border-indigo-100">
+        <div className="p-8 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1e1e2e] text-center space-y-6 shadow-sm animate-fade-in">
+          <div className="w-14 h-14 rounded-full bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 flex items-center justify-center mx-auto text-2xl font-extrabold border border-indigo-100">
             🎉
           </div>
           <div>
-            <h2 className="text-xl font-bold text-slate-900">
+            <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">
               Student Profile Created!
             </h2>
-            <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto font-medium">
-              Give this unique invite code to <strong className="text-slate-900">{fullName}</strong> so they can register their account.
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-sm mx-auto font-medium">
+              Give this unique invite code to <strong className="text-slate-900 dark:text-slate-100">{fullName}</strong> so they can register their account.
             </p>
           </div>
 
@@ -142,7 +142,7 @@ export default function AddStudentPage() {
             </span>
             <button
               onClick={copyCode}
-              className="p-2.5 rounded-xl bg-white border border-indigo-200 hover:bg-indigo-50 transition-colors flex items-center gap-1.5 text-xs font-bold text-indigo-700 shadow-xs"
+              className="p-2.5 rounded-xl bg-white dark:bg-[#1e1e2e] border border-indigo-200 hover:bg-indigo-50 transition-colors flex items-center gap-1.5 text-xs font-bold text-indigo-700 shadow-xs"
             >
               {copied ? (
                 <>
@@ -156,7 +156,7 @@ export default function AddStudentPage() {
             </button>
           </div>
 
-          <div className="pt-4 border-t border-slate-100 flex justify-center gap-3">
+          <div className="pt-4 border-t border-slate-100 dark:border-white/5 flex justify-center gap-3">
             <button
               onClick={() => {
                 setCreatedInviteCode(null);
@@ -165,7 +165,7 @@ export default function AddStudentPage() {
                 setGuardianPhone("");
                 setInstitution("");
               }}
-              className="px-4 py-2.5 text-xs font-bold rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50"
+              className="px-4 py-2.5 text-xs font-bold rounded-xl border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-300 hover:bg-slate-50"
             >
               Add Another Student
             </button>
@@ -191,13 +191,13 @@ export default function AddStudentPage() {
           {/* Form Card */}
           <form
             onSubmit={handleSubmit}
-            className="p-6 sm:p-8 rounded-2xl border border-slate-200 bg-white space-y-6 shadow-xs"
+            className="p-6 sm:p-8 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1e1e2e] space-y-6 shadow-xs"
           >
             <div className="space-y-4">
               <div>
                 <label
                   htmlFor="student-name"
-                  className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5"
+                  className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5"
                 >
                   Student Full Name
                 </label>
@@ -208,7 +208,7 @@ export default function AddStudentPage() {
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   placeholder="e.g. Samiul Alam"
-                  className="w-full px-4 py-2.5 text-sm rounded-xl border border-slate-200 bg-slate-50/50 text-slate-900 focus:bg-white focus:border-indigo-600 outline-none transition-colors"
+                  className="w-full px-4 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-[#13131f]/50 text-slate-900 dark:text-slate-100 focus:bg-white focus:border-indigo-600 outline-none transition-colors"
                 />
               </div>
 
@@ -216,7 +216,7 @@ export default function AddStudentPage() {
                 <div>
                   <label
                     htmlFor="student-phone"
-                    className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5"
+                    className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5"
                   >
                     Student Phone Number
                   </label>
@@ -227,14 +227,14 @@ export default function AddStudentPage() {
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
                     placeholder="01712345678"
-                    className="w-full px-4 py-2.5 text-sm rounded-xl border border-slate-200 bg-slate-50/50 text-slate-900 focus:bg-white focus:border-indigo-600 outline-none transition-colors"
+                    className="w-full px-4 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-[#13131f]/50 text-slate-900 dark:text-slate-100 focus:bg-white focus:border-indigo-600 outline-none transition-colors"
                   />
                 </div>
 
                 <div>
                   <label
                     htmlFor="guardian-phone"
-                    className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5"
+                    className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5"
                   >
                     Guardian Phone Number (Optional)
                   </label>
@@ -244,7 +244,7 @@ export default function AddStudentPage() {
                     value={guardianPhone}
                     onChange={(e) => setGuardianPhone(e.target.value)}
                     placeholder="01812345678"
-                    className="w-full px-4 py-2.5 text-sm rounded-xl border border-slate-200 bg-slate-50/50 text-slate-900 focus:bg-white focus:border-indigo-600 outline-none transition-colors"
+                    className="w-full px-4 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-[#13131f]/50 text-slate-900 dark:text-slate-100 focus:bg-white focus:border-indigo-600 outline-none transition-colors"
                   />
                 </div>
               </div>
@@ -252,7 +252,7 @@ export default function AddStudentPage() {
               <div>
                 <label
                   htmlFor="student-school"
-                  className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5"
+                  className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5"
                 >
                   School / College (Optional)
                 </label>
@@ -262,24 +262,24 @@ export default function AddStudentPage() {
                   value={institution}
                   onChange={(e) => setInstitution(e.target.value)}
                   placeholder="e.g. Dhaka Residential Model College"
-                  className="w-full px-4 py-2.5 text-sm rounded-xl border border-slate-200 bg-slate-50/50 text-slate-900 focus:bg-white focus:border-indigo-600 outline-none transition-colors"
+                  className="w-full px-4 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-[#13131f]/50 text-slate-900 dark:text-slate-100 focus:bg-white focus:border-indigo-600 outline-none transition-colors"
                 />
               </div>
             </div>
 
             {/* Batch Enrollment Selection */}
-            <div className="pt-6 border-t border-slate-100 space-y-3">
+            <div className="pt-6 border-t border-slate-100 dark:border-white/5 space-y-3">
               <div>
-                <h3 className="text-sm font-bold text-slate-900">
+                <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
                   Enroll in Batches
                 </h3>
-                <p className="text-xs text-slate-500 font-medium">
+                <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
                   Select one or more active batches for this student
                 </p>
               </div>
 
               {batches.length === 0 ? (
-                <div className="p-4 text-xs rounded-xl border border-dashed border-slate-200 text-slate-500 bg-slate-50/50">
+                <div className="p-4 text-xs rounded-xl border border-dashed border-slate-200 dark:border-white/10 text-slate-500 dark:text-slate-400 bg-slate-50/50 dark:bg-[#13131f]/50">
                   No active batches found. Please create a batch first.
                 </div>
               ) : (
@@ -293,14 +293,14 @@ export default function AddStudentPage() {
                         className={`p-4 rounded-xl border cursor-pointer transition-all flex items-center justify-between ${
                           isSelected
                             ? "border-indigo-500 bg-indigo-50/80 shadow-xs"
-                            : "border-slate-200 bg-slate-50/50 hover:bg-slate-100/50"
+                            : "border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-[#13131f]/50 hover:bg-slate-100/50"
                         }`}
                       >
                         <div>
-                          <div className="text-xs font-bold text-slate-900">
+                          <div className="text-xs font-bold text-slate-900 dark:text-slate-100">
                             {batch.name}
                           </div>
-                          <div className="text-[11px] text-slate-500 font-semibold mt-0.5">
+                          <div className="text-[11px] text-slate-500 dark:text-slate-400 font-semibold mt-0.5">
                             {batch.subject} — Class {batch.gradeClass}
                           </div>
                         </div>
@@ -318,10 +318,10 @@ export default function AddStudentPage() {
             </div>
 
             {/* Form Footer */}
-            <div className="pt-6 border-t border-slate-100 flex items-center justify-end gap-3">
+            <div className="pt-6 border-t border-slate-100 dark:border-white/5 flex items-center justify-end gap-3">
               <Link
                 href="/tutor/students"
-                className="px-4 py-2.5 text-sm font-semibold rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors"
+                className="px-4 py-2.5 text-sm font-semibold rounded-xl border border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-400 hover:bg-slate-50 transition-colors"
               >
                 Cancel
               </Link>

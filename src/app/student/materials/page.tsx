@@ -86,7 +86,7 @@ export default function StudentMaterialsPage() {
       case "image": return <ImageIcon className="w-10 h-10 text-green-500" />;
       case "docx": return <File className="w-10 h-10 text-blue-700" />;
       case "ppt": return <FileArchive className="w-10 h-10 text-orange-500" />;
-      default: return <File className="w-10 h-10 text-slate-500" />;
+      default: return <File className="w-10 h-10 text-slate-500 dark:text-slate-400" />;
     }
   };
 
@@ -103,22 +103,22 @@ export default function StudentMaterialsPage() {
     <div className="max-w-5xl mx-auto space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
           <BookOpen className="w-6 h-6 text-indigo-600" />
           Study Materials
         </h1>
-        <p className="text-slate-500 text-sm mt-1">Access lecture notes, assignments, and study resources from your tutor.</p>
+        <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">Access lecture notes, assignments, and study resources from your tutor.</p>
       </div>
 
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col min-h-[500px]">
+      <div className="bg-white dark:bg-[#1e1e2e] rounded-2xl border border-slate-200 dark:border-white/10 shadow-sm overflow-hidden flex flex-col min-h-[500px]">
         {/* Filter Bar */}
-        <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex flex-wrap gap-3 items-center justify-between">
+        <div className="p-4 border-b border-slate-100 dark:border-white/5 bg-slate-50/50 dark:bg-[#13131f]/50 flex flex-wrap gap-3 items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-slate-600">Filter by Subject:</span>
+            <span className="text-sm font-medium text-slate-600 dark:text-slate-400">Filter by Subject:</span>
             <select 
               value={selectedBatchId}
               onChange={(e) => setSelectedBatchId(e.target.value)}
-              className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500/20"
+              className="px-3 py-1.5 bg-white dark:bg-[#1e1e2e] border border-slate-200 dark:border-white/10 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-300 outline-none focus:ring-2 focus:ring-indigo-500/20"
             >
               <option value="all">All Subjects</option>
               {batches.map(b => (
@@ -137,11 +137,11 @@ export default function StudentMaterialsPage() {
             </div>
           ) : materials.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-64 text-center px-4">
-              <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-3">
+              <div className="w-16 h-16 bg-slate-50 dark:bg-[#13131f] rounded-full flex items-center justify-center mb-3">
                 <BookOpen className="w-8 h-8 text-slate-300" />
               </div>
-              <h3 className="text-slate-800 font-bold mb-1">No Materials Found</h3>
-              <p className="text-slate-500 text-sm max-w-sm">
+              <h3 className="text-slate-800 dark:text-slate-200 font-bold mb-1">No Materials Found</h3>
+              <p className="text-slate-500 dark:text-slate-400 text-sm max-w-sm">
                 {selectedBatchId === "all" 
                   ? "Your tutor hasn't shared any study materials yet." 
                   : "No materials available for this specific subject."}
@@ -153,35 +153,35 @@ export default function StudentMaterialsPage() {
                 const batch = batches.find(b => b.id === mat.batchId);
                 
                 return (
-                  <div key={mat.id} className="border border-slate-200 rounded-2xl p-5 hover:border-indigo-300 hover:shadow-md transition-all bg-white group flex flex-col h-full">
+                  <div key={mat.id} className="border border-slate-200 dark:border-white/10 rounded-2xl p-5 hover:border-indigo-300 hover:shadow-md transition-all bg-white dark:bg-[#1e1e2e] group flex flex-col h-full">
                     <div className="flex items-start gap-4 mb-4">
-                      <div className="shrink-0 p-3 bg-slate-50 rounded-xl group-hover:bg-indigo-50 transition-colors">
+                      <div className="shrink-0 p-3 bg-slate-50 dark:bg-[#13131f] rounded-xl group-hover:bg-indigo-50 transition-colors">
                         {getFileIcon(mat.fileType)}
                       </div>
                       <div className="flex-1 min-w-0 pt-1">
-                        <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wide uppercase mb-1 ${mat.batchId ? 'bg-indigo-100 text-indigo-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                        <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wide uppercase mb-1 ${mat.batchId ? 'bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700' : 'bg-emerald-100 text-emerald-700 dark:text-emerald-400'}`}>
                           {mat.batchId && batch ? batch.subject : "General"}
                         </span>
-                        <h4 className="font-bold text-slate-900 text-base leading-snug line-clamp-2">
+                        <h4 className="font-bold text-slate-900 dark:text-slate-100 text-base leading-snug line-clamp-2">
                           {mat.title}
                         </h4>
                       </div>
                     </div>
                     
                     {mat.description && (
-                      <p className="text-sm text-slate-600 line-clamp-3 mb-4 flex-1">
+                      <p className="text-sm text-slate-600 dark:text-slate-400 line-clamp-3 mb-4 flex-1">
                         {mat.description}
                       </p>
                     )}
                     {!mat.description && <div className="flex-1"></div>}
                     
-                    <div className="mt-auto pt-4 border-t border-slate-100 flex items-center justify-between">
-                      <div className="text-xs font-medium text-slate-500">
+                    <div className="mt-auto pt-4 border-t border-slate-100 dark:border-white/5 flex items-center justify-between">
+                      <div className="text-xs font-medium text-slate-500 dark:text-slate-400">
                         {formatSize(mat.fileSize)} • {new Date(mat.createdAt).toLocaleDateString()}
                       </div>
                       <button
                         onClick={() => handleDownload(mat.filePath)}
-                        className="flex items-center justify-center gap-1.5 py-1.5 px-3 bg-indigo-50 text-indigo-700 hover:bg-indigo-600 hover:text-white rounded-lg text-sm font-semibold transition-colors"
+                        className="flex items-center justify-center gap-1.5 py-1.5 px-3 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 hover:bg-indigo-600 hover:text-white rounded-lg text-sm font-semibold transition-colors"
                       >
                         <Download className="w-4 h-4" />
                         View

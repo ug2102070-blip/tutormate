@@ -95,7 +95,7 @@ export function AudioPlayer({ src, isMe }: AudioPlayerProps) {
       className={`flex items-center gap-3 p-2.5 rounded-xl border max-w-xs ${
         isMe
           ? "bg-indigo-700/40 text-white border-white/20"
-          : "bg-slate-100 text-slate-900 border-slate-200"
+          : "bg-slate-100 dark:bg-[#252535] text-slate-900 dark:text-slate-100 border-slate-200 dark:border-white/10"
       }`}
     >
       <audio ref={audioRef} src={src} preload="auto" />
@@ -105,7 +105,7 @@ export function AudioPlayer({ src, isMe }: AudioPlayerProps) {
         onClick={togglePlay}
         className={`p-2 rounded-full transition-transform active:scale-95 shrink-0 ${
           isMe
-            ? "bg-white text-indigo-600 hover:bg-white/90"
+            ? "bg-white dark:bg-[#1e1e2e] text-indigo-600 hover:bg-white/90"
             : "bg-indigo-600 text-white hover:bg-indigo-700"
         }`}
       >

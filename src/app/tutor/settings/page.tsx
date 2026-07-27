@@ -111,7 +111,7 @@ export default function TutorSettingsPage() {
   if (loading) {
     return (
       <div className="max-w-3xl mx-auto space-y-6">
-        <div className="h-64 rounded-2xl animate-shimmer border border-slate-200 bg-white" />
+        <div className="h-64 rounded-2xl animate-shimmer border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1e1e2e]" />
       </div>
     );
   }
@@ -120,17 +120,17 @@ export default function TutorSettingsPage() {
     <div className="max-w-3xl mx-auto space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+        <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
           Account & Profile Settings
         </h1>
-        <p className="text-sm text-slate-500 font-medium mt-0.5">
+        <p className="text-sm text-slate-500 dark:text-slate-400 font-medium mt-0.5">
           Manage your personal details, coaching branding, bKash/Nagad payment info, and subscription
         </p>
       </div>
 
       {success && (
         <div
-          className="p-4 text-sm font-semibold rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 animate-fade-in flex items-center gap-2"
+          className="p-4 text-sm font-semibold rounded-xl bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20 animate-fade-in flex items-center gap-2"
           role="status"
         >
           <Check className="w-4 h-4 text-emerald-600" /> Settings updated successfully!
@@ -148,8 +148,8 @@ export default function TutorSettingsPage() {
 
       <form onSubmit={handleSaveSettings} className="space-y-6">
         {/* Personal & Branding Section */}
-        <div className="p-6 sm:p-8 rounded-2xl border border-slate-200 bg-white space-y-5 shadow-xs">
-          <div className="flex items-center gap-2 text-sm font-bold text-slate-900 border-b border-slate-100 pb-3">
+        <div className="p-6 sm:p-8 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1e1e2e] space-y-5 shadow-xs">
+          <div className="flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-slate-100 border-b border-slate-100 dark:border-white/5 pb-3">
             <User className="w-4 h-4 text-indigo-600" /> Profile & Coaching Branding
           </div>
 
@@ -157,7 +157,7 @@ export default function TutorSettingsPage() {
             <div>
               <label
                 htmlFor="settings-name"
-                className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5"
+                className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5"
               >
                 Full Name
               </label>
@@ -167,7 +167,7 @@ export default function TutorSettingsPage() {
                 required
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
-                className="w-full px-4 py-2.5 text-sm rounded-xl border border-slate-200 bg-slate-50/50 text-slate-900 focus:bg-white focus:border-indigo-600 outline-none transition-colors"
+                className="w-full px-4 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-[#13131f]/50 text-slate-900 dark:text-slate-100 focus:bg-white focus:border-indigo-600 outline-none transition-colors"
               />
             </div>
 
@@ -175,7 +175,7 @@ export default function TutorSettingsPage() {
               <div>
                 <label
                   htmlFor="settings-institution"
-                  className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5"
+                  className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5"
                 >
                   Institution / Coaching Name
                 </label>
@@ -185,14 +185,14 @@ export default function TutorSettingsPage() {
                   value={institution}
                   onChange={(e) => setInstitution(e.target.value)}
                   placeholder="e.g. Excellence Coaching"
-                  className="w-full px-4 py-2.5 text-sm rounded-xl border border-slate-200 bg-slate-50/50 text-slate-900 focus:bg-white focus:border-indigo-600 outline-none transition-colors"
+                  className="w-full px-4 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-[#13131f]/50 text-slate-900 dark:text-slate-100 focus:bg-white focus:border-indigo-600 outline-none transition-colors"
                 />
               </div>
 
               <div>
                 <label
                   htmlFor="settings-phone"
-                  className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5"
+                  className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5"
                 >
                   Contact Phone
                 </label>
@@ -203,7 +203,7 @@ export default function TutorSettingsPage() {
                   value={contactPhone}
                   onChange={(e) => setContactPhone(e.target.value)}
                   placeholder="01712345678"
-                  className="w-full px-4 py-2.5 text-sm rounded-xl border border-slate-200 bg-slate-50/50 text-slate-900 focus:bg-white focus:border-indigo-600 outline-none transition-colors"
+                  className="w-full px-4 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-[#13131f]/50 text-slate-900 dark:text-slate-100 focus:bg-white focus:border-indigo-600 outline-none transition-colors"
                 />
               </div>
             </div>
@@ -211,8 +211,8 @@ export default function TutorSettingsPage() {
         </div>
 
         {/* Payment Numbers Section */}
-        <div className="p-6 sm:p-8 rounded-2xl border border-slate-200 bg-white space-y-5 shadow-xs">
-          <div className="flex items-center gap-2 text-sm font-bold text-slate-900 border-b border-slate-100 pb-3">
+        <div className="p-6 sm:p-8 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1e1e2e] space-y-5 shadow-xs">
+          <div className="flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-slate-100 border-b border-slate-100 dark:border-white/5 pb-3">
             <Wallet className="w-4 h-4 text-emerald-600" /> Fee Collection Payment Numbers (bKash / Nagad)
           </div>
 
@@ -220,7 +220,7 @@ export default function TutorSettingsPage() {
             <div>
               <label
                 htmlFor="settings-bkash"
-                className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5 flex items-center gap-1"
+                className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5 flex items-center gap-1"
               >
                 <Phone className="w-3.5 h-3.5 text-pink-600" /> bKash Personal Number
               </label>
@@ -230,14 +230,14 @@ export default function TutorSettingsPage() {
                 value={bkashNumber}
                 onChange={(e) => setBkashNumber(e.target.value)}
                 placeholder="01712345678"
-                className="w-full px-4 py-2.5 text-sm rounded-xl border border-slate-200 bg-slate-50/50 text-slate-900 focus:bg-white focus:border-indigo-600 outline-none transition-colors"
+                className="w-full px-4 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-[#13131f]/50 text-slate-900 dark:text-slate-100 focus:bg-white focus:border-indigo-600 outline-none transition-colors"
               />
             </div>
 
             <div>
               <label
                 htmlFor="settings-nagad"
-                className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5 flex items-center gap-1"
+                className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5 flex items-center gap-1"
               >
                 <Phone className="w-3.5 h-3.5 text-orange-600" /> Nagad Personal Number
               </label>
@@ -247,7 +247,7 @@ export default function TutorSettingsPage() {
                 value={nagadNumber}
                 onChange={(e) => setNagadNumber(e.target.value)}
                 placeholder="01812345678"
-                className="w-full px-4 py-2.5 text-sm rounded-xl border border-slate-200 bg-slate-50/50 text-slate-900 focus:bg-white focus:border-indigo-600 outline-none transition-colors"
+                className="w-full px-4 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-[#13131f]/50 text-slate-900 dark:text-slate-100 focus:bg-white focus:border-indigo-600 outline-none transition-colors"
               />
             </div>
           </div>
@@ -259,28 +259,28 @@ export default function TutorSettingsPage() {
             <div className="flex items-center gap-2 text-sm font-bold text-indigo-900">
               <ShieldCheck className="w-4 h-4 text-indigo-600" /> Subscription Plan Status
             </div>
-            <span className="px-3 py-1 rounded-full text-xs font-extrabold uppercase bg-emerald-100 text-emerald-800 border border-emerald-200">
+            <span className="px-3 py-1 rounded-full text-xs font-extrabold uppercase bg-emerald-100 text-emerald-800 border border-emerald-200 dark:border-emerald-500/20">
               {tutor?.subscription?.status || "Active"}
             </span>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
             <div>
-              <div className="text-xs font-semibold text-slate-500">Current Plan</div>
-              <div className="text-sm font-extrabold text-slate-900 capitalize mt-0.5">
+              <div className="text-xs font-semibold text-slate-500 dark:text-slate-400">Current Plan</div>
+              <div className="text-sm font-extrabold text-slate-900 dark:text-slate-100 capitalize mt-0.5">
                 {tutor?.subscription?.plan?.replace("_", " ") || "Free Trial"}
               </div>
             </div>
 
             <div>
-              <div className="text-xs font-semibold text-slate-500">Student Capacity Limit</div>
-              <div className="text-sm font-extrabold text-slate-900 mt-0.5">
+              <div className="text-xs font-semibold text-slate-500 dark:text-slate-400">Student Capacity Limit</div>
+              <div className="text-sm font-extrabold text-slate-900 dark:text-slate-100 mt-0.5">
                 Up to {tutor?.subscription?.maxStudents || 50} Students
               </div>
             </div>
 
             <div>
-              <div className="text-xs font-semibold text-slate-500">Valid Until</div>
+              <div className="text-xs font-semibold text-slate-500 dark:text-slate-400">Valid Until</div>
               <div className="text-sm font-extrabold text-indigo-700 mt-0.5">
                 30 Days Free Trial
               </div>

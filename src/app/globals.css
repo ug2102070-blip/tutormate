@@ -1,9 +1,12 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* ========================
    LIGHT MODE TOKENS
 ======================== */
 :root {
+  color-scheme: light;
   --color-primary: #6366f1;
   --color-primary-light: #818cf8;
   --color-primary-dark: #4f46e5;
@@ -20,8 +23,8 @@
   --color-error: #ef4444;
 
   --color-surface: #ffffff;
-  --color-bg: #ffffff;
-  --color-bg-secondary: #f8fafc;
+  --color-bg: #f8fafc;
+  --color-bg-secondary: #ffffff;
   --color-bg-tertiary: #f1f5f9;
   --color-border: #e2e8f0;
   --color-text: #0f172a;
@@ -36,7 +39,7 @@
   --color-nav-active-bg: rgba(99, 102, 241, 0.1);
 
   /* Header */
-  --color-header-bg: rgba(255, 255, 255, 0.95);
+  --color-header-bg: rgba(255, 255, 255, 0.92);
   --color-header-border: #e2e8f0;
 
   /* Sidebar */
@@ -50,14 +53,15 @@
 }
 
 /* ========================
-   DARK MODE TOKENS
+   DARK MODE TOKENS (Obsidian SaaS Palette)
 ======================== */
 .dark {
+  color-scheme: dark;
   --color-primary: #818cf8;
   --color-primary-light: #a5b4fc;
   --color-primary-dark: #6366f1;
-  --color-primary-50: rgba(99, 102, 241, 0.12);
-  --color-primary-100: rgba(99, 102, 241, 0.18);
+  --color-primary-50: rgba(99, 102, 241, 0.14);
+  --color-primary-100: rgba(99, 102, 241, 0.22);
 
   --color-accent: #22d3ee;
   --color-accent-light: #67e8f9;
@@ -67,34 +71,34 @@
   --color-warning: #fbbf24;
   --color-error: #f87171;
 
-  --color-surface: #1e1e2e;
-  --color-bg: #13131f;
-  --color-bg-secondary: #1a1a2e;
-  --color-bg-tertiary: #252535;
+  --color-surface: #131b2e;
+  --color-bg: #0b0f19;
+  --color-bg-secondary: #162036;
+  --color-bg-tertiary: #1e2b47;
   --color-border: rgba(255, 255, 255, 0.08);
-  --color-text: #f1f5f9;
+  --color-text: #f8fafc;
   --color-text-secondary: #94a3b8;
   --color-text-muted: #64748b;
 
   /* Navigation */
-  --color-nav-bg: rgba(30, 30, 46, 0.95);
-  --color-nav-border: rgba(255, 255, 255, 0.06);
+  --color-nav-bg: rgba(19, 27, 46, 0.94);
+  --color-nav-border: rgba(255, 255, 255, 0.08);
   --color-nav-active: #818cf8;
   --color-nav-inactive: #475569;
-  --color-nav-active-bg: rgba(129, 140, 248, 0.15);
+  --color-nav-active-bg: rgba(129, 140, 248, 0.16);
 
   /* Header */
-  --color-header-bg: rgba(19, 19, 31, 0.95);
-  --color-header-border: rgba(255, 255, 255, 0.06);
+  --color-header-bg: rgba(11, 15, 25, 0.88);
+  --color-header-border: rgba(255, 255, 255, 0.08);
 
   /* Sidebar */
-  --color-sidebar-bg: #1e1e2e;
-  --color-sidebar-border: rgba(255, 255, 255, 0.06);
+  --color-sidebar-bg: #131b2e;
+  --color-sidebar-border: rgba(255, 255, 255, 0.08);
 
   /* Shadows */
-  --shadow-nav: 0 -1px 0 rgba(0,0,0,0.3), 0 -4px 24px rgba(0,0,0,0.4);
-  --shadow-card: 0 1px 3px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.2);
-  --shadow-elevated: 0 4px 24px rgba(0,0,0,0.4), 0 1px 4px rgba(0,0,0,0.3);
+  --shadow-nav: 0 -1px 0 rgba(0,0,0,0.4), 0 -4px 24px rgba(0,0,0,0.5);
+  --shadow-card: 0 1px 3px rgba(0,0,0,0.4), 0 1px 2px rgba(0,0,0,0.3);
+  --shadow-elevated: 0 10px 30px rgba(0,0,0,0.5), 0 2px 6px rgba(0,0,0,0.3);
 }
 
 /* ========================
@@ -116,6 +120,7 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overscroll-behavior: none;
+  transition: background-color 0.25s ease-in-out, color 0.25s ease-in-out;
 }
 
 /* ========================

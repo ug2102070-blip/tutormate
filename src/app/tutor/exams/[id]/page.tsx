@@ -165,7 +165,7 @@ export default function ExamDetailsPage({ params }: { params: Promise<{ id: stri
           Back to Exams
         </Link>
         
-        <div className="bg-white dark:bg-[#1e1e2e] border border-slate-200 dark:border-white/10 rounded-2xl p-6 shadow-xs">
+        <div className="bg-white dark:bg-[#131b2e] border border-slate-200 dark:border-white/10 rounded-2xl p-6 shadow-xs">
           <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4">
             <div>
               <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-1">{exam.title}</h1>
@@ -173,16 +173,16 @@ export default function ExamDetailsPage({ params }: { params: Promise<{ id: stri
             </div>
             
             <div className="flex gap-4">
-              <div className="bg-slate-50 dark:bg-[#13131f] px-4 py-2 rounded-xl border border-slate-100 dark:border-white/5 text-center">
+              <div className="bg-slate-50 dark:bg-[#0b0f19] px-4 py-2 rounded-xl border border-slate-100 dark:border-white/5 text-center">
                 <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-0.5">Exam Date</p>
                 <p className="font-bold text-slate-800 dark:text-slate-200">{new Date(exam.examDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
               </div>
-              <div className="bg-slate-50 dark:bg-[#13131f] px-4 py-2 rounded-xl border border-slate-100 dark:border-white/5 text-center">
+              <div className="bg-slate-50 dark:bg-[#0b0f19] px-4 py-2 rounded-xl border border-slate-100 dark:border-white/5 text-center">
                 <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-0.5">Total Marks</p>
                 <p className="font-bold text-slate-800 dark:text-slate-200">{exam.totalMarks}</p>
               </div>
               {exam.passMarks && (
-                <div className="bg-slate-50 dark:bg-[#13131f] px-4 py-2 rounded-xl border border-slate-100 dark:border-white/5 text-center">
+                <div className="bg-slate-50 dark:bg-[#0b0f19] px-4 py-2 rounded-xl border border-slate-100 dark:border-white/5 text-center">
                   <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-0.5">Pass Marks</p>
                   <p className="font-bold text-slate-800 dark:text-slate-200">{exam.passMarks}</p>
                 </div>
@@ -208,8 +208,8 @@ export default function ExamDetailsPage({ params }: { params: Promise<{ id: stri
       )}
 
       {/* Students Table */}
-      <div className="bg-white dark:bg-[#1e1e2e] border border-slate-200 dark:border-white/10 rounded-2xl shadow-xs overflow-hidden">
-        <div className="p-4 border-b border-slate-200 dark:border-white/10 flex justify-between items-center bg-slate-50 dark:bg-[#13131f]">
+      <div className="bg-white dark:bg-[#131b2e] border border-slate-200 dark:border-white/10 rounded-2xl shadow-xs overflow-hidden">
+        <div className="p-4 border-b border-slate-200 dark:border-white/10 flex justify-between items-center bg-slate-50 dark:bg-[#0b0f19]">
           <h2 className="text-lg font-bold text-slate-800 dark:text-slate-200">Student Results</h2>
           <button
             onClick={handleSaveResults}
@@ -228,7 +228,7 @@ export default function ExamDetailsPage({ params }: { params: Promise<{ id: stri
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-white dark:bg-[#1e1e2e] border-b border-slate-200 dark:border-white/10 text-xs uppercase tracking-wider font-bold text-slate-500 dark:text-slate-400">
+              <tr className="bg-white dark:bg-[#131b2e] border-b border-slate-200 dark:border-white/10 text-xs uppercase tracking-wider font-bold text-slate-500 dark:text-slate-400">
                 <th className="p-4 pl-6">Student Name</th>
                 <th className="p-4 w-32 text-center">Absent</th>
                 <th className="p-4 w-40">Marks Obtained</th>

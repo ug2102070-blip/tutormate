@@ -136,7 +136,7 @@ export default function TutorExamsPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Create Form (Side) */}
         <div className="lg:col-span-1">
-          <div className="bg-white dark:bg-[#1e1e2e] rounded-2xl border border-slate-200 dark:border-white/10 shadow-xs p-5 sticky top-6">
+          <div className="bg-white dark:bg-[#131b2e] rounded-2xl border border-slate-200 dark:border-white/10 shadow-xs p-5 sticky top-6">
             <h2 className="text-lg font-bold text-slate-800 dark:text-slate-200 mb-4 flex items-center gap-2">
               <Plus className="w-5 h-5 text-indigo-600" />
               Create New Exam
@@ -147,7 +147,7 @@ export default function TutorExamsPage() {
                 <select
                   value={formData.batchId}
                   onChange={(e) => setFormData({ ...formData, batchId: e.target.value })}
-                  className="w-full rounded-xl border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#13131f] text-sm focus:border-indigo-500 focus:ring-indigo-500"
+                  className="w-full rounded-xl border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#0b0f19] text-sm focus:border-indigo-500 focus:ring-indigo-500"
                   required
                 >
                   {batches.map(b => (
@@ -163,7 +163,7 @@ export default function TutorExamsPage() {
                   placeholder="e.g. Midterm Physics Exam"
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  className="w-full rounded-xl border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#13131f] text-sm focus:border-indigo-500 focus:ring-indigo-500"
+                  className="w-full rounded-xl border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#0b0f19] text-sm focus:border-indigo-500 focus:ring-indigo-500"
                   required
                 />
               </div>
@@ -175,7 +175,7 @@ export default function TutorExamsPage() {
                   placeholder="e.g. Vector Algebra"
                   value={formData.subject}
                   onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
-                  className="w-full rounded-xl border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#13131f] text-sm focus:border-indigo-500 focus:ring-indigo-500"
+                  className="w-full rounded-xl border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#0b0f19] text-sm focus:border-indigo-500 focus:ring-indigo-500"
                 />
               </div>
 
@@ -185,7 +185,7 @@ export default function TutorExamsPage() {
                   type="date"
                   value={formData.examDate}
                   onChange={(e) => setFormData({ ...formData, examDate: e.target.value })}
-                  className="w-full rounded-xl border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#13131f] text-sm focus:border-indigo-500 focus:ring-indigo-500"
+                  className="w-full rounded-xl border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#0b0f19] text-sm focus:border-indigo-500 focus:ring-indigo-500"
                   required
                 />
               </div>
@@ -198,7 +198,7 @@ export default function TutorExamsPage() {
                     min="1"
                     value={formData.totalMarks}
                     onChange={(e) => setFormData({ ...formData, totalMarks: parseInt(e.target.value) })}
-                    className="w-full rounded-xl border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#13131f] text-sm focus:border-indigo-500 focus:ring-indigo-500"
+                    className="w-full rounded-xl border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#0b0f19] text-sm focus:border-indigo-500 focus:ring-indigo-500"
                     required
                   />
                 </div>
@@ -209,7 +209,7 @@ export default function TutorExamsPage() {
                     min="0"
                     value={formData.passMarks}
                     onChange={(e) => setFormData({ ...formData, passMarks: parseInt(e.target.value) })}
-                    className="w-full rounded-xl border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#13131f] text-sm focus:border-indigo-500 focus:ring-indigo-500"
+                    className="w-full rounded-xl border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#0b0f19] text-sm focus:border-indigo-500 focus:ring-indigo-500"
                   />
                 </div>
               </div>
@@ -240,7 +240,7 @@ export default function TutorExamsPage() {
 
         {/* List View */}
         <div className="lg:col-span-2 space-y-4">
-          <div className="bg-white dark:bg-[#1e1e2e] rounded-2xl border border-slate-200 dark:border-white/10 p-4 shadow-xs flex flex-wrap gap-4 items-center justify-between">
+          <div className="bg-white dark:bg-[#131b2e] rounded-2xl border border-slate-200 dark:border-white/10 p-4 shadow-xs flex flex-wrap gap-4 items-center justify-between">
             <div className="flex items-center gap-2">
               <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Filter by Batch:</label>
               <select
@@ -257,13 +257,13 @@ export default function TutorExamsPage() {
           </div>
 
           {loading ? (
-            <div className="flex flex-col items-center justify-center p-12 bg-white dark:bg-[#1e1e2e] rounded-2xl border border-slate-200 dark:border-white/10 shadow-xs">
+            <div className="flex flex-col items-center justify-center p-12 bg-white dark:bg-[#131b2e] rounded-2xl border border-slate-200 dark:border-white/10 shadow-xs">
               <Loader2 className="w-8 h-8 text-indigo-500 animate-spin mb-4" />
               <p className="text-slate-500 dark:text-slate-400 font-medium">Loading exams...</p>
             </div>
           ) : exams.length === 0 ? (
-            <div className="text-center p-12 bg-white dark:bg-[#1e1e2e] rounded-2xl border border-slate-200 dark:border-white/10 shadow-xs">
-              <div className="w-16 h-16 bg-slate-50 dark:bg-[#13131f] rounded-full flex items-center justify-center mx-auto mb-4">
+            <div className="text-center p-12 bg-white dark:bg-[#131b2e] rounded-2xl border border-slate-200 dark:border-white/10 shadow-xs">
+              <div className="w-16 h-16 bg-slate-50 dark:bg-[#0b0f19] rounded-full flex items-center justify-center mx-auto mb-4">
                 <Award className="w-8 h-8 text-slate-400" />
               </div>
               <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200">No exams found</h3>
@@ -276,7 +276,7 @@ export default function TutorExamsPage() {
               {exams.map(exam => {
                 const batch = batches.find(b => b.id === exam.batchId);
                 return (
-                  <div key={exam.id} className="bg-white dark:bg-[#1e1e2e] rounded-2xl border border-slate-200 dark:border-white/10 p-5 shadow-xs hover:border-indigo-200 hover:shadow-md transition-all group">
+                  <div key={exam.id} className="bg-white dark:bg-[#131b2e] rounded-2xl border border-slate-200 dark:border-white/10 p-5 shadow-xs hover:border-indigo-200 hover:shadow-md transition-all group">
                     <div className="flex justify-between items-start mb-4">
                       <div>
                         <div className="flex items-center gap-2 mb-1">
@@ -298,7 +298,7 @@ export default function TutorExamsPage() {
                       </button>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-4 text-sm text-slate-600 dark:text-slate-400 mb-5 bg-slate-50 dark:bg-[#13131f] rounded-xl p-3 border border-slate-100 dark:border-white/5">
+                    <div className="flex flex-wrap items-center gap-4 text-sm text-slate-600 dark:text-slate-400 mb-5 bg-slate-50 dark:bg-[#0b0f19] rounded-xl p-3 border border-slate-100 dark:border-white/5">
                       <div className="flex items-center gap-1.5">
                         <Calendar className="w-4 h-4 text-indigo-500" />
                         <span className="font-medium">{new Date(exam.examDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>

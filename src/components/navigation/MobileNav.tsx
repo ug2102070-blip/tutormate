@@ -10,6 +10,8 @@ import {
   HelpCircle,
   Bell,
   BookOpen,
+  Video,
+  CalendarDays,
 } from "lucide-react";
 
 interface MobileNavProps {
@@ -22,14 +24,14 @@ export function MobileNav({ role }: MobileNavProps) {
   const tutorItems = [
     { href: "/tutor/dashboard", label: "Home", icon: LayoutDashboard },
     { href: "/tutor/batches", label: "Batches", icon: Users },
-    { href: "/tutor/attendance", label: "Attendance", icon: CalendarCheck },
+    { href: "/tutor/calendar", label: "Calendar", icon: CalendarDays },
     { href: "/tutor/fees", label: "Fees", icon: CreditCard },
     { href: "/tutor/doubts", label: "Doubts", icon: HelpCircle },
   ];
 
   const studentItems = [
     { href: "/student/dashboard", label: "Home", icon: LayoutDashboard },
-    { href: "/student/attendance", label: "Attendance", icon: CalendarCheck },
+    { href: "/student/recorded-classes", label: "Classes 🎥", icon: Video },
     { href: "/student/fees", label: "Fees", icon: CreditCard },
     { href: "/student/doubts", label: "Doubts", icon: HelpCircle },
     { href: "/student/notifications", label: "Alerts", icon: Bell },

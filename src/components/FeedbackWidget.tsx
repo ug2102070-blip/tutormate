@@ -68,7 +68,7 @@ export function FeedbackWidget({ userId, userRole }: FeedbackWidgetProps) {
       {/* Modal */}
       {isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-[#1e1e2e] rounded-2xl shadow-2xl border border-slate-100 dark:border-white/5 max-w-md w-full p-6 relative">
+          <div className="bg-white dark:bg-[#131b2e] rounded-2xl shadow-2xl border border-slate-100 dark:border-white/5 max-w-md w-full p-6 relative">
             <button
               onClick={() => setIsOpen(false)}
               className="absolute top-4 right-4 p-1 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100 transition-colors"
@@ -132,7 +132,7 @@ export function FeedbackWidget({ userId, userRole }: FeedbackWidgetProps) {
                   <select
                     value={category}
                     onChange={(e) => setCategory(e.target.value as any)}
-                    className="w-full text-xs bg-slate-50 dark:bg-[#13131f] border border-slate-200 dark:border-white/10 rounded-xl p-2.5 text-slate-800 dark:text-slate-200 font-medium focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:outline-hidden"
+                    className="w-full text-xs bg-slate-50 dark:bg-[#0b0f19] border border-slate-200 dark:border-white/10 rounded-xl p-2.5 text-slate-800 dark:text-slate-200 font-medium focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:outline-hidden"
                   >
                     <option value="ease_of_use">Ease of Use / UX</option>
                     <option value="missing_feature">Missing Feature Request</option>
@@ -153,7 +153,7 @@ export function FeedbackWidget({ userId, userRole }: FeedbackWidgetProps) {
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
                     placeholder="Tell us what was easy, confusing, or could be improved..."
-                    className="w-full text-xs bg-slate-50 dark:bg-[#13131f] border border-slate-200 dark:border-white/10 rounded-xl p-2.5 text-slate-800 dark:text-slate-200 placeholder-slate-400 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:outline-hidden"
+                    className="w-full text-xs bg-slate-50 dark:bg-[#0b0f19] border border-slate-200 dark:border-white/10 rounded-xl p-2.5 text-slate-800 dark:text-slate-200 placeholder-slate-400 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:outline-hidden"
                   />
                 </div>
 
@@ -167,7 +167,7 @@ export function FeedbackWidget({ userId, userRole }: FeedbackWidgetProps) {
                     value={suggestedPrice}
                     onChange={(e) => setSuggestedPrice(e.target.value)}
                     placeholder="e.g. 500 BDT / month, $10 / month"
-                    className="w-full text-xs bg-slate-50 dark:bg-[#13131f] border border-slate-200 dark:border-white/10 rounded-xl p-2.5 text-slate-800 dark:text-slate-200 placeholder-slate-400 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:outline-hidden"
+                    className="w-full text-xs bg-slate-50 dark:bg-[#0b0f19] border border-slate-200 dark:border-white/10 rounded-xl p-2.5 text-slate-800 dark:text-slate-200 placeholder-slate-400 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:outline-hidden"
                   />
                 </div>
 

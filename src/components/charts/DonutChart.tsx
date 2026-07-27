@@ -1,0 +1,100 @@
+"use client";
+
+interface DonutChartProps {
+  data: { label: string; value: number; color: string }[];
+  size?: number;
+  centerText?: string;
+  centerSubtext?: string;
+}
+
+export function DonutChart({
+  data,
+  size = 160,
+  centerText,
+  centerSubtext,
+}: DonutChartProps) {
+  const total = data.reduce((sum, item) => sum + item.value, 0);
+
+  if (total === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center p-6 text-center text-xs text-slate-400">
+        No distribution data available yet.
+      </div>
+    );
+  }
+
+  const radius = 60;
+  const circumference = 2 * Math.PI * radius;
+  let accumulatedPercent = 0;
+
+  return (
+    <div className="flex flex-col sm:flex-row items-center gap-6 justify-center">
+      {/* SVG Donut */}
+      <div className="relative flex items-center justify-center" style={{ width: size, height: size }}>
+        <svg viewBox="0 0 160 160" className="w-full h-full transform -rotate-90">
+          <circle
+            cx="80"
+            cy="80"
+            r={radius}
+            fill="transparent"
+            stroke="var(--color-border, #e2e8f0)"
+            strokeWidth="20"
+          />
+          {data.map((item, idx) => {
+            if (item.value === 0) return null;
+            const percent = item.value / total;
+            const strokeDasharray = `${percent * circumference} ${circumference}`;
+            const strokeDashoffset = -accumulatedPercent * circumference;
+            accumulatedPercent += percent;
+
+            return (
+              <circle
+                key={idx}
+                cx="80"
+                cy="80"
+                r={radius}
+                fill="transparent"
+                stroke={item.color}
+                strokeWidth="20"
+                strokeDasharray={strokeDasharray}
+                strokeDashoffset={strokeDashoffset}
+                className="transition-all duration-500 ease-out"
+              />
+            );
+          })}
+        </svg>
+
+        {/* Center label */}
+        <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
+          <span className="text-lg font-extrabold" style={{ color: "var(--color-text)" }}>
+            {centerText ?? total}
+          </span>
+          {centerSubtext && (
+            <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "var(--color-text-muted)" }}>
+              {centerSubtext}
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* Legend list */}
+      <div className="space-y-2">
+        {data.map((item, idx) => {
+          const pct = Math.round((item.value / total) * 100);
+          return (
+            <div key={idx} className="flex items-center gap-2.5 text-xs font-semibold">
+              <span
+                className="w-3 h-3 rounded-full shrink-0"
+                style={{ background: item.color }}
+              />
+              <span style={{ color: "var(--color-text-secondary)" }}>{item.label}:</span>
+              <span className="font-bold ml-auto" style={{ color: "var(--color-text)" }}>
+                {item.value} ({pct}%)
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}

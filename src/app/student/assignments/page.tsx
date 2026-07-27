@@ -86,7 +86,7 @@ export default function StudentAssignmentsPage() {
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-white dark:bg-[#1e1e2e] p-4 rounded-xl border border-slate-200 dark:border-white/10 shadow-sm flex items-center gap-4">
+        <div className="bg-white dark:bg-[#131b2e] p-4 rounded-xl border border-slate-200 dark:border-white/10 shadow-sm flex items-center gap-4">
           <div className="bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 p-3 rounded-lg">
             <FileText className="w-6 h-6" />
           </div>
@@ -95,7 +95,7 @@ export default function StudentAssignmentsPage() {
             <div className="text-xl font-bold text-slate-900 dark:text-slate-100">{submissions.length}</div>
           </div>
         </div>
-        <div className="bg-white dark:bg-[#1e1e2e] p-4 rounded-xl border border-slate-200 dark:border-white/10 shadow-sm flex items-center gap-4">
+        <div className="bg-white dark:bg-[#131b2e] p-4 rounded-xl border border-slate-200 dark:border-white/10 shadow-sm flex items-center gap-4">
           <div className="bg-amber-50 dark:bg-amber-500/10 text-amber-600 p-3 rounded-lg">
             <AlertCircle className="w-6 h-6" />
           </div>
@@ -104,7 +104,7 @@ export default function StudentAssignmentsPage() {
             <div className="text-xl font-bold text-amber-700 dark:text-amber-400">{pendingCount}</div>
           </div>
         </div>
-        <div className="bg-white dark:bg-[#1e1e2e] p-4 rounded-xl border border-slate-200 dark:border-white/10 shadow-sm flex items-center gap-4">
+        <div className="bg-white dark:bg-[#131b2e] p-4 rounded-xl border border-slate-200 dark:border-white/10 shadow-sm flex items-center gap-4">
           <div className="bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 p-3 rounded-lg">
             <CheckCircle className="w-6 h-6" />
           </div>
@@ -115,7 +115,7 @@ export default function StudentAssignmentsPage() {
         </div>
       </div>
 
-      <div className="bg-white dark:bg-[#1e1e2e] rounded-2xl border border-slate-200 dark:border-white/10 shadow-sm overflow-hidden flex flex-col min-h-[500px]">
+      <div className="bg-white dark:bg-[#131b2e] rounded-2xl border border-slate-200 dark:border-white/10 shadow-sm overflow-hidden flex flex-col min-h-[500px]">
         {/* List */}
         <div className="p-0 flex-1 overflow-y-auto">
           {loading ? (
@@ -125,7 +125,7 @@ export default function StudentAssignmentsPage() {
             </div>
           ) : submissions.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-64 text-center px-4">
-              <div className="w-16 h-16 bg-slate-50 dark:bg-[#13131f] rounded-full flex items-center justify-center mb-3">
+              <div className="w-16 h-16 bg-slate-50 dark:bg-[#0b0f19] rounded-full flex items-center justify-center mb-3">
                 <BookOpen className="w-8 h-8 text-slate-300" />
               </div>
               <h3 className="text-slate-800 dark:text-slate-200 font-bold mb-1">No Assignments</h3>

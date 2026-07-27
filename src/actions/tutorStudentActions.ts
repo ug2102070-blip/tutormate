@@ -4,16 +4,21 @@ import { createAdminClient } from "@/lib/supabase/server";
 import { verifyUserAuth } from "@/lib/authHelpers";
 import { studentSchema, type StudentFormValues } from "@/lib/validations/student";
 import { generateInviteCode } from "@/lib/utils";
+import { checkStudentLimit } from "@/lib/serverSubscriptions";
 
 /**
  * Creates a student record under the authenticated tutor and generates a unique invite code in Supabase.
  */
 export async function createStudent(formData: StudentFormValues, idToken: string) {
   const authState = await verifyUserAuth(idToken);
-  if (authState.role !== "tutor") {
+  if (authState.role !== "tutor" && authState.role !== "owner" && authState.role !== "admin") {
     throw new Error("Unauthorized: Only tutors can add students.");
   }
   const tutorId = authState.tutorId || authState.uid;
+
+  // Enforce Subscription Plan Limit for Students
+  await checkStudentLimit(tutorId);
+
   const validated = studentSchema.parse(formData);
   const inviteCode = generateInviteCode(8);
 

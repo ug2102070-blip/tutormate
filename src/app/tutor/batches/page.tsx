@@ -112,12 +112,12 @@ export default function BatchesPage() {
           {[1, 2, 3].map((i) => (
             <div
               key={i}
-              className="h-44 rounded-2xl animate-shimmer border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1e1e2e]"
+              className="h-44 rounded-2xl animate-shimmer border border-slate-200 dark:border-white/10 bg-white dark:bg-[#131b2e]"
             />
           ))}
         </div>
       ) : filteredBatches.length === 0 ? (
-        <div className="py-16 text-center border border-dashed rounded-2xl border-slate-200 dark:border-white/10 bg-white dark:bg-[#1e1e2e] shadow-xs">
+        <div className="py-16 text-center border border-dashed rounded-2xl border-slate-200 dark:border-white/10 bg-white dark:bg-[#131b2e] shadow-xs">
           <Users className="w-10 h-10 mx-auto text-slate-400 mb-3" />
           <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
             No {tab} batches found
@@ -141,7 +141,7 @@ export default function BatchesPage() {
           {filteredBatches.map((batch) => (
             <div
               key={batch.id}
-              className="p-6 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1e1e2e] flex flex-col justify-between transition-all duration-200 hover:shadow-md shadow-xs"
+              className="p-6 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#131b2e] flex flex-col justify-between transition-all duration-200 hover:shadow-md shadow-xs"
             >
               <div>
                 <div className="flex items-start justify-between gap-2">
@@ -172,7 +172,7 @@ export default function BatchesPage() {
                     {batch.schedule?.map((s, idx) => (
                       <span
                         key={idx}
-                        className="text-[11px] px-2.5 py-1 rounded-lg font-semibold bg-slate-50 dark:bg-[#13131f] text-slate-700 dark:text-slate-300 border border-slate-200/60"
+                        className="text-[11px] px-2.5 py-1 rounded-lg font-semibold bg-slate-50 dark:bg-[#0b0f19] text-slate-700 dark:text-slate-300 border border-slate-200/60"
                       >
                         {s.day}: {s.time}
                       </span>

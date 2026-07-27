@@ -1,7 +1,18 @@
 // ============================================
 // CUSTOM CLAIMS & USER ROLES
 // ============================================
-export type UserRole = "tutor" | "student" | "admin" | "parent";
+export type UserRole = "tutor" | "student" | "admin" | "parent" | "owner";
+
+export type Permission =
+  | "read_own_data"
+  | "write_own_batch"
+  | "read_all_batches"
+  | "manage_tutors"
+  | "manage_billing"
+  | "manage_center"
+  | "view_analytics"
+  | "manage_users"
+  | "manage_roles";
 
 export interface TutorClaims {
   role: "tutor";
@@ -18,6 +29,10 @@ export interface AdminClaims {
   role: "admin";
 }
 
+export interface OwnerClaims {
+  role: "owner";
+}
+
 export interface ParentClaims {
   role: "parent";
   studentId: string;     // students.id of the linked child
@@ -25,7 +40,15 @@ export interface ParentClaims {
   tutorId: string;       // the tutor of the child
 }
 
-export type CustomClaims = TutorClaims | StudentClaims | AdminClaims | ParentClaims;
+export type CustomClaims = TutorClaims | StudentClaims | AdminClaims | ParentClaims | OwnerClaims;
+
+export interface UserPermissionDoc {
+  id: string;
+  userId: string;
+  permission: Permission;
+  grantedBy: string | null;
+  createdAt: string;
+}
 
 // ============================================
 // DATABASE DOCUMENT / ROW TYPES
@@ -45,10 +68,13 @@ export interface UserDoc {
 }
 
 export interface SubscriptionInfo {
-  plan: "free_trial" | "starter" | "pro" | "pro_plus";
+  plan: "free_trial" | "starter" | "pro";
   status: "active" | "past_due" | "canceled";
   validUntil: string;
   maxStudents: number;
+  maxBatches: number;
+  allowAiFeatures: boolean;
+  priceBDT?: number;
 }
 
 export interface TutorStats {
@@ -66,6 +92,7 @@ export interface TutorDoc {
   nagadNumber: string | null;
   subscription: SubscriptionInfo;
   stats: TutorStats;
+  coachingCenterId?: string | null;
   createdAt: string;
 }
 
@@ -281,3 +308,93 @@ export interface ParentLinkDoc {
   studentId: string;   // students.id of the child
   createdAt: string;
 }
+
+// ============================================
+// FEATURE 17: QR ATTENDANCE
+// ============================================
+
+export interface QRTokenDoc {
+  id: string;
+  tutorId: string;
+  batchId: string;
+  date: string;
+  token: string;
+  shortCode: string;
+  expiresAt: string;
+  isUsed: boolean;
+  createdAt: string;
+}
+
+// ============================================
+// FEATURE 18: MULTI-TUTOR / COACHING CENTER
+// ============================================
+
+export interface CoachingCenterDoc {
+  id: string;
+  ownerUid: string;
+  name: string;
+  address: string | null;
+  contactPhone: string | null;
+  logoUrl: string | null;
+  code: string;
+  createdAt: string;
+}
+
+export interface CenterTutorDoc {
+  tutorId: string;
+  userId: string;
+  fullName: string;
+  institution: string;
+  contactPhone: string;
+  batchCount: number;
+  studentCount: number;
+  isOwner: boolean;
+  joinedAt: string;
+}
+
+export interface CenterAnalyticsDoc {
+  totalTutors: number;
+  totalStudents: number;
+  totalBatches: number;
+  monthlyRevenue: number;
+  attendanceRate: number;
+}
+
+// ============================================
+// FEATURE 23: INTERNAL CHAT SYSTEM
+// ============================================
+
+export interface ConversationDoc {
+  id: string;
+  tutorId: string;
+  participantUids: string[];
+  type: "direct" | "announcement";
+  batchId?: string | null;
+  title?: string | null;
+  createdAt: string;
+  lastMessage?: string;
+  lastMessageAt?: string;
+}
+
+export interface ChatMessageDoc {
+  id: string;
+  conversationId: string;
+  senderUid: string;
+  senderRole: "tutor" | "student" | "parent" | "admin" | "owner";
+  text: string;
+  attachmentPath?: string | null;
+  createdAt: string;
+  senderName?: string;
+}
+
+// ============================================
+// FEATURE 28: RELATIONAL BATCH ENROLLMENT
+// ============================================
+
+export interface BatchEnrollmentDoc {
+  studentId: string;
+  batchId: string;
+  enrolledAt: string;
+}
+
+

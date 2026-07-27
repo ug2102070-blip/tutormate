@@ -105,7 +105,7 @@ export function AudioPlayer({ src, isMe }: AudioPlayerProps) {
         onClick={togglePlay}
         className={`p-2 rounded-full transition-transform active:scale-95 shrink-0 ${
           isMe
-            ? "bg-white dark:bg-[#1e1e2e] text-indigo-600 hover:bg-white/90"
+            ? "bg-white dark:bg-[#131b2e] text-indigo-600 hover:bg-white/90"
             : "bg-indigo-600 text-white hover:bg-indigo-700"
         }`}
       >

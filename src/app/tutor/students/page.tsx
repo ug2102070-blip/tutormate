@@ -113,14 +113,14 @@ export default function StudentsPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search student name, phone, or invite code..."
-            className="w-full pl-10 pr-4 py-2 text-xs font-medium rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1e1e2e] text-slate-900 dark:text-slate-100 outline-none"
+            className="w-full pl-10 pr-4 py-2 text-xs font-medium rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#131b2e] text-slate-900 dark:text-slate-100 outline-none"
           />
         </div>
 
         <select
           value={selectedBatchId}
           onChange={(e) => setSelectedBatchId(e.target.value)}
-          className="w-full sm:w-56 px-3 py-2 text-xs font-bold rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1e1e2e] text-slate-900 dark:text-slate-100 outline-none"
+          className="w-full sm:w-56 px-3 py-2 text-xs font-bold rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#131b2e] text-slate-900 dark:text-slate-100 outline-none"
         >
           <option value="all">All Batches</option>
           {Object.entries(batches).map(([id, name]) => (
@@ -133,9 +133,9 @@ export default function StudentsPage() {
 
       {/* Students Table */}
       {loading ? (
-        <div className="h-64 rounded-2xl animate-shimmer border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1e1e2e]" />
+        <div className="h-64 rounded-2xl animate-shimmer border border-slate-200 dark:border-white/10 bg-white dark:bg-[#131b2e]" />
       ) : filteredStudents.length === 0 ? (
-        <div className="py-16 text-center border border-dashed rounded-2xl border-slate-200 dark:border-white/10 bg-white dark:bg-[#1e1e2e] shadow-xs">
+        <div className="py-16 text-center border border-dashed rounded-2xl border-slate-200 dark:border-white/10 bg-white dark:bg-[#131b2e] shadow-xs">
           <UserPlus className="w-10 h-10 mx-auto text-slate-400 mb-3" />
           <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
             No students found
@@ -153,7 +153,7 @@ export default function StudentsPage() {
           </Link>
         </div>
       ) : (
-        <div className="rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1e1e2e] overflow-hidden shadow-xs">
+        <div className="rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#131b2e] overflow-hidden shadow-xs">
           {/* Mobile Card View */}
           <div className="divide-y divide-slate-100 md:hidden">
             {filteredStudents.map((s) => (
@@ -195,7 +195,7 @@ export default function StudentsPage() {
 
                 <div className="pt-1 flex items-center justify-between border-t border-slate-100 dark:border-white/5">
                   <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">Invite Code:</span>
-                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#13131f] font-mono text-[11px] font-extrabold text-indigo-700">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#0b0f19] font-mono text-[11px] font-extrabold text-indigo-700">
                     {s.inviteCode}
                     <button
                       onClick={() => copyInviteCode(s.inviteCode)}
@@ -217,7 +217,7 @@ export default function StudentsPage() {
           {/* Desktop Table View */}
           <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="border-b border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#13131f] text-slate-700 dark:text-slate-300 font-bold uppercase tracking-wider">
+              <thead className="border-b border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#0b0f19] text-slate-700 dark:text-slate-300 font-bold uppercase tracking-wider">
                 <tr>
                   <th className="px-4 py-3">Student Name</th>
                   <th className="px-4 py-3">Phone</th>
@@ -264,7 +264,7 @@ export default function StudentsPage() {
                       </div>
                     </td>
                     <td className="px-4 py-3">
-                      <div className="inline-flex items-center gap-2 px-3 py-1 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#13131f] font-mono text-[11px] font-extrabold text-indigo-700 tracking-wider">
+                      <div className="inline-flex items-center gap-2 px-3 py-1 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#0b0f19] font-mono text-[11px] font-extrabold text-indigo-700 tracking-wider">
                         {s.inviteCode}
                         <button
                           onClick={() => copyInviteCode(s.inviteCode)}

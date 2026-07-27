@@ -14,6 +14,13 @@ import {
   FileText,
   Award,
   Bell,
+  Sparkles,
+  Video,
+  Building2,
+  Key,
+  Gem,
+  MessageSquare,
+  CalendarDays,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -25,25 +32,37 @@ export function Sidebar({ role }: SidebarProps) {
 
   const tutorNavItems = [
     { href: "/tutor/dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { href: "/tutor/ai-assistant", label: "AI Assistant 🤖", icon: Sparkles },
+    { href: "/tutor/subscription", label: "Subscription 💎", icon: Gem },
+    { href: "/tutor/coaching", label: "Coaching Center 🏫", icon: Building2 },
+    { href: "/tutor/permissions", label: "Role Permissions 🔑", icon: Key },
+    { href: "/tutor/chat", label: "Internal Chat 💬", icon: MessageSquare },
     { href: "/tutor/batches", label: "Batches", icon: Users },
     { href: "/tutor/students", label: "Students", icon: GraduationCap },
     { href: "/tutor/attendance", label: "Attendance", icon: CalendarCheck },
     { href: "/tutor/fees", label: "Fee Ledger", icon: CreditCard },
+    { href: "/tutor/recorded-classes", label: "Recorded Classes 🎥", icon: Video },
     { href: "/tutor/doubts", label: "Student Doubts", icon: HelpCircle },
     { href: "/tutor/materials", label: "Study Materials", icon: BookOpen },
     { href: "/tutor/assignments", label: "Assignments", icon: FileText },
     { href: "/tutor/exams", label: "Exams", icon: Award },
+    { href: "/tutor/calendar", label: "Calendar", icon: CalendarDays },
+    { href: "/tutor/notifications", label: "Notifications", icon: Bell },
     { href: "/tutor/settings", label: "Settings", icon: Settings },
   ];
 
   const studentNavItems = [
     { href: "/student/dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { href: "/student/chat", label: "Class Chat 💬", icon: MessageSquare },
     { href: "/student/attendance", label: "My Attendance", icon: CalendarCheck },
     { href: "/student/fees", label: "Payment History", icon: CreditCard },
+    { href: "/student/recorded-classes", label: "Recorded Classes 🎥", icon: Video },
     { href: "/student/doubts", label: "Ask Doubts", icon: HelpCircle },
     { href: "/student/materials", label: "Study Materials", icon: BookOpen },
     { href: "/student/assignments", label: "Assignments", icon: FileText },
     { href: "/student/exams", label: "Exams", icon: Award },
+    { href: "/student/calendar", label: "My Schedule", icon: CalendarDays },
+    { href: "/student/notifications", label: "Notifications", icon: Bell },
   ];
 
   const items = role === "tutor" ? tutorNavItems : studentNavItems;

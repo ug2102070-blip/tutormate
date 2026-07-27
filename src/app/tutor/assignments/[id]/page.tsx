@@ -102,7 +102,7 @@ export default function AssignmentDetailsPage() {
         <ArrowLeft className="w-4 h-4 mr-1" /> Back to Assignments
       </Link>
 
-      <div className="bg-white dark:bg-[#1e1e2e] rounded-2xl border border-slate-200 dark:border-white/10 p-6 shadow-sm">
+      <div className="bg-white dark:bg-[#131b2e] rounded-2xl border border-slate-200 dark:border-white/10 p-6 shadow-sm">
         <div className="flex justify-between items-start mb-4">
           <div>
             <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{assignment.title}</h1>
@@ -115,13 +115,13 @@ export default function AssignmentDetailsPage() {
         </div>
         
         {assignment.description && (
-          <p className="text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-[#13131f] p-4 rounded-xl text-sm border border-slate-100 dark:border-white/5">
+          <p className="text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-[#0b0f19] p-4 rounded-xl text-sm border border-slate-100 dark:border-white/5">
             {assignment.description}
           </p>
         )}
 
         <div className="grid grid-cols-3 gap-4 mt-6 pt-6 border-t border-slate-100 dark:border-white/5">
-          <div className="bg-slate-50 dark:bg-[#13131f] rounded-xl p-3 text-center border border-slate-100 dark:border-white/5">
+          <div className="bg-slate-50 dark:bg-[#0b0f19] rounded-xl p-3 text-center border border-slate-100 dark:border-white/5">
             <div className="text-xl font-bold text-slate-700 dark:text-slate-300">{pendingCount}</div>
             <div className="text-xs text-slate-500 dark:text-slate-400 font-medium uppercase mt-1">Pending</div>
           </div>
@@ -136,8 +136,8 @@ export default function AssignmentDetailsPage() {
         </div>
       </div>
 
-      <div className="bg-white dark:bg-[#1e1e2e] rounded-2xl border border-slate-200 dark:border-white/10 shadow-sm overflow-hidden">
-        <div className="px-6 py-4 border-b border-slate-100 dark:border-white/5 bg-slate-50/50 dark:bg-[#13131f]/50">
+      <div className="bg-white dark:bg-[#131b2e] rounded-2xl border border-slate-200 dark:border-white/10 shadow-sm overflow-hidden">
+        <div className="px-6 py-4 border-b border-slate-100 dark:border-white/5 bg-slate-50/50 dark:bg-[#0b0f19]/50">
           <h3 className="font-bold text-slate-800 dark:text-slate-200">Student Submissions</h3>
         </div>
         
@@ -193,7 +193,7 @@ export default function AssignmentDetailsPage() {
                           )}
                           
                           {gradingId === sub.id ? (
-                            <div className="flex items-center gap-2 bg-white dark:bg-[#1e1e2e] border border-slate-200 dark:border-white/10 rounded-lg p-1 shadow-sm absolute right-12 z-10">
+                            <div className="flex items-center gap-2 bg-white dark:bg-[#131b2e] border border-slate-200 dark:border-white/10 rounded-lg p-1 shadow-sm absolute right-12 z-10">
                               <input 
                                 type="number" 
                                 min={0} max={assignment.maxMarks}

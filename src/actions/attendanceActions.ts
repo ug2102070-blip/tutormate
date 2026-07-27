@@ -126,3 +126,259 @@ export async function getStudentAttendanceHistory(idToken: string): Promise<Atte
   logs.sort((a, b) => (b.date > a.date ? 1 : -1));
   return logs;
 }
+
+/**
+ * Tutor generates a live QR session for a batch.
+ */
+export async function generateQRSession(
+  payload: { batchId: string; durationMinutes?: number },
+  idToken: string
+) {
+  const authState = await verifyUserAuth(idToken);
+  if (authState.role !== "tutor") {
+    throw new Error("Unauthorized: Only tutors can create QR attendance sessions.");
+  }
+  const tutorId = authState.tutorId || authState.uid;
+  const { batchId, durationMinutes = 5 } = payload;
+  const date = new Date().toISOString().split("T")[0];
+
+  const supabase = createAdminClient();
+
+  // Fetch batch details to verify tutor ownership
+  const { data: batch, error: batchErr } = await supabase
+    .from("batches")
+    .select("name, tutor_id")
+    .eq("id", batchId)
+    .single();
+
+  if (batchErr || !batch || batch.tutor_id !== tutorId) {
+    throw new Error("Batch not found or unauthorized.");
+  }
+
+  // Generate unique token & 6-digit short code
+  const token = `TMQR-${crypto.randomUUID()}`;
+  const shortCode = Math.floor(100000 + Math.random() * 900000).toString();
+  const expiresAt = new Date(Date.now() + durationMinutes * 60 * 1000).toISOString();
+
+  // Deactivate any existing active tokens for this batch & date
+  await supabase
+    .from("qr_tokens")
+    .update({ is_used: true })
+    .eq("batch_id", batchId)
+    .eq("date", date);
+
+  const { data: qrToken, error } = await supabase
+    .from("qr_tokens")
+    .insert({
+      tutor_id: tutorId,
+      batch_id: batchId,
+      date,
+      token,
+      short_code: shortCode,
+      expires_at: expiresAt,
+      is_used: false,
+    })
+    .select("*")
+    .single();
+
+  if (error) {
+    throw new Error(`Failed to generate QR token: ${error.message}`);
+  }
+
+  return {
+    success: true,
+    qrToken: {
+      id: qrToken.id,
+      tutorId: qrToken.tutor_id,
+      batchId: qrToken.batch_id,
+      batchName: batch.name,
+      date: qrToken.date,
+      token: qrToken.token,
+      shortCode: qrToken.short_code,
+      expiresAt: qrToken.expires_at,
+    },
+  };
+}
+
+/**
+ * Get active QR session for a batch (tutor view)
+ */
+export async function getActiveQRSession(batchId: string, idToken: string) {
+  const authState = await verifyUserAuth(idToken);
+  if (authState.role !== "tutor") {
+    throw new Error("Unauthorized.");
+  }
+  const tutorId = authState.tutorId || authState.uid;
+  const date = new Date().toISOString().split("T")[0];
+
+  const supabase = createAdminClient();
+
+  const { data: qrToken } = await supabase
+    .from("qr_tokens")
+    .select("*")
+    .eq("batch_id", batchId)
+    .eq("tutor_id", tutorId)
+    .eq("date", date)
+    .eq("is_used", false)
+    .gt("expires_at", new Date().toISOString())
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (!qrToken) return null;
+
+  // Also fetch current attendance for today to check scanned count
+  const { data: att } = await supabase
+    .from("attendance")
+    .select("records")
+    .eq("batch_id", batchId)
+    .eq("date", date)
+    .maybeSingle();
+
+  const records = (att?.records || {}) as Record<string, AttendanceRecord>;
+  const presentCount = Object.values(records).filter((r) => r?.status === "present").length;
+
+  return {
+    id: qrToken.id,
+    tutorId: qrToken.tutor_id,
+    batchId: qrToken.batch_id,
+    date: qrToken.date,
+    token: qrToken.token,
+    shortCode: qrToken.short_code,
+    expiresAt: qrToken.expires_at,
+    presentCount,
+  };
+}
+
+/**
+ * Student scans QR code or enters 6-digit PIN to mark attendance.
+ */
+export async function scanQRAttendance(tokenOrPin: string, idToken: string) {
+  const authState = await verifyUserAuth(idToken);
+  if (authState.role !== "student") {
+    throw new Error("Unauthorized: Only students can scan QR attendance.");
+  }
+
+  const supabase = createAdminClient();
+
+  // Find student doc
+  let studentDocId = authState.studentDocId;
+
+  if (!studentDocId) {
+    const { data: student } = await supabase
+      .from("students")
+      .select("id, enrolled_batch_ids, full_name")
+      .eq("auth_uid", authState.uid)
+      .maybeSingle();
+
+    if (!student) {
+      throw new Error("Student profile not found.");
+    }
+    studentDocId = student.id;
+  }
+
+  const { data: student } = await supabase
+    .from("students")
+    .select("id, enrolled_batch_ids, full_name")
+    .eq("id", studentDocId)
+    .single();
+
+  if (!student) {
+    throw new Error("Student profile not found.");
+  }
+
+  const cleanedInput = tokenOrPin.trim();
+
+  // Find matching token or short_code
+  let { data: qrToken } = await supabase
+    .from("qr_tokens")
+    .select("*, batches(name)")
+    .eq("token", cleanedInput)
+    .maybeSingle();
+
+  if (!qrToken) {
+    const { data: byCode } = await supabase
+      .from("qr_tokens")
+      .select("*, batches(name)")
+      .eq("short_code", cleanedInput)
+      .maybeSingle();
+    qrToken = byCode;
+  }
+
+  if (!qrToken) {
+    throw new Error("Invalid QR Code or PIN. Please check and try again.");
+  }
+
+  const now = new Date().toISOString();
+  if (qrToken.expires_at < now || qrToken.is_used) {
+    throw new Error("This QR session has expired or is no longer active.");
+  }
+
+  // Check enrollment
+  const enrolledBatches: string[] = student.enrolled_batch_ids || [];
+  if (!enrolledBatches.includes(qrToken.batch_id)) {
+    throw new Error("You are not enrolled in this batch.");
+  }
+
+  const batchId = qrToken.batch_id;
+  const date = qrToken.date;
+  const tutorId = qrToken.tutor_id;
+
+  // Fetch all active students in batch to populate initial attendance map if missing
+  const { data: allStudents } = await supabase
+    .from("students")
+    .select("id")
+    .eq("status", "active")
+    .contains("enrolled_batch_ids", [batchId]);
+
+  // Fetch existing attendance record for this batch & date
+  const { data: att } = await supabase
+    .from("attendance")
+    .select("id, records")
+    .eq("batch_id", batchId)
+    .eq("date", date)
+    .maybeSingle();
+
+  let records: Record<string, AttendanceRecord> = {};
+
+  if (att && att.records) {
+    records = att.records as Record<string, AttendanceRecord>;
+  } else {
+    // Initialize all students as absent except scanning student
+    (allStudents || []).forEach((s) => {
+      records[s.id] = { status: "absent", remarks: null };
+    });
+  }
+
+  // Set scanning student to present
+  records[student.id] = {
+    status: "present",
+    remarks: "Scanned via QR Code 📷",
+  };
+
+  const { error: upsertErr } = await supabase.from("attendance").upsert(
+    {
+      tutor_id: tutorId,
+      batch_id: batchId,
+      date: date,
+      records: records,
+      scan_method: "qr",
+    },
+    { onConflict: "batch_id, date" }
+  );
+
+  if (upsertErr) {
+    throw new Error(`Failed to log attendance: ${upsertErr.message}`);
+  }
+
+  const batchName = (qrToken.batches as unknown as { name: string })?.name || "Batch";
+
+  return {
+    success: true,
+    batchName,
+    date,
+    studentName: student.full_name,
+    timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+  };
+}
+

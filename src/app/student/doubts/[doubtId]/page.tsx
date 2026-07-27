@@ -18,6 +18,6 @@ export default function StudentDoubtDetailPage({
   }, [doubtId, router]);
 
   return (
-    <div className="h-64 rounded-2xl animate-shimmer border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1e1e2e]" />
+    <div className="h-64 rounded-2xl animate-shimmer border border-slate-200 dark:border-white/10 bg-white dark:bg-[#131b2e]" />
   );
 }

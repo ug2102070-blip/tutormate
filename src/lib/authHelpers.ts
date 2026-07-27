@@ -1,5 +1,6 @@
 import { createAdminClient, createClient } from "@/lib/supabase/server";
-import type { UserRole } from "@/types";
+import type { UserRole, Permission } from "@/types";
+import { getRoleDefaultPermissions, assertPermission } from "@/lib/permissions";
 
 export interface VerifiedAuth {
   uid: string;
@@ -8,6 +9,7 @@ export interface VerifiedAuth {
   studentDocId?: string;
   studentAuthUid?: string;  // for parent role: the child's auth_uid
   email?: string;
+  permissions: Permission[];
 }
 
 /**
@@ -61,14 +63,40 @@ export async function verifyUserAuth(idToken?: string): Promise<VerifiedAuth> {
   throw new Error("Invalid or expired authentication token");
 }
 
+/**
+ * Verifies user authentication and asserts required permission.
+ */
+export async function verifyUserAuthWithPermission(
+  permission: Permission,
+  idToken?: string
+): Promise<VerifiedAuth> {
+  const auth = await verifyUserAuth(idToken);
+  assertPermission(auth, permission);
+  return auth;
+}
+
 async function fetchProfileAuth(uid: string, email?: string): Promise<VerifiedAuth> {
   const supabase = createAdminClient();
 
   let role: UserRole | null = null;
   let tutorId: string | undefined = undefined;
   let studentDocId: string | undefined = undefined;
+  let studentAuthUid: string | undefined = undefined;
 
-  // 1. Fetch from profiles table
+  // 1. First, check tutors table directly (If user_id matches, this user IS a tutor)
+  const { data: tutor } = await supabase
+    .from("tutors")
+    .select("id")
+    .eq("user_id", uid)
+    .limit(1)
+    .maybeSingle();
+
+  if (tutor) {
+    role = "tutor";
+    tutorId = tutor.id;
+  }
+
+  // 2. Fetch from profiles table
   const { data: profile } = await supabase
     .from("profiles")
     .select("*")
@@ -76,23 +104,15 @@ async function fetchProfileAuth(uid: string, email?: string): Promise<VerifiedAu
     .maybeSingle();
 
   if (profile) {
-    role = profile.role as UserRole;
-    tutorId = profile.tutor_id || undefined;
-    studentDocId = profile.student_doc_id || undefined;
-  }
-
-  // 2. Check tutors table
-  if (!tutorId || role === "tutor") {
-    const { data: tutor } = await supabase
-      .from("tutors")
-      .select("id")
-      .eq("user_id", uid)
-      .limit(1)
-      .maybeSingle();
-
-    if (tutor) {
-      tutorId = tutor.id;
-      if (!role) role = "tutor";
+    if (!role) {
+      role = profile.role as UserRole;
+    }
+    // If tutorId wasn't found from tutors table, check profile
+    if (!tutorId && role === "tutor") {
+      tutorId = profile.tutor_id || undefined;
+    }
+    if (!studentDocId) {
+      studentDocId = profile.student_doc_id || undefined;
     }
   }
 
@@ -107,8 +127,8 @@ async function fetchProfileAuth(uid: string, email?: string): Promise<VerifiedAu
 
     if (student) {
       studentDocId = student.id;
-      if (!tutorId) tutorId = student.tutor_id;
-      if (!role) role = "student";
+      tutorId = student.tutor_id || undefined;
+      role = "student";
     }
   }
 
@@ -126,18 +146,29 @@ async function fetchProfileAuth(uid: string, email?: string): Promise<VerifiedAu
       studentDocId = parentLink.student_id;
       if (student) {
         tutorId = student.tutor_id || undefined;
+        studentAuthUid = student.auth_uid || undefined;
       }
-      if (!role) role = "parent";
+      role = "parent";
     }
   }
 
-  // 5. Default fallback if role is still unknown but uid exists
-  if (!role) {
-    role = "tutor";
-  }
+  // 5. Fetch custom per-user permissions from user_permissions table
+  const permissionsSet = new Set<Permission>(getRoleDefaultPermissions(role));
+  try {
+    const { data: customPerms } = await supabase
+      .from("user_permissions")
+      .select("permission")
+      .eq("user_id", uid);
 
-  if (role === "tutor" && !tutorId) {
-    tutorId = uid;
+    if (customPerms && customPerms.length > 0) {
+      customPerms.forEach((row) => {
+        if (row.permission) {
+          permissionsSet.add(row.permission as Permission);
+        }
+      });
+    }
+  } catch {
+    // If user_permissions table doesn't exist yet, fallback to default role permissions
   }
 
   return {
@@ -145,6 +176,9 @@ async function fetchProfileAuth(uid: string, email?: string): Promise<VerifiedAu
     role,
     tutorId,
     studentDocId,
+    studentAuthUid,
     email: email || profile?.email,
+    permissions: Array.from(permissionsSet),
   };
 }
+

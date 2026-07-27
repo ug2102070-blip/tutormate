@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import type { TutorDoc } from "@/types";
-import { Save, User, Phone, Wallet, ShieldCheck, Check } from "lucide-react";
+import { Save, User, Phone, Wallet, ShieldCheck, Check, Palette } from "lucide-react";
+import { ThemeSelect } from "@/components/ThemeSelect";
 
 export default function TutorSettingsPage() {
   const { user, refreshUser } = useAuth();
@@ -111,7 +113,7 @@ export default function TutorSettingsPage() {
   if (loading) {
     return (
       <div className="max-w-3xl mx-auto space-y-6">
-        <div className="h-64 rounded-2xl animate-shimmer border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1e1e2e]" />
+        <div className="h-64 rounded-2xl animate-shimmer border border-slate-200 dark:border-white/10 bg-white dark:bg-[#131b2e]" />
       </div>
     );
   }
@@ -124,7 +126,7 @@ export default function TutorSettingsPage() {
           Account & Profile Settings
         </h1>
         <p className="text-sm text-slate-500 dark:text-slate-400 font-medium mt-0.5">
-          Manage your personal details, coaching branding, bKash/Nagad payment info, and subscription
+          Manage your personal details, coaching branding, appearance, bKash/Nagad payment info, and subscription
         </p>
       </div>
 
@@ -146,11 +148,19 @@ export default function TutorSettingsPage() {
         </div>
       )}
 
+      {/* Appearance & Theme Section */}
+      <div className="p-6 sm:p-8 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#131b2e] space-y-5 shadow-xs">
+        <div className="flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-slate-100 border-b border-slate-100 dark:border-white/5 pb-3">
+          <Palette className="w-4 h-4 text-indigo-600 dark:text-indigo-400" /> Appearance & Dark Mode Theme
+        </div>
+        <ThemeSelect />
+      </div>
+
       <form onSubmit={handleSaveSettings} className="space-y-6">
         {/* Personal & Branding Section */}
-        <div className="p-6 sm:p-8 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1e1e2e] space-y-5 shadow-xs">
+        <div className="p-6 sm:p-8 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#131b2e] space-y-5 shadow-xs">
           <div className="flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-slate-100 border-b border-slate-100 dark:border-white/5 pb-3">
-            <User className="w-4 h-4 text-indigo-600" /> Profile & Coaching Branding
+            <User className="w-4 h-4 text-indigo-600 dark:text-indigo-400" /> Profile & Coaching Branding
           </div>
 
           <div className="space-y-4">
@@ -167,7 +177,7 @@ export default function TutorSettingsPage() {
                 required
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
-                className="w-full px-4 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-[#13131f]/50 text-slate-900 dark:text-slate-100 focus:bg-white focus:border-indigo-600 outline-none transition-colors"
+                className="w-full px-4 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-[#0b0f19]/50 text-slate-900 dark:text-slate-100 focus:bg-white focus:border-indigo-600 outline-none transition-colors"
               />
             </div>
 
@@ -185,7 +195,7 @@ export default function TutorSettingsPage() {
                   value={institution}
                   onChange={(e) => setInstitution(e.target.value)}
                   placeholder="e.g. Excellence Coaching"
-                  className="w-full px-4 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-[#13131f]/50 text-slate-900 dark:text-slate-100 focus:bg-white focus:border-indigo-600 outline-none transition-colors"
+                  className="w-full px-4 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-[#0b0f19]/50 text-slate-900 dark:text-slate-100 focus:bg-white focus:border-indigo-600 outline-none transition-colors"
                 />
               </div>
 
@@ -203,7 +213,7 @@ export default function TutorSettingsPage() {
                   value={contactPhone}
                   onChange={(e) => setContactPhone(e.target.value)}
                   placeholder="01712345678"
-                  className="w-full px-4 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-[#13131f]/50 text-slate-900 dark:text-slate-100 focus:bg-white focus:border-indigo-600 outline-none transition-colors"
+                  className="w-full px-4 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-[#0b0f19]/50 text-slate-900 dark:text-slate-100 focus:bg-white focus:border-indigo-600 outline-none transition-colors"
                 />
               </div>
             </div>
@@ -211,7 +221,7 @@ export default function TutorSettingsPage() {
         </div>
 
         {/* Payment Numbers Section */}
-        <div className="p-6 sm:p-8 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1e1e2e] space-y-5 shadow-xs">
+        <div className="p-6 sm:p-8 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#131b2e] space-y-5 shadow-xs">
           <div className="flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-slate-100 border-b border-slate-100 dark:border-white/5 pb-3">
             <Wallet className="w-4 h-4 text-emerald-600" /> Fee Collection Payment Numbers (bKash / Nagad)
           </div>
@@ -230,7 +240,7 @@ export default function TutorSettingsPage() {
                 value={bkashNumber}
                 onChange={(e) => setBkashNumber(e.target.value)}
                 placeholder="01712345678"
-                className="w-full px-4 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-[#13131f]/50 text-slate-900 dark:text-slate-100 focus:bg-white focus:border-indigo-600 outline-none transition-colors"
+                className="w-full px-4 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-[#0b0f19]/50 text-slate-900 dark:text-slate-100 focus:bg-white focus:border-indigo-600 outline-none transition-colors"
               />
             </div>
 
@@ -247,7 +257,7 @@ export default function TutorSettingsPage() {
                 value={nagadNumber}
                 onChange={(e) => setNagadNumber(e.target.value)}
                 placeholder="01812345678"
-                className="w-full px-4 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-[#13131f]/50 text-slate-900 dark:text-slate-100 focus:bg-white focus:border-indigo-600 outline-none transition-colors"
+                className="w-full px-4 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-[#0b0f19]/50 text-slate-900 dark:text-slate-100 focus:bg-white focus:border-indigo-600 outline-none transition-colors"
               />
             </div>
           </div>
@@ -259,9 +269,17 @@ export default function TutorSettingsPage() {
             <div className="flex items-center gap-2 text-sm font-bold text-indigo-900">
               <ShieldCheck className="w-4 h-4 text-indigo-600" /> Subscription Plan Status
             </div>
-            <span className="px-3 py-1 rounded-full text-xs font-extrabold uppercase bg-emerald-100 text-emerald-800 border border-emerald-200 dark:border-emerald-500/20">
-              {tutor?.subscription?.status || "Active"}
-            </span>
+            <div className="flex items-center gap-3">
+              <span className="px-3 py-1 rounded-full text-xs font-extrabold uppercase bg-emerald-100 text-emerald-800 border border-emerald-200 dark:border-emerald-500/20">
+                {tutor?.subscription?.status || "Active"}
+              </span>
+              <Link
+                href="/tutor/subscription"
+                className="px-3 py-1 rounded-lg text-xs font-extrabold bg-indigo-600 text-white hover:bg-indigo-700 transition-all flex items-center gap-1"
+              >
+                Manage & Upgrade 💎
+              </Link>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">

@@ -1,11 +1,12 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { createClient } from "@/lib/supabase/client";
 import { getStudentMaterials } from "@/actions/materialActions";
 import { getMediaSignedUrl } from "@/actions/mediaActions";
-import { BookOpen, FileText, Image as ImageIcon, Video, File, FileArchive, Loader2, FileDown, Download } from "lucide-react";
+import { BookOpen, FileText, Image as ImageIcon, Video, File, FileArchive, Loader2, FileDown, Download, ArrowRight } from "lucide-react";
 import type { BatchDoc, MaterialDoc } from "@/types";
 
 export default function StudentMaterialsPage() {
@@ -102,23 +103,33 @@ export default function StudentMaterialsPage() {
   return (
     <div className="max-w-5xl mx-auto space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-          <BookOpen className="w-6 h-6 text-indigo-600" />
-          Study Materials
-        </h1>
-        <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">Access lecture notes, assignments, and study resources from your tutor.</p>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+            <BookOpen className="w-6 h-6 text-indigo-600" />
+            Study Materials
+          </h1>
+          <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">Access lecture notes, assignments, and study resources from your tutor.</p>
+        </div>
+
+        <Link
+          href="/student/recorded-classes"
+          className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm rounded-xl transition-all shadow-sm shrink-0"
+        >
+          <Video className="w-4 h-4" />
+          Recorded Classes 🎥 <ArrowRight className="w-4 h-4" />
+        </Link>
       </div>
 
-      <div className="bg-white dark:bg-[#1e1e2e] rounded-2xl border border-slate-200 dark:border-white/10 shadow-sm overflow-hidden flex flex-col min-h-[500px]">
+      <div className="bg-white dark:bg-[#131b2e] rounded-2xl border border-slate-200 dark:border-white/10 shadow-sm overflow-hidden flex flex-col min-h-[500px]">
         {/* Filter Bar */}
-        <div className="p-4 border-b border-slate-100 dark:border-white/5 bg-slate-50/50 dark:bg-[#13131f]/50 flex flex-wrap gap-3 items-center justify-between">
+        <div className="p-4 border-b border-slate-100 dark:border-white/5 bg-slate-50/50 dark:bg-[#0b0f19]/50 flex flex-wrap gap-3 items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="text-sm font-medium text-slate-600 dark:text-slate-400">Filter by Subject:</span>
             <select 
               value={selectedBatchId}
               onChange={(e) => setSelectedBatchId(e.target.value)}
-              className="px-3 py-1.5 bg-white dark:bg-[#1e1e2e] border border-slate-200 dark:border-white/10 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-300 outline-none focus:ring-2 focus:ring-indigo-500/20"
+              className="px-3 py-1.5 bg-white dark:bg-[#131b2e] border border-slate-200 dark:border-white/10 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-300 outline-none focus:ring-2 focus:ring-indigo-500/20"
             >
               <option value="all">All Subjects</option>
               {batches.map(b => (
@@ -137,7 +148,7 @@ export default function StudentMaterialsPage() {
             </div>
           ) : materials.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-64 text-center px-4">
-              <div className="w-16 h-16 bg-slate-50 dark:bg-[#13131f] rounded-full flex items-center justify-center mb-3">
+              <div className="w-16 h-16 bg-slate-50 dark:bg-[#0b0f19] rounded-full flex items-center justify-center mb-3">
                 <BookOpen className="w-8 h-8 text-slate-300" />
               </div>
               <h3 className="text-slate-800 dark:text-slate-200 font-bold mb-1">No Materials Found</h3>
@@ -153,9 +164,9 @@ export default function StudentMaterialsPage() {
                 const batch = batches.find(b => b.id === mat.batchId);
                 
                 return (
-                  <div key={mat.id} className="border border-slate-200 dark:border-white/10 rounded-2xl p-5 hover:border-indigo-300 hover:shadow-md transition-all bg-white dark:bg-[#1e1e2e] group flex flex-col h-full">
+                  <div key={mat.id} className="border border-slate-200 dark:border-white/10 rounded-2xl p-5 hover:border-indigo-300 hover:shadow-md transition-all bg-white dark:bg-[#131b2e] group flex flex-col h-full">
                     <div className="flex items-start gap-4 mb-4">
-                      <div className="shrink-0 p-3 bg-slate-50 dark:bg-[#13131f] rounded-xl group-hover:bg-indigo-50 transition-colors">
+                      <div className="shrink-0 p-3 bg-slate-50 dark:bg-[#0b0f19] rounded-xl group-hover:bg-indigo-50 transition-colors">
                         {getFileIcon(mat.fileType)}
                       </div>
                       <div className="flex-1 min-w-0 pt-1">

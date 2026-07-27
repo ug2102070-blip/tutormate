@@ -17,7 +17,7 @@ export default function TutorLayout({
 
   useEffect(() => {
     if (!loading) {
-      if (!user) {
+      if (!user || !role) {
         router.push("/login");
       } else if (role === "student") {
         router.push("/student/dashboard");

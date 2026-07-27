@@ -133,7 +133,7 @@ export default function StudentAssignmentDetailsPage() {
         <ArrowLeft className="w-4 h-4 mr-1" /> Back to Assignments
       </Link>
 
-      <div className="bg-white dark:bg-[#1e1e2e] rounded-2xl border border-slate-200 dark:border-white/10 p-6 shadow-sm">
+      <div className="bg-white dark:bg-[#131b2e] rounded-2xl border border-slate-200 dark:border-white/10 p-6 shadow-sm">
         <div className="flex justify-between items-start mb-4">
           <div>
             <div className="flex items-center gap-3 mb-2">
@@ -163,7 +163,7 @@ export default function StudentAssignmentDetailsPage() {
         {assignment.description && (
           <div className="mt-6">
             <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 mb-2">Instructions</h3>
-            <div className="text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-[#13131f] p-4 rounded-xl text-sm border border-slate-100 dark:border-white/5 whitespace-pre-wrap">
+            <div className="text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-[#0b0f19] p-4 rounded-xl text-sm border border-slate-100 dark:border-white/5 whitespace-pre-wrap">
               {assignment.description}
             </div>
           </div>
@@ -179,7 +179,7 @@ export default function StudentAssignmentDetailsPage() {
         )}
       </div>
 
-      <div className="bg-white dark:bg-[#1e1e2e] rounded-2xl border border-slate-200 dark:border-white/10 p-6 shadow-sm">
+      <div className="bg-white dark:bg-[#131b2e] rounded-2xl border border-slate-200 dark:border-white/10 p-6 shadow-sm">
         <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-4 flex items-center gap-2">
           <FileText className="w-5 h-5 text-indigo-500" />
           My Work
@@ -212,7 +212,7 @@ export default function StudentAssignmentDetailsPage() {
               </div>
             ) : (
               <div className="flex flex-col gap-4">
-                <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-[#13131f] border border-slate-200 dark:border-white/10 rounded-xl">
+                <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-[#0b0f19] border border-slate-200 dark:border-white/10 rounded-xl">
                   <div className="flex items-center gap-3 overflow-hidden">
                     <FileIcon className="w-8 h-8 text-indigo-500 shrink-0" />
                     <div className="min-w-0">
@@ -244,7 +244,7 @@ export default function StudentAssignmentDetailsPage() {
             )}
           </form>
         ) : (
-          <div className="flex flex-col sm:flex-row items-center justify-between p-4 bg-slate-50 dark:bg-[#13131f] border border-slate-200 dark:border-white/10 rounded-xl gap-4">
+          <div className="flex flex-col sm:flex-row items-center justify-between p-4 bg-slate-50 dark:bg-[#0b0f19] border border-slate-200 dark:border-white/10 rounded-xl gap-4">
             <div className="flex items-center gap-4 text-left w-full sm:w-auto">
               <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center shrink-0">
                 <CheckCircle className="w-6 h-6 text-emerald-600" />
@@ -260,7 +260,7 @@ export default function StudentAssignmentDetailsPage() {
             {submission.filePath && (
               <button
                 onClick={() => handleDownload(submission.filePath)}
-                className="w-full sm:w-auto flex items-center justify-center gap-2 py-2 px-4 bg-white dark:bg-[#1e1e2e] border border-slate-200 dark:border-white/10 hover:bg-slate-50 text-slate-700 dark:text-slate-300 text-sm font-semibold rounded-lg transition-colors shadow-sm"
+                className="w-full sm:w-auto flex items-center justify-center gap-2 py-2 px-4 bg-white dark:bg-[#131b2e] border border-slate-200 dark:border-white/10 hover:bg-slate-50 text-slate-700 dark:text-slate-300 text-sm font-semibold rounded-lg transition-colors shadow-sm"
               >
                 <FileDown className="w-4 h-4" /> View Submission File
               </button>

@@ -3,6 +3,7 @@
 import { createAdminClient, getSupabaseServerClient } from "@/lib/supabase/server";
 import { verifyUserAuth } from "@/lib/authHelpers";
 import { batchSchema, type BatchFormValues } from "@/lib/validations/batch";
+import { checkBatchLimit } from "@/lib/serverSubscriptions";
 
 async function ensureTutorRecord(tutorId: string, email?: string) {
   const adminSupabase = createAdminClient();
@@ -63,10 +64,14 @@ async function ensureTutorRecord(tutorId: string, email?: string) {
  */
 export async function createBatch(formData: BatchFormValues, idToken: string) {
   const authState = await verifyUserAuth(idToken);
-  if (authState.role !== "tutor") {
+  if (authState.role !== "tutor" && authState.role !== "owner" && authState.role !== "admin") {
     throw new Error("Unauthorized: Only tutors can create batches.");
   }
   const tutorId = authState.tutorId || authState.uid;
+
+  // Enforce Subscription Plan Limit for Batches
+  await checkBatchLimit(tutorId);
+
   const validated = batchSchema.parse(formData);
 
   // Guarantee tutor row exists in public.tutors to satisfy foreign key constraints

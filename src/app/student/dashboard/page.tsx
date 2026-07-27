@@ -25,7 +25,7 @@ export default function StudentDashboardPage() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         <Link
           href="/student/attendance"
-          className="p-5 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1e1e2e] flex items-center justify-between transition-all duration-200 hover:shadow-md hover:border-indigo-500 group shadow-xs"
+          className="p-5 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#131b2e] flex items-center justify-between transition-all duration-200 hover:shadow-md hover:border-indigo-500 group shadow-xs"
         >
           <div className="flex items-center gap-4">
             <div className="p-3 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600">
@@ -45,7 +45,7 @@ export default function StudentDashboardPage() {
 
         <Link
           href="/student/fees"
-          className="p-5 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1e1e2e] flex items-center justify-between transition-all duration-200 hover:shadow-md hover:border-emerald-500 group shadow-xs"
+          className="p-5 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#131b2e] flex items-center justify-between transition-all duration-200 hover:shadow-md hover:border-emerald-500 group shadow-xs"
         >
           <div className="flex items-center gap-4">
             <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600">
@@ -65,7 +65,7 @@ export default function StudentDashboardPage() {
 
         <Link
           href="/student/doubts"
-          className="p-5 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1e1e2e] flex items-center justify-between transition-all duration-200 hover:shadow-md hover:border-amber-500 group shadow-xs"
+          className="p-5 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#131b2e] flex items-center justify-between transition-all duration-200 hover:shadow-md hover:border-amber-500 group shadow-xs"
         >
           <div className="flex items-center gap-4">
             <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-500/10 text-amber-500">

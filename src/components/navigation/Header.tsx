@@ -9,6 +9,7 @@ import { LogOut, Settings, ChevronDown, User } from "lucide-react";
 import { HeaderCalendar } from "@/components/HeaderCalendar";
 import { NotificationBell } from "@/components/NotificationBell";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { LanguageToggle } from "@/components/LanguageToggle";
 
 export function Header() {
   const router = useRouter();
@@ -80,6 +81,9 @@ export function Header() {
         <div className="hidden md:block">
           {role && <HeaderCalendar role={role as "tutor" | "student"} />}
         </div>
+
+        {/* Language Toggle */}
+        <LanguageToggle />
 
         {/* Theme Toggle */}
         <ThemeToggle />

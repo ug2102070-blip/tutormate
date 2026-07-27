@@ -1,11 +1,12 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState, useRef } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { createClient } from "@/lib/supabase/client";
 import { getTutorMaterials, createMaterial, deleteMaterial, updateMaterial } from "@/actions/materialActions";
 import { getMediaSignedUrl } from "@/actions/mediaActions";
-import { BookOpen, Upload, Trash2, FileText, Image as ImageIcon, Video, File, FileArchive, Loader2, Plus, Eye, EyeOff, FileDown } from "lucide-react";
+import { BookOpen, Upload, Trash2, FileText, Image as ImageIcon, Video, File, FileArchive, Loader2, Plus, Eye, EyeOff, FileDown, ArrowRight } from "lucide-react";
 import type { BatchDoc, MaterialDoc } from "@/types";
 
 export default function MaterialsPage() {
@@ -14,7 +15,7 @@ export default function MaterialsPage() {
   const [materials, setMaterials] = useState<MaterialDoc[]>([]);
   const [selectedBatchId, setSelectedBatchId] = useState<string>("all");
   const [loading, setLoading] = useState(true);
-  
+
   // Upload state
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
@@ -205,12 +206,20 @@ export default function MaterialsPage() {
           </h1>
           <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">Upload and share notes, videos, and slides with your students.</p>
         </div>
+
+        <Link
+          href="/tutor/recorded-classes"
+          className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm rounded-xl transition-all shadow-sm shrink-0"
+        >
+          <Video className="w-4 h-4" />
+          Recorded Classes 🎥 <ArrowRight className="w-4 h-4" />
+        </Link>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Upload Form (Side) */}
         <div className="lg:col-span-1">
-          <div className="bg-white dark:bg-[#1e1e2e] rounded-2xl border border-slate-200 dark:border-white/10 p-5 shadow-sm sticky top-6">
+          <div className="bg-white dark:bg-[#131b2e] rounded-2xl border border-slate-200 dark:border-white/10 p-5 shadow-sm sticky top-6">
             <h2 className="text-lg font-bold text-slate-800 dark:text-slate-200 mb-4 flex items-center gap-2">
               <Upload className="w-5 h-5 text-indigo-500" />
               Upload Material
@@ -230,7 +239,7 @@ export default function MaterialsPage() {
                   required
                   value={formData.title}
                   onChange={e => setFormData({...formData, title: e.target.value})}
-                  className="w-full px-3 py-2 bg-slate-50 dark:bg-[#13131f] border border-slate-200 dark:border-white/10 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none"
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-[#0b0f19] border border-slate-200 dark:border-white/10 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none"
                   placeholder="e.g., Chapter 1 Notes"
                 />
               </div>
@@ -240,7 +249,7 @@ export default function MaterialsPage() {
                 <textarea 
                   value={formData.description}
                   onChange={e => setFormData({...formData, description: e.target.value})}
-                  className="w-full px-3 py-2 bg-slate-50 dark:bg-[#13131f] border border-slate-200 dark:border-white/10 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none resize-none"
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-[#0b0f19] border border-slate-200 dark:border-white/10 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none resize-none"
                   placeholder="Brief context about this material..."
                   rows={2}
                 />
@@ -251,7 +260,7 @@ export default function MaterialsPage() {
                 <select 
                   value={formData.batchId}
                   onChange={e => setFormData({...formData, batchId: e.target.value})}
-                  className="w-full px-3 py-2 bg-slate-50 dark:bg-[#13131f] border border-slate-200 dark:border-white/10 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none"
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-[#0b0f19] border border-slate-200 dark:border-white/10 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none"
                 >
                   <option value="all">Global (All Students)</option>
                   {batches.map(b => (
@@ -298,15 +307,15 @@ export default function MaterialsPage() {
 
         {/* Materials List (Main) */}
         <div className="lg:col-span-2">
-          <div className="bg-white dark:bg-[#1e1e2e] rounded-2xl border border-slate-200 dark:border-white/10 shadow-sm overflow-hidden flex flex-col h-full min-h-[500px]">
+          <div className="bg-white dark:bg-[#131b2e] rounded-2xl border border-slate-200 dark:border-white/10 shadow-sm overflow-hidden flex flex-col h-full min-h-[500px]">
             {/* Filter Bar */}
-            <div className="p-4 border-b border-slate-100 dark:border-white/5 bg-slate-50/50 dark:bg-[#13131f]/50 flex flex-wrap gap-3 items-center justify-between">
+            <div className="p-4 border-b border-slate-100 dark:border-white/5 bg-slate-50/50 dark:bg-[#0b0f19]/50 flex flex-wrap gap-3 items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className="text-sm font-medium text-slate-600 dark:text-slate-400">Filter by Batch:</span>
                 <select 
                   value={selectedBatchId}
                   onChange={(e) => setSelectedBatchId(e.target.value)}
-                  className="px-3 py-1.5 bg-white dark:bg-[#1e1e2e] border border-slate-200 dark:border-white/10 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-300 outline-none focus:ring-2 focus:ring-indigo-500/20"
+                  className="px-3 py-1.5 bg-white dark:bg-[#131b2e] border border-slate-200 dark:border-white/10 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-300 outline-none focus:ring-2 focus:ring-indigo-500/20"
                 >
                   <option value="all">All Materials</option>
                   {batches.map(b => (
@@ -325,7 +334,7 @@ export default function MaterialsPage() {
                 </div>
               ) : materials.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-64 text-center px-4">
-                  <div className="w-16 h-16 bg-slate-50 dark:bg-[#13131f] rounded-full flex items-center justify-center mb-3">
+                  <div className="w-16 h-16 bg-slate-50 dark:bg-[#0b0f19] rounded-full flex items-center justify-center mb-3">
                     <BookOpen className="w-8 h-8 text-slate-300" />
                   </div>
                   <h3 className="text-slate-800 dark:text-slate-200 font-bold mb-1">No Materials Found</h3>

@@ -1,0 +1,79 @@
+{
+  "app": {
+    "title": "TutorMate",
+    "subtitle": "Smart Coaching & Student Management System"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "aiAssistant": "AI Assistant 🤖",
+    "coaching": "Coaching Center 🏫",
+    "permissions": "Role Permissions 🔑",
+    "subscription": "Subscription 💎",
+    "batches": "Batches",
+    "students": "Students",
+    "attendance": "Attendance",
+    "fees": "Fee Ledger",
+    "recordedClasses": "Recorded Classes 🎥",
+    "doubts": "Student Doubts",
+    "askDoubts": "Ask Doubts",
+    "materials": "Study Materials",
+    "assignments": "Assignments",
+    "exams": "Exams",
+    "settings": "Settings",
+    "myAttendance": "My Attendance",
+    "paymentHistory": "Payment History"
+  },
+  "common": {
+    "loading": "Loading...",
+    "save": "Save Changes",
+    "saving": "Saving...",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "delete": "Delete",
+    "edit": "Edit",
+    "action": "Action",
+    "actions": "Actions",
+    "status": "Status",
+    "active": "Active font",
+    "search": "Search...",
+    "filter": "Filter",
+    "refresh": "Refresh",
+    "success": "Success",
+    "error": "Error",
+    "all": "All",
+    "none": "None",
+    "back": "Back"
+  },
+  "fees": {
+    "title": "Fee Management & Ledger",
+    "studentTitle": "Payment History & Fee Statements",
+    "amountDue": "Amount Due",
+    "amountPaid": "Amount Paid",
+    "totalPaid": "Total Paid",
+    "totalUnpaid": "Pending Dues",
+    "payNow": "Pay Now",
+    "payBkash": "Pay via bKash 🌸",
+    "payNagad": "Pay via Nagad 🟠",
+    "paid": "Paid",
+    "unpaid": "Unpaid",
+    "partial": "Partial",
+    "paymentMethod": "Payment Method",
+    "transactionId": "Transaction ID (TrxID)",
+    "receipt": "Payment Receipt"
+  },
+  "attendance": {
+    "title": "Class Attendance Engine",
+    "markAttendance": "Mark Attendance",
+    "present": "Present",
+    "absent": "Absent",
+    "late": "Late",
+    "qrScan": "Scan QR Code 📷"
+  },
+  "roles": {
+    "student": "Student",
+    "parent": "Parent",
+    "tutor": "Tutor",
+    "admin": "Admin",
+    "owner": "Owner"
+  }
+}

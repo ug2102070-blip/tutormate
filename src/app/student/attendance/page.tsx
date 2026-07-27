@@ -4,32 +4,34 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { getStudentAttendanceHistory } from "@/actions/attendanceActions";
 import type { AttendanceDoc } from "@/types";
-import { CalendarCheck, Check, X, Clock } from "lucide-react";
+import { CalendarCheck, Check, X, Clock, QrCode } from "lucide-react";
+import { QRScannerModal } from "@/components/student/QRScannerModal";
 
 export default function StudentAttendancePage() {
   const { user, claims } = useAuth();
   const [attendanceLogs, setAttendanceLogs] = useState<AttendanceDoc[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
 
-  useEffect(() => {
+  const loadAttendance = async () => {
     if (!user) {
       setLoading(false);
       return;
     }
-
-    async function loadAttendance() {
-      try {
-        const logs = await getStudentAttendanceHistory(user!.id);
-        setAttendanceLogs(logs);
-      } catch (err) {
-        console.error("Error loading attendance:", err);
-      } finally {
-        setLoading(false);
-      }
+    try {
+      const logs = await getStudentAttendanceHistory(user.id);
+      setAttendanceLogs(logs);
+    } catch (err) {
+      console.error("Error loading attendance:", err);
+    } finally {
+      setLoading(false);
     }
+  };
 
+  useEffect(() => {
     loadAttendance();
   }, [user, claims]);
+
 
 
   const studentDocId = claims?.role === "student" ? claims.studentDocId : "";
@@ -49,14 +51,25 @@ export default function StudentAttendancePage() {
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight text-[var(--color-text)]">
-          My Attendance History
-        </h1>
-        <p className="text-sm text-[var(--color-text-secondary)]">
-          Track your daily class attendance logs across enrolled batches
-        </p>
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-[var(--color-text)]">
+            My Attendance History
+          </h1>
+          <p className="text-sm text-[var(--color-text-secondary)]">
+            Track your daily class attendance logs across enrolled batches
+          </p>
+        </div>
+
+        <button
+          onClick={() => setIsScannerOpen(true)}
+          className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-extrabold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-xs transition-all"
+        >
+          <QrCode className="w-4 h-4" />
+          Scan QR Attendance 📷
+        </button>
       </div>
+
 
       {/* Summary Stats Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -150,6 +163,17 @@ export default function StudentAttendancePage() {
           </div>
         </div>
       )}
+
+      {/* Student QR Scanner Modal */}
+      {user && (
+        <QRScannerModal
+          userId={user.id}
+          isOpen={isScannerOpen}
+          onClose={() => setIsScannerOpen(false)}
+          onSuccess={loadAttendance}
+        />
+      )}
     </div>
   );
 }
+

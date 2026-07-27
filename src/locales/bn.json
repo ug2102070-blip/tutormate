@@ -1,0 +1,79 @@
+{
+  "app": {
+    "title": "টিউটরমেট (TutorMate)",
+    "subtitle": "স্মার্ট কোচিং এবং স্টুডেন্ট ম্যানেজমেন্ট সিস্টেম"
+  },
+  "nav": {
+    "dashboard": "ড্যাশবোর্ড",
+    "aiAssistant": "এআই অ্যাসিস্ট্যান্ট 🤖",
+    "coaching": "কোচিং সেন্টার 🏫",
+    "permissions": "রোল পারমিশনস 🔑",
+    "subscription": "সাবস্ক্রিপশন 💎",
+    "batches": "ব্যাচসমূহ",
+    "students": "শিক্ষার্থীবৃন্দ",
+    "attendance": "উপস্থিতি",
+    "fees": "ফি হিসাব",
+    "recordedClasses": "রেকর্ডকৃত ক্লাস 🎥",
+    "doubts": "শিক্ষার্থীর প্রশ্নাবলি",
+    "askDoubts": "প্রশ্ন করুন",
+    "materials": "স্টাডি মেটেরিয়ালস",
+    "assignments": "অ্যাসাইনমেন্ট",
+    "exams": "পরীক্ষাসমূহ",
+    "settings": "সেটিংস",
+    "myAttendance": "আমার উপস্থিতি",
+    "paymentHistory": "পেমেন্ট হিস্ট্রি"
+  },
+  "common": {
+    "loading": "লোড হচ্ছে...",
+    "save": "সংরক্ষণ করুন",
+    "saving": "সংরক্ষিত হচ্ছে...",
+    "cancel": "বাতিল",
+    "confirm": "নিশ্চিত করুন",
+    "delete": "মুছে ফেলুন",
+    "edit": "সম্পাদনা",
+    "action": "অ্যাকশন",
+    "actions": "অ্যাকশনসমূহ",
+    "status": "স্ট্যাটাস",
+    "active": "সক্রিয়",
+    "search": "অনুসন্ধান করুন...",
+    "filter": "ফিল্টার",
+    "refresh": "রিফ্রেশ",
+    "success": "সফল",
+    "error": "ত্রুটি",
+    "all": "সকল",
+    "none": "কোনটিই নয়",
+    "back": "ফিরে যান"
+  },
+  "fees": {
+    "title": "ফি ব্যবস্থাপনা ও লেজার",
+    "studentTitle": "পেমেন্ট হিস্ট্রি ও ফি স্টেটমেন্ট",
+    "amountDue": "বকেয়া পরিমাণ",
+    "amountPaid": "পরিশোধিত পরিমাণ",
+    "totalPaid": "মোট পরিশোধিত",
+    "totalUnpaid": "মোট বকেয়া",
+    "payNow": "পেমেন্ট করুন",
+    "payBkash": "বিকাশ পেমেন্ট 🌸",
+    "payNagad": "নগদ পেমেন্ট 🟠",
+    "paid": "পরিশোধিত",
+    "unpaid": "অপরিশোধিত",
+    "partial": "আংশিক",
+    "paymentMethod": "পেমেন্ট মেথড",
+    "transactionId": "ট্রানজেকশন আইডি (TrxID)",
+    "receipt": "পেমেন্ট রশিদ"
+  },
+  "attendance": {
+    "title": "ক্লাস উপস্থিতি ইঞ্জিন",
+    "markAttendance": "উপস্থিতি গ্রহণ করুন",
+    "present": "উপস্থিত",
+    "absent": "অনুপস্থিত",
+    "late": "বিলম্ব",
+    "qrScan": "কিউআর কোড স্ক্যান 📷"
+  },
+  "roles": {
+    "student": "শিক্ষার্থী",
+    "parent": "অভিভাবক",
+    "tutor": "শিক্ষক",
+    "admin": "এডমিন",
+    "owner": "মালিক (Owner)"
+  }
+}

@@ -76,8 +76,8 @@ export default function StudentExamsPage() {
       </div>
 
       {results.length === 0 ? (
-        <div className="text-center p-12 bg-white dark:bg-[#1e1e2e] rounded-2xl border border-slate-200 dark:border-white/10 shadow-xs mt-6">
-          <div className="w-16 h-16 bg-slate-50 dark:bg-[#13131f] rounded-full flex items-center justify-center mx-auto mb-4">
+        <div className="text-center p-12 bg-white dark:bg-[#131b2e] rounded-2xl border border-slate-200 dark:border-white/10 shadow-xs mt-6">
+          <div className="w-16 h-16 bg-slate-50 dark:bg-[#0b0f19] rounded-full flex items-center justify-center mx-auto mb-4">
             <Award className="w-8 h-8 text-slate-400" />
           </div>
           <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200">No Results Yet</h3>
@@ -95,7 +95,7 @@ export default function StudentExamsPage() {
             const isPassing = exam.passMarks ? (result.marksObtained !== null && result.marksObtained >= exam.passMarks) : null;
 
             return (
-              <div key={result.id} className="bg-white dark:bg-[#1e1e2e] rounded-2xl border border-slate-200 dark:border-white/10 p-6 shadow-xs overflow-hidden relative">
+              <div key={result.id} className="bg-white dark:bg-[#131b2e] rounded-2xl border border-slate-200 dark:border-white/10 p-6 shadow-xs overflow-hidden relative">
                 {/* Header info */}
                 <div className="flex flex-wrap justify-between items-start gap-4 mb-6">
                   <div>
@@ -128,7 +128,7 @@ export default function StudentExamsPage() {
                       </div>
                     </div>
                   ) : (
-                    <div className="bg-slate-50 dark:bg-[#13131f] text-slate-500 dark:text-slate-400 px-4 py-2 rounded-xl border border-slate-200 dark:border-white/10 font-semibold text-sm">
+                    <div className="bg-slate-50 dark:bg-[#0b0f19] text-slate-500 dark:text-slate-400 px-4 py-2 rounded-xl border border-slate-200 dark:border-white/10 font-semibold text-sm">
                       Pending Grade
                     </div>
                   )}
@@ -136,22 +136,22 @@ export default function StudentExamsPage() {
 
                 {/* Main Stats Grid */}
                 {!result.isAbsent && (
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-slate-50 dark:bg-[#13131f] rounded-2xl p-4 border border-slate-100 dark:border-white/5">
-                    <div className="bg-white dark:bg-[#1e1e2e] rounded-xl p-3 shadow-xs border border-slate-100 dark:border-white/5">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-slate-50 dark:bg-[#0b0f19] rounded-2xl p-4 border border-slate-100 dark:border-white/5">
+                    <div className="bg-white dark:bg-[#131b2e] rounded-xl p-3 shadow-xs border border-slate-100 dark:border-white/5">
                       <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase mb-1">Marks Obtained</p>
                       <p className="text-lg font-bold text-slate-900 dark:text-slate-100">
                         {result.marksObtained !== null ? result.marksObtained : "-"} <span className="text-sm font-medium text-slate-400">/ {exam.totalMarks}</span>
                       </p>
                     </div>
                     
-                    <div className="bg-white dark:bg-[#1e1e2e] rounded-xl p-3 shadow-xs border border-slate-100 dark:border-white/5">
+                    <div className="bg-white dark:bg-[#131b2e] rounded-xl p-3 shadow-xs border border-slate-100 dark:border-white/5">
                       <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase mb-1">Percentage</p>
                       <p className="text-lg font-bold text-slate-900 dark:text-slate-100">
                         {result.marksObtained !== null ? `${percentage}%` : "-"}
                       </p>
                     </div>
 
-                    <div className="bg-white dark:bg-[#1e1e2e] rounded-xl p-3 shadow-xs border border-slate-100 dark:border-white/5">
+                    <div className="bg-white dark:bg-[#131b2e] rounded-xl p-3 shadow-xs border border-slate-100 dark:border-white/5">
                       <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase mb-1">Batch Rank</p>
                       <p className="text-lg font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
                         {result.position ? `#${result.position}` : "-"}
@@ -159,7 +159,7 @@ export default function StudentExamsPage() {
                       </p>
                     </div>
 
-                    <div className="bg-white dark:bg-[#1e1e2e] rounded-xl p-3 shadow-xs border border-slate-100 dark:border-white/5">
+                    <div className="bg-white dark:bg-[#131b2e] rounded-xl p-3 shadow-xs border border-slate-100 dark:border-white/5">
                       <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase mb-1">Status</p>
                       <p className={`text-lg font-bold ${
                         isPassing === true ? 'text-emerald-600' : 

@@ -133,7 +133,7 @@ export default function EditMaterialPage({ params }: { params: Promise<{ id: str
         </div>
       </div>
 
-      <div className="bg-white dark:bg-[#1e1e2e] rounded-2xl border border-slate-200 dark:border-white/10 p-6 shadow-sm">
+      <div className="bg-white dark:bg-[#131b2e] rounded-2xl border border-slate-200 dark:border-white/10 p-6 shadow-sm">
         {error && (
           <div className="p-3 bg-red-50 dark:bg-red-500/10 text-red-700 text-sm rounded-xl mb-6">
             {error}
@@ -148,7 +148,7 @@ export default function EditMaterialPage({ params }: { params: Promise<{ id: str
               required
               value={formData.title}
               onChange={e => setFormData({...formData, title: e.target.value})}
-              className="w-full px-3 py-2 bg-slate-50 dark:bg-[#13131f] border border-slate-200 dark:border-white/10 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none"
+              className="w-full px-3 py-2 bg-slate-50 dark:bg-[#0b0f19] border border-slate-200 dark:border-white/10 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none"
             />
           </div>
 
@@ -157,7 +157,7 @@ export default function EditMaterialPage({ params }: { params: Promise<{ id: str
             <textarea 
               value={formData.description}
               onChange={e => setFormData({...formData, description: e.target.value})}
-              className="w-full px-3 py-2 bg-slate-50 dark:bg-[#13131f] border border-slate-200 dark:border-white/10 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none resize-none"
+              className="w-full px-3 py-2 bg-slate-50 dark:bg-[#0b0f19] border border-slate-200 dark:border-white/10 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none resize-none"
               rows={4}
             />
           </div>
@@ -167,7 +167,7 @@ export default function EditMaterialPage({ params }: { params: Promise<{ id: str
             <select 
               value={formData.batchId}
               onChange={e => setFormData({...formData, batchId: e.target.value})}
-              className="w-full px-3 py-2 bg-slate-50 dark:bg-[#13131f] border border-slate-200 dark:border-white/10 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none"
+              className="w-full px-3 py-2 bg-slate-50 dark:bg-[#0b0f19] border border-slate-200 dark:border-white/10 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none"
             >
               <option value="all">Global (All Students)</option>
               {batches.map(b => (

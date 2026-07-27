@@ -61,6 +61,7 @@ export const metadata: Metadata = {
 };
 
 import { ThemeProvider } from "@/components/ThemeProvider";
+import { LanguageProvider } from "@/context/LanguageContext";
 
 export default function RootLayout({
   children,
@@ -81,12 +82,14 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <AuthProvider>
-            <NetworkStatus />
-            <PwaRegister />
-            <PwaInstallPrompt />
-            {children}
-          </AuthProvider>
+          <LanguageProvider>
+            <AuthProvider>
+              <NetworkStatus />
+              <PwaRegister />
+              <PwaInstallPrompt />
+              {children}
+            </AuthProvider>
+          </LanguageProvider>
         </ThemeProvider>
       </body>
     </html>

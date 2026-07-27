@@ -70,7 +70,7 @@ export default function CreateBatchPage() {
       <div className="flex items-center gap-3">
         <Link
           href="/tutor/batches"
-          className="p-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1e1e2e] hover:bg-slate-50 transition-colors shadow-xs"
+          className="p-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#131b2e] hover:bg-slate-50 transition-colors shadow-xs"
         >
           <ArrowLeft className="w-4 h-4 text-slate-600 dark:text-slate-400" />
         </Link>
@@ -96,7 +96,7 @@ export default function CreateBatchPage() {
       {/* Form Card */}
       <form
         onSubmit={handleSubmit}
-        className="p-6 sm:p-8 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1e1e2e] space-y-6 shadow-xs"
+        className="p-6 sm:p-8 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#131b2e] space-y-6 shadow-xs"
       >
         <div className="space-y-4">
           <div>
@@ -113,7 +113,7 @@ export default function CreateBatchPage() {
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g. HSC Physics Batch A"
-              className="w-full px-4 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-[#13131f]/50 text-slate-900 dark:text-slate-100 focus:bg-white focus:border-indigo-600 outline-none transition-colors"
+              className="w-full px-4 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-[#0b0f19]/50 text-slate-900 dark:text-slate-100 focus:bg-white focus:border-indigo-600 outline-none transition-colors"
             />
           </div>
 
@@ -132,7 +132,7 @@ export default function CreateBatchPage() {
                 value={subject}
                 onChange={(e) => setSubject(e.target.value)}
                 placeholder="e.g. Physics"
-                className="w-full px-4 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-[#13131f]/50 text-slate-900 dark:text-slate-100 focus:bg-white focus:border-indigo-600 outline-none transition-colors"
+                className="w-full px-4 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-[#0b0f19]/50 text-slate-900 dark:text-slate-100 focus:bg-white focus:border-indigo-600 outline-none transition-colors"
               />
             </div>
 
@@ -150,7 +150,7 @@ export default function CreateBatchPage() {
                 value={gradeClass}
                 onChange={(e) => setGradeClass(e.target.value)}
                 placeholder="e.g. 11-12 / HSC"
-                className="w-full px-4 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-[#13131f]/50 text-slate-900 dark:text-slate-100 focus:bg-white focus:border-indigo-600 outline-none transition-colors"
+                className="w-full px-4 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-[#0b0f19]/50 text-slate-900 dark:text-slate-100 focus:bg-white focus:border-indigo-600 outline-none transition-colors"
               />
             </div>
           </div>
@@ -171,7 +171,7 @@ export default function CreateBatchPage() {
               value={monthlyFee}
               onChange={(e) => setMonthlyFee(Number(e.target.value))}
               placeholder="1500"
-              className="w-full px-4 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-[#13131f]/50 text-slate-900 dark:text-slate-100 focus:bg-white focus:border-indigo-600 outline-none transition-colors font-semibold"
+              className="w-full px-4 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-[#0b0f19]/50 text-slate-900 dark:text-slate-100 focus:bg-white focus:border-indigo-600 outline-none transition-colors font-semibold"
             />
           </div>
         </div>
@@ -205,7 +205,7 @@ export default function CreateBatchPage() {
                 <select
                   value={slot.day}
                   onChange={(e) => updateScheduleSlot(index, "day", e.target.value)}
-                  className="px-3 py-2 text-xs font-bold rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1e1e2e] text-slate-900 dark:text-slate-100 outline-none"
+                  className="px-3 py-2 text-xs font-bold rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-[#131b2e] text-slate-900 dark:text-slate-100 outline-none"
                 >
                   {daysOfWeek.map((d) => (
                     <option key={d} value={d}>
@@ -219,7 +219,7 @@ export default function CreateBatchPage() {
                   value={slot.time}
                   onChange={(e) => updateScheduleSlot(index, "time", e.target.value)}
                   placeholder="e.g. 4:00 PM - 5:30 PM"
-                  className="flex-1 px-3 py-2 text-xs rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1e1e2e] text-slate-900 dark:text-slate-100 font-medium outline-none"
+                  className="flex-1 px-3 py-2 text-xs rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-[#131b2e] text-slate-900 dark:text-slate-100 font-medium outline-none"
                 />
 
                 {schedule.length > 1 && (

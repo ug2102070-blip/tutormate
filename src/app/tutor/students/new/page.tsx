@@ -106,7 +106,7 @@ export default function AddStudentPage() {
       <div className="flex items-center gap-3">
         <Link
           href="/tutor/students"
-          className="p-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1e1e2e] hover:bg-slate-50 transition-colors shadow-xs"
+          className="p-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#131b2e] hover:bg-slate-50 transition-colors shadow-xs"
         >
           <ArrowLeft className="w-4 h-4 text-slate-600 dark:text-slate-400" />
         </Link>
@@ -122,7 +122,7 @@ export default function AddStudentPage() {
 
       {/* Success Modal Card after Creation */}
       {createdInviteCode ? (
-        <div className="p-8 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1e1e2e] text-center space-y-6 shadow-sm animate-fade-in">
+        <div className="p-8 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#131b2e] text-center space-y-6 shadow-sm animate-fade-in">
           <div className="w-14 h-14 rounded-full bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 flex items-center justify-center mx-auto text-2xl font-extrabold border border-indigo-100">
             🎉
           </div>
@@ -142,7 +142,7 @@ export default function AddStudentPage() {
             </span>
             <button
               onClick={copyCode}
-              className="p-2.5 rounded-xl bg-white dark:bg-[#1e1e2e] border border-indigo-200 hover:bg-indigo-50 transition-colors flex items-center gap-1.5 text-xs font-bold text-indigo-700 shadow-xs"
+              className="p-2.5 rounded-xl bg-white dark:bg-[#131b2e] border border-indigo-200 hover:bg-indigo-50 transition-colors flex items-center gap-1.5 text-xs font-bold text-indigo-700 shadow-xs"
             >
               {copied ? (
                 <>
@@ -191,7 +191,7 @@ export default function AddStudentPage() {
           {/* Form Card */}
           <form
             onSubmit={handleSubmit}
-            className="p-6 sm:p-8 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1e1e2e] space-y-6 shadow-xs"
+            className="p-6 sm:p-8 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#131b2e] space-y-6 shadow-xs"
           >
             <div className="space-y-4">
               <div>
@@ -208,7 +208,7 @@ export default function AddStudentPage() {
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   placeholder="e.g. Samiul Alam"
-                  className="w-full px-4 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-[#13131f]/50 text-slate-900 dark:text-slate-100 focus:bg-white focus:border-indigo-600 outline-none transition-colors"
+                  className="w-full px-4 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-[#0b0f19]/50 text-slate-900 dark:text-slate-100 focus:bg-white focus:border-indigo-600 outline-none transition-colors"
                 />
               </div>
 
@@ -227,7 +227,7 @@ export default function AddStudentPage() {
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
                     placeholder="01712345678"
-                    className="w-full px-4 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-[#13131f]/50 text-slate-900 dark:text-slate-100 focus:bg-white focus:border-indigo-600 outline-none transition-colors"
+                    className="w-full px-4 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-[#0b0f19]/50 text-slate-900 dark:text-slate-100 focus:bg-white focus:border-indigo-600 outline-none transition-colors"
                   />
                 </div>
 
@@ -244,7 +244,7 @@ export default function AddStudentPage() {
                     value={guardianPhone}
                     onChange={(e) => setGuardianPhone(e.target.value)}
                     placeholder="01812345678"
-                    className="w-full px-4 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-[#13131f]/50 text-slate-900 dark:text-slate-100 focus:bg-white focus:border-indigo-600 outline-none transition-colors"
+                    className="w-full px-4 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-[#0b0f19]/50 text-slate-900 dark:text-slate-100 focus:bg-white focus:border-indigo-600 outline-none transition-colors"
                   />
                 </div>
               </div>
@@ -262,7 +262,7 @@ export default function AddStudentPage() {
                   value={institution}
                   onChange={(e) => setInstitution(e.target.value)}
                   placeholder="e.g. Dhaka Residential Model College"
-                  className="w-full px-4 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-[#13131f]/50 text-slate-900 dark:text-slate-100 focus:bg-white focus:border-indigo-600 outline-none transition-colors"
+                  className="w-full px-4 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-[#0b0f19]/50 text-slate-900 dark:text-slate-100 focus:bg-white focus:border-indigo-600 outline-none transition-colors"
                 />
               </div>
             </div>
@@ -279,7 +279,7 @@ export default function AddStudentPage() {
               </div>
 
               {batches.length === 0 ? (
-                <div className="p-4 text-xs rounded-xl border border-dashed border-slate-200 dark:border-white/10 text-slate-500 dark:text-slate-400 bg-slate-50/50 dark:bg-[#13131f]/50">
+                <div className="p-4 text-xs rounded-xl border border-dashed border-slate-200 dark:border-white/10 text-slate-500 dark:text-slate-400 bg-slate-50/50 dark:bg-[#0b0f19]/50">
                   No active batches found. Please create a batch first.
                 </div>
               ) : (
@@ -293,7 +293,7 @@ export default function AddStudentPage() {
                         className={`p-4 rounded-xl border cursor-pointer transition-all flex items-center justify-between ${
                           isSelected
                             ? "border-indigo-500 bg-indigo-50/80 shadow-xs"
-                            : "border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-[#13131f]/50 hover:bg-slate-100/50"
+                            : "border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-[#0b0f19]/50 hover:bg-slate-100/50"
                         }`}
                       >
                         <div>

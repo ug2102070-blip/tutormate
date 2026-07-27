@@ -523,15 +523,15 @@ export default function StudentDoubtsPage({
       </div>
 
       {/* Main Inbox Dual Panel Layout */}
-      <div className="flex-1 grid grid-cols-1 md:grid-cols-12 gap-4 bg-white dark:bg-[#1e1e2e] border border-slate-200 dark:border-white/10 rounded-2xl shadow-xs overflow-hidden min-h-0">
+      <div className="flex-1 grid grid-cols-1 md:grid-cols-12 gap-4 bg-white dark:bg-[#131b2e] border border-slate-200 dark:border-white/10 rounded-2xl shadow-xs overflow-hidden min-h-0">
         {/* LEFT SIDEBAR: Threads & Conversations List */}
         <div
-          className={`md:col-span-4 border-r border-slate-200 dark:border-white/10 flex flex-col bg-slate-50/50 dark:bg-[#13131f]/50 ${
+          className={`md:col-span-4 border-r border-slate-200 dark:border-white/10 flex flex-col bg-slate-50/50 dark:bg-[#0b0f19]/50 ${
             selectedDoubtId ? "hidden md:flex" : "flex"
           }`}
         >
           {/* Search & Filters */}
-          <div className="p-3 space-y-2 border-b border-slate-200 dark:border-white/10 bg-white dark:bg-[#1e1e2e]">
+          <div className="p-3 space-y-2 border-b border-slate-200 dark:border-white/10 bg-white dark:bg-[#131b2e]">
             <div className="relative">
               <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
@@ -539,7 +539,7 @@ export default function StudentDoubtsPage({
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search messages..."
-                className="w-full pl-9 pr-3 py-1.5 text-xs rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#13131f] outline-none focus:border-indigo-500"
+                className="w-full pl-9 pr-3 py-1.5 text-xs rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#0b0f19] outline-none focus:border-indigo-500"
               />
             </div>
 
@@ -641,14 +641,14 @@ export default function StudentDoubtsPage({
 
         {/* RIGHT PANEL: Active Messenger Chat Area */}
         <div
-          className={`md:col-span-8 flex flex-col h-full min-h-0 bg-white dark:bg-[#1e1e2e] ${
+          className={`md:col-span-8 flex flex-col h-full min-h-0 bg-white dark:bg-[#131b2e] ${
             selectedDoubtId ? "flex" : "hidden md:flex"
           }`}
         >
           {activeDoubt ? (
             <>
               {/* Messenger Active Chat Header */}
-              <div className="p-3.5 border-b border-slate-200 dark:border-white/10 flex items-center justify-between bg-white dark:bg-[#1e1e2e] shrink-0">
+              <div className="p-3.5 border-b border-slate-200 dark:border-white/10 flex items-center justify-between bg-white dark:bg-[#131b2e] shrink-0">
                 <div className="flex items-center gap-3">
                   <button
                     onClick={() => setSelectedDoubtId(null)}
@@ -703,10 +703,10 @@ export default function StudentDoubtsPage({
               <div
                 ref={chatContainerRef}
                 onScroll={handleScroll}
-                className="flex-1 p-4 overflow-y-auto min-h-0 space-y-4 bg-slate-50/40 dark:bg-[#13131f]/40"
+                className="flex-1 p-4 overflow-y-auto min-h-0 space-y-4 bg-slate-50/40 dark:bg-[#0b0f19]/40"
               >
                 {/* Initial Question Bubble */}
-                <div className="max-w-xl mx-auto p-4 rounded-2xl bg-white dark:bg-[#1e1e2e] border border-slate-200 dark:border-white/10 shadow-xs space-y-2">
+                <div className="max-w-xl mx-auto p-4 rounded-2xl bg-white dark:bg-[#131b2e] border border-slate-200 dark:border-white/10 shadow-xs space-y-2">
                   <div className="text-[10px] font-extrabold uppercase tracking-wider text-indigo-600">
                     Topic Question Overview
                   </div>
@@ -758,7 +758,7 @@ export default function StudentDoubtsPage({
                         className={`max-w-[80%] p-3.5 rounded-2xl text-xs space-y-2 shadow-xs ${
                           isMe
                             ? "bg-indigo-600 text-white rounded-br-xs"
-                            : "bg-white dark:bg-[#1e1e2e] text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-white/10 rounded-bl-xs"
+                            : "bg-white dark:bg-[#131b2e] text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-white/10 rounded-bl-xs"
                         }`}
                       >
                         <div
@@ -828,7 +828,7 @@ export default function StudentDoubtsPage({
               </div>
 
               {/* Input Bar Footer */}
-              <div className="p-3 border-t border-slate-200 dark:border-white/10 bg-white dark:bg-[#1e1e2e] shrink-0 space-y-2">
+              <div className="p-3 border-t border-slate-200 dark:border-white/10 bg-white dark:bg-[#131b2e] shrink-0 space-y-2">
                 {error && (
                   <div className="p-2 text-xs rounded-lg bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-500/20">
                     {error}
@@ -916,7 +916,7 @@ export default function StudentDoubtsPage({
                       value={newMessageText}
                       onChange={(e) => setNewMessageText(e.target.value)}
                       placeholder="Type a message to your teacher..."
-                      className="flex-1 px-4 py-2.5 text-xs rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#13131f] outline-none focus:border-indigo-500 text-slate-900 dark:text-slate-100 font-medium"
+                      className="flex-1 px-4 py-2.5 text-xs rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#0b0f19] outline-none focus:border-indigo-500 text-slate-900 dark:text-slate-100 font-medium"
                     />
 
                     {/* Send Button */}
@@ -932,7 +932,7 @@ export default function StudentDoubtsPage({
               </div>
             </>
           ) : (
-            <div className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-slate-50/50 dark:bg-[#13131f]/50">
+            <div className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-slate-50/50 dark:bg-[#0b0f19]/50">
               <MessageSquare className="w-12 h-12 text-slate-300 mb-3" />
               <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200">No active chat selected</h3>
               <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mt-1">
@@ -946,7 +946,7 @@ export default function StudentDoubtsPage({
       {/* NEW TOPIC MODAL */}
       {showNewModal && (
         <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-[#1e1e2e] rounded-2xl border border-slate-200 dark:border-white/10 shadow-xl max-w-lg w-full p-6 space-y-4 animate-scale-up">
+          <div className="bg-white dark:bg-[#131b2e] rounded-2xl border border-slate-200 dark:border-white/10 shadow-xl max-w-lg w-full p-6 space-y-4 animate-scale-up">
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-white/5 pb-3">
               <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">Ask Your Teacher</h3>
               <button
@@ -966,7 +966,7 @@ export default function StudentDoubtsPage({
                   required
                   value={batchId}
                   onChange={(e) => setBatchId(e.target.value)}
-                  className="w-full px-3.5 py-2.5 text-xs font-bold rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#13131f] outline-none focus:border-indigo-600 text-slate-900 dark:text-slate-100"
+                  className="w-full px-3.5 py-2.5 text-xs font-bold rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#0b0f19] outline-none focus:border-indigo-600 text-slate-900 dark:text-slate-100"
                 >
                   {batches.map((b) => (
                     <option key={b.id} value={b.id}>
@@ -986,7 +986,7 @@ export default function StudentDoubtsPage({
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="e.g. Chapter 4 Integration Problem 5"
-                  className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#13131f] outline-none focus:border-indigo-600 font-medium text-slate-900 dark:text-slate-100"
+                  className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#0b0f19] outline-none focus:border-indigo-600 font-medium text-slate-900 dark:text-slate-100"
                 />
               </div>
 
@@ -1000,7 +1000,7 @@ export default function StudentDoubtsPage({
                   value={initialQuestion}
                   onChange={(e) => setInitialQuestion(e.target.value)}
                   placeholder="Explain where you got stuck or what you didn't understand..."
-                  className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#13131f] outline-none focus:border-indigo-600 font-medium text-slate-900 dark:text-slate-100"
+                  className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#0b0f19] outline-none focus:border-indigo-600 font-medium text-slate-900 dark:text-slate-100"
                 />
               </div>
 

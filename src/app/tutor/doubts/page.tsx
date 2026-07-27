@@ -427,15 +427,15 @@ export default function TutorDoubtsPage({
       </div>
 
       {/* Dual Panel Messenger Inbox */}
-      <div className="flex-1 grid grid-cols-1 md:grid-cols-12 gap-4 bg-white dark:bg-[#1e1e2e] border border-slate-200 dark:border-white/10 rounded-2xl shadow-xs overflow-hidden min-h-0">
+      <div className="flex-1 grid grid-cols-1 md:grid-cols-12 gap-4 bg-white dark:bg-[#131b2e] border border-slate-200 dark:border-white/10 rounded-2xl shadow-xs overflow-hidden min-h-0">
         {/* LEFT SIDEBAR: Student Conversations List */}
         <div
-          className={`md:col-span-4 border-r border-slate-200 dark:border-white/10 flex flex-col bg-slate-50/50 dark:bg-[#13131f]/50 ${
+          className={`md:col-span-4 border-r border-slate-200 dark:border-white/10 flex flex-col bg-slate-50/50 dark:bg-[#0b0f19]/50 ${
             selectedDoubtId ? "hidden md:flex" : "flex"
           }`}
         >
           {/* Search & Filter */}
-          <div className="p-3 space-y-2 border-b border-slate-200 dark:border-white/10 bg-white dark:bg-[#1e1e2e]">
+          <div className="p-3 space-y-2 border-b border-slate-200 dark:border-white/10 bg-white dark:bg-[#131b2e]">
             <div className="relative">
               <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
@@ -443,7 +443,7 @@ export default function TutorDoubtsPage({
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search student or topic..."
-                className="w-full pl-9 pr-3 py-1.5 text-xs rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#13131f] outline-none focus:border-indigo-500 font-medium"
+                className="w-full pl-9 pr-3 py-1.5 text-xs rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#0b0f19] outline-none focus:border-indigo-500 font-medium"
               />
             </div>
 
@@ -546,14 +546,14 @@ export default function TutorDoubtsPage({
 
         {/* RIGHT PANEL: Active Messenger Chat Area */}
         <div
-          className={`md:col-span-8 flex flex-col h-full min-h-0 bg-white dark:bg-[#1e1e2e] ${
+          className={`md:col-span-8 flex flex-col h-full min-h-0 bg-white dark:bg-[#131b2e] ${
             selectedDoubtId ? "flex" : "hidden md:flex"
           }`}
         >
           {activeDoubt ? (
             <>
               {/* Header */}
-              <div className="p-3.5 border-b border-slate-200 dark:border-white/10 flex items-center justify-between bg-white dark:bg-[#1e1e2e] shrink-0">
+              <div className="p-3.5 border-b border-slate-200 dark:border-white/10 flex items-center justify-between bg-white dark:bg-[#131b2e] shrink-0">
                 <div className="flex items-center gap-3">
                   <button
                     onClick={() => setSelectedDoubtId(null)}
@@ -611,10 +611,10 @@ export default function TutorDoubtsPage({
               <div
                 ref={chatContainerRef}
                 onScroll={handleScroll}
-                className="flex-1 p-4 overflow-y-auto min-h-0 space-y-4 bg-slate-50/40 dark:bg-[#13131f]/40"
+                className="flex-1 p-4 overflow-y-auto min-h-0 space-y-4 bg-slate-50/40 dark:bg-[#0b0f19]/40"
               >
                 {/* Initial Question Overview */}
-                <div className="max-w-xl mx-auto p-4 rounded-2xl bg-white dark:bg-[#1e1e2e] border border-slate-200 dark:border-white/10 shadow-xs space-y-2">
+                <div className="max-w-xl mx-auto p-4 rounded-2xl bg-white dark:bg-[#131b2e] border border-slate-200 dark:border-white/10 shadow-xs space-y-2">
                   <div className="text-[10px] font-extrabold uppercase tracking-wider text-indigo-600 flex items-center justify-between">
                     <span>Student Question</span>
                     <span>Status: {activeDoubt.status}</span>
@@ -667,7 +667,7 @@ export default function TutorDoubtsPage({
                         className={`max-w-[80%] p-3.5 rounded-2xl text-xs space-y-2 shadow-xs ${
                           isMe
                             ? "bg-indigo-600 text-white rounded-br-xs"
-                            : "bg-white dark:bg-[#1e1e2e] text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-white/10 rounded-bl-xs"
+                            : "bg-white dark:bg-[#131b2e] text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-white/10 rounded-bl-xs"
                         }`}
                       >
                         <div
@@ -737,7 +737,7 @@ export default function TutorDoubtsPage({
               </div>
 
               {/* Reply Input Bar */}
-              <div className="p-3 border-t border-slate-200 dark:border-white/10 bg-white dark:bg-[#1e1e2e] shrink-0 space-y-2">
+              <div className="p-3 border-t border-slate-200 dark:border-white/10 bg-white dark:bg-[#131b2e] shrink-0 space-y-2">
                 {error && (
                   <div className="p-2 text-xs rounded-lg bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-500/20">
                     {error}
@@ -825,7 +825,7 @@ export default function TutorDoubtsPage({
                       value={newMessageText}
                       onChange={(e) => setNewMessageText(e.target.value)}
                       placeholder={`Reply to ${activeDoubt.studentName}...`}
-                      className="flex-1 px-4 py-2.5 text-xs rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#13131f] outline-none focus:border-indigo-500 text-slate-900 dark:text-slate-100 font-medium"
+                      className="flex-1 px-4 py-2.5 text-xs rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#0b0f19] outline-none focus:border-indigo-500 text-slate-900 dark:text-slate-100 font-medium"
                     />
 
                     {/* Send Button */}
@@ -841,7 +841,7 @@ export default function TutorDoubtsPage({
               </div>
             </>
           ) : (
-            <div className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-slate-50/50 dark:bg-[#13131f]/50">
+            <div className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-slate-50/50 dark:bg-[#0b0f19]/50">
               <MessageSquare className="w-12 h-12 text-slate-300 mb-3" />
               <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200">Select a student doubt thread</h3>
               <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mt-1">

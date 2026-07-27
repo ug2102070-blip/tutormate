@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   display_name TEXT,
   phone_number TEXT,
   photo_url TEXT,
-  role TEXT NOT NULL CHECK (role IN ('tutor', 'student', 'admin')),
+  role TEXT NOT NULL CHECK (role IN ('tutor', 'student', 'admin', 'parent', 'owner')),
   tutor_id UUID,
   student_doc_id UUID,
   created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -299,4 +299,151 @@ CREATE TABLE IF NOT EXISTS public.events (
 ALTER TABLE public.events ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Public events" ON public.events;
 CREATE POLICY "Public events" ON public.events FOR ALL USING (true) WITH CHECK (true);
+
+-- 17. Create QR Tokens Table & scan_method column for Attendance
+ALTER TABLE public.attendance
+  ADD COLUMN IF NOT EXISTS scan_method TEXT DEFAULT 'manual';
+
+CREATE TABLE IF NOT EXISTS public.qr_tokens (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tutor_id UUID NOT NULL REFERENCES public.tutors(id) ON DELETE CASCADE,
+  batch_id UUID NOT NULL REFERENCES public.batches(id) ON DELETE CASCADE,
+  date DATE NOT NULL,
+  token TEXT UNIQUE NOT NULL,
+  short_code TEXT UNIQUE NOT NULL,
+  expires_at TIMESTAMPTZ NOT NULL,
+  is_used BOOLEAN DEFAULT false,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.qr_tokens ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Public qr_tokens" ON public.qr_tokens;
+CREATE POLICY "Public qr_tokens" ON public.qr_tokens FOR ALL USING (true) WITH CHECK (true);
+
+-- 18. Create Coaching Centers Table & coaching_center_id on Tutors
+CREATE TABLE IF NOT EXISTS public.coaching_centers (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  owner_uid UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  address TEXT,
+  contact_phone TEXT,
+  logo_url TEXT,
+  code TEXT UNIQUE NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.tutors
+  ADD COLUMN IF NOT EXISTS coaching_center_id UUID REFERENCES public.coaching_centers(id) ON DELETE SET NULL;
+
+ALTER TABLE public.coaching_centers ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Public coaching_centers" ON public.coaching_centers;
+CREATE POLICY "Public coaching_centers" ON public.coaching_centers FOR ALL USING (true) WITH CHECK (true);
+
+-- 19. Create User Permissions Engine Table
+CREATE TABLE IF NOT EXISTS public.user_permissions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  permission TEXT NOT NULL,
+  granted_by UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE (user_id, permission)
+);
+
+ALTER TABLE public.user_permissions ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Public user_permissions" ON public.user_permissions;
+CREATE POLICY "Public user_permissions" ON public.user_permissions FOR ALL USING (true) WITH CHECK (true);
+
+-- 20. Feature 28: Batch Enrollments Relational Junction Table
+CREATE TABLE IF NOT EXISTS public.batch_enrollments (
+  student_id UUID NOT NULL REFERENCES public.students(id) ON DELETE CASCADE,
+  batch_id UUID NOT NULL REFERENCES public.batches(id) ON DELETE CASCADE,
+  enrolled_at TIMESTAMPTZ DEFAULT NOW(),
+  PRIMARY KEY (student_id, batch_id)
+);
+
+ALTER TABLE public.batch_enrollments ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Public batch_enrollments" ON public.batch_enrollments;
+CREATE POLICY "Public batch_enrollments" ON public.batch_enrollments FOR ALL USING (true) WITH CHECK (true);
+
+-- 21. Feature 23: Internal Chat System Tables
+CREATE TABLE IF NOT EXISTS public.conversations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tutor_id UUID NOT NULL REFERENCES public.tutors(id) ON DELETE CASCADE,
+  participant_uids UUID[] NOT NULL,
+  type TEXT NOT NULL CHECK (type IN ('direct', 'announcement')),
+  batch_id UUID REFERENCES public.batches(id) ON DELETE SET NULL,
+  title TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS public.chat_messages (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  conversation_id UUID NOT NULL REFERENCES public.conversations(id) ON DELETE CASCADE,
+  sender_uid UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  sender_role TEXT NOT NULL,
+  text TEXT NOT NULL,
+  attachment_path TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.conversations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.chat_messages ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Public conversations" ON public.conversations;
+CREATE POLICY "Public conversations" ON public.conversations FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Public chat_messages" ON public.chat_messages;
+CREATE POLICY "Public chat_messages" ON public.chat_messages FOR ALL USING (true) WITH CHECK (true);
+
+ALTER PUBLICATION supabase_realtime ADD TABLE public.chat_messages;
+
+-- 22. Feature 11: Notifications Table
+CREATE TABLE IF NOT EXISTS public.notifications (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  body TEXT,
+  type TEXT NOT NULL
+    CHECK (type IN ('assignment', 'material', 'exam', 'fee', 'doubt', 'announcement')),
+  reference_id UUID,
+  reference_type TEXT,
+  is_read BOOLEAN NOT NULL DEFAULT false,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Public notifications" ON public.notifications;
+CREATE POLICY "Public notifications" ON public.notifications FOR ALL USING (true) WITH CHECK (true);
+ALTER PUBLICATION supabase_realtime ADD TABLE public.notifications;
+
+-- 23. Feature 12: Parent Links Table
+CREATE TABLE IF NOT EXISTS public.parent_links (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  parent_uid UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  student_id UUID NOT NULL REFERENCES public.students(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE (parent_uid, student_id)
+);
+
+ALTER TABLE public.parent_links ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Public parent_links" ON public.parent_links;
+CREATE POLICY "Public parent_links" ON public.parent_links FOR ALL USING (true) WITH CHECK (true);
+
+-- 24. Feature 28: High-Performance Composite B-Tree Database Indexes
+CREATE INDEX IF NOT EXISTS idx_attendance_batch_date ON public.attendance(batch_id, date);
+CREATE INDEX IF NOT EXISTS idx_fees_student_month ON public.fees(student_id, year, month);
+CREATE INDEX IF NOT EXISTS idx_doubts_tutor_status ON public.doubts(tutor_id, status);
+CREATE INDEX IF NOT EXISTS idx_notifications_user_read ON public.notifications(user_id, is_read);
+CREATE INDEX IF NOT EXISTS idx_materials_batch ON public.materials(batch_id, tutor_id);
+CREATE INDEX IF NOT EXISTS idx_submissions_assignment ON public.assignment_submissions(assignment_id, status);
+CREATE INDEX IF NOT EXISTS idx_exam_results_exam ON public.exam_results(exam_id, marks_obtained DESC);
+CREATE INDEX IF NOT EXISTS idx_chat_messages_conv ON public.chat_messages(conversation_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_batch_enrollments_student ON public.batch_enrollments(student_id);
+CREATE INDEX IF NOT EXISTS idx_batch_enrollments_batch ON public.batch_enrollments(batch_id);
+CREATE INDEX IF NOT EXISTS idx_parent_links_parent ON public.parent_links(parent_uid);
+CREATE INDEX IF NOT EXISTS idx_parent_links_student ON public.parent_links(student_id);
+
+
+
+
 

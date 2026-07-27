@@ -5,7 +5,8 @@ import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { saveAttendance } from "@/actions/attendanceActions";
 import type { BatchDoc, StudentDoc, AttendanceRecord } from "@/types";
-import { CalendarCheck, Save, Check, X, Clock } from "lucide-react";
+import { CalendarCheck, Save, Check, X, Clock, QrCode } from "lucide-react";
+import { QRGeneratorModal } from "@/components/tutor/QRGeneratorModal";
 
 export default function AttendancePage() {
   const { user } = useAuth();
@@ -22,7 +23,9 @@ export default function AttendancePage() {
   const [saving, setSaving] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [error, setError] = useState("");
+  const [isQRModalOpen, setIsQRModalOpen] = useState(false);
   const supabase = createClient();
+
 
   // Load tutor's batches
   useEffect(() => {
@@ -179,15 +182,27 @@ export default function AttendancePage() {
           </p>
         </div>
 
-        <button
-          onClick={handleSaveAttendance}
-          disabled={saving || students.length === 0}
-          className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-xs transition-all disabled:opacity-50"
-        >
-          <Save className="w-4 h-4" />
-          {saving ? "Saving Logs..." : "Save Attendance"}
-        </button>
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <button
+            onClick={() => setIsQRModalOpen(true)}
+            disabled={!selectedBatchId}
+            className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/10 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 border border-indigo-200 dark:border-indigo-500/30 rounded-xl shadow-xs transition-all disabled:opacity-50"
+          >
+            <QrCode className="w-4 h-4" />
+            Start QR Class 📷
+          </button>
+
+          <button
+            onClick={handleSaveAttendance}
+            disabled={saving || students.length === 0}
+            className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-xs transition-all disabled:opacity-50"
+          >
+            <Save className="w-4 h-4" />
+            {saving ? "Saving Logs..." : "Save Attendance"}
+          </button>
+        </div>
       </div>
+
 
       {savedSuccess && (
         <div
@@ -208,7 +223,7 @@ export default function AttendancePage() {
       )}
 
       {/* Batch & Date Picker Bar */}
-      <div className="p-4 sm:p-5 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1e1e2e] flex flex-col sm:flex-row items-center gap-4 justify-between shadow-xs">
+      <div className="p-4 sm:p-5 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#131b2e] flex flex-col sm:flex-row items-center gap-4 justify-between shadow-xs">
         <div className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
           <div>
             <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">
@@ -217,7 +232,7 @@ export default function AttendancePage() {
             <select
               value={selectedBatchId}
               onChange={(e) => setSelectedBatchId(e.target.value)}
-              className="w-full sm:w-56 px-4 py-2 text-xs font-bold rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#13131f] text-slate-900 dark:text-slate-100 outline-none"
+              className="w-full sm:w-56 px-4 py-2 text-xs font-bold rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#0b0f19] text-slate-900 dark:text-slate-100 outline-none"
             >
               {batches.map((b) => (
                 <option key={b.id} value={b.id}>
@@ -235,7 +250,7 @@ export default function AttendancePage() {
               type="date"
               value={selectedDate}
               onChange={(e) => setSelectedDate(e.target.value)}
-              className="w-full sm:w-44 px-4 py-2 text-xs font-bold rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#13131f] text-slate-900 dark:text-slate-100 outline-none"
+              className="w-full sm:w-44 px-4 py-2 text-xs font-bold rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#0b0f19] text-slate-900 dark:text-slate-100 outline-none"
             />
           </div>
         </div>
@@ -267,9 +282,9 @@ export default function AttendancePage() {
 
       {/* Attendance Sheet */}
       {loading ? (
-        <div className="h-64 rounded-2xl animate-shimmer border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1e1e2e]" />
+        <div className="h-64 rounded-2xl animate-shimmer border border-slate-200 dark:border-white/10 bg-white dark:bg-[#131b2e]" />
       ) : students.length === 0 ? (
-        <div className="py-16 text-center border border-dashed rounded-2xl border-slate-200 dark:border-white/10 bg-white dark:bg-[#1e1e2e] shadow-xs">
+        <div className="py-16 text-center border border-dashed rounded-2xl border-slate-200 dark:border-white/10 bg-white dark:bg-[#131b2e] shadow-xs">
           <CalendarCheck className="w-10 h-10 mx-auto text-slate-400 mb-3" />
           <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
             No active students in this batch
@@ -279,7 +294,7 @@ export default function AttendancePage() {
           </p>
         </div>
       ) : (
-        <div className="rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1e1e2e] overflow-hidden shadow-xs">
+        <div className="rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#131b2e] overflow-hidden shadow-xs">
           <div className="divide-y divide-slate-100">
             {students.map((student, idx) => {
               const currentStatus =
@@ -360,6 +375,19 @@ export default function AttendancePage() {
           </div>
         </div>
       )}
+
+      {/* QR Code Generator Modal */}
+      {user && selectedBatchId && (
+        <QRGeneratorModal
+          batchId={selectedBatchId}
+          batchName={batches.find((b) => b.id === selectedBatchId)?.name || "Batch"}
+          userId={user.id}
+          isOpen={isQRModalOpen}
+          onClose={() => setIsQRModalOpen(false)}
+          onSessionUpdated={loadBatchStudentsAndAttendance}
+        />
+      )}
     </div>
   );
 }
+

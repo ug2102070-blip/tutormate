@@ -61,16 +61,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return { role: "admin" };
         }
       }
-      const defaultRole = (supabaseUser.user_metadata?.role as UserRole) || "tutor";
-      return {
-        role: defaultRole,
-        tutorId: supabaseUser.id,
-      } as CustomClaims;
+      // If no profile exists, return null so they are forced to onboard
+      return null;
     } catch {
-      return {
-        role: "tutor",
-        tutorId: supabaseUser.id,
-      } as CustomClaims;
+      return null;
     }
   }
 

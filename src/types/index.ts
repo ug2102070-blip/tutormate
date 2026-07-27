@@ -200,3 +200,48 @@ export interface SubmissionDoc {
   status: "pending" | "submitted" | "graded" | "late";
   updatedAt: string;
 }
+
+export interface ExamDoc {
+  id: string;
+  tutorId: string;
+  batchId: string;
+  title: string;
+  subject: string | null;
+  examDate: string; // YYYY-MM-DD
+  totalMarks: number;
+  passMarks: number | null;
+  createdAt: string;
+}
+
+export interface ExamResultDoc {
+  id: string;
+  examId: string;
+  studentId: string;
+  marksObtained: number | null;
+  grade: string | null;
+  position: number | null;
+  remarks: string | null;
+  isAbsent: boolean;
+  createdAt: string;
+}
+
+export interface EventDoc {
+  id: string;
+  tutorId: string;
+  batchId: string | null;
+  title: string;
+  eventDate: string; // YYYY-MM-DD
+  type: "holiday" | "announcement" | "other";
+  createdAt: string;
+}
+
+export type CalendarEvent = {
+  id: string;
+  date: string; // YYYY-MM-DD
+  title: string;
+  type: "class" | "exam" | "assignment" | "event";
+  batchId?: string;
+  batchName?: string;
+  color: string; // mapped from type
+  extraData?: Record<string, unknown>; // For any extra context like marks, etc.
+};

@@ -9,6 +9,7 @@ import {
   CreditCard,
   HelpCircle,
   BookOpen,
+  Award,
 } from "lucide-react";
 
 interface MobileNavProps {
@@ -25,6 +26,7 @@ export function MobileNav({ role }: MobileNavProps) {
     { href: "/tutor/fees", label: "Fees", icon: CreditCard },
     { href: "/tutor/materials", label: "Materials", icon: BookOpen },
     { href: "/tutor/doubts", label: "Doubts", icon: HelpCircle },
+    { href: "/tutor/exams", label: "Exams", icon: Award },
   ];
 
   const studentItems = [
@@ -33,6 +35,7 @@ export function MobileNav({ role }: MobileNavProps) {
     { href: "/student/fees", label: "Fees", icon: CreditCard },
     { href: "/student/materials", label: "Materials", icon: BookOpen },
     { href: "/student/doubts", label: "Doubts", icon: HelpCircle },
+    { href: "/student/exams", label: "Exams", icon: Award },
   ];
 
   const items = role === "tutor" ? tutorItems : studentItems;

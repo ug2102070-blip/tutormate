@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { getOnboardingStatus } from "@/actions/dashboardActions";
 import Link from "next/link";
 import {
   CheckCircle2,
@@ -82,18 +83,46 @@ export function OnboardingChecklist({ tutorName }: OnboardingChecklistProps) {
 
   useEffect(() => {
     setIsMounted(true);
-    try {
-      const savedState = localStorage.getItem(STORAGE_KEY);
-      if (savedState) {
-        setCompletedSteps(JSON.parse(savedState));
+    let isSubscribed = true;
+
+    async function fetchStatus() {
+      try {
+        const savedDismissed = localStorage.getItem(DISMISSED_KEY);
+        if (savedDismissed === "true" && isSubscribed) {
+          setIsDismissed(true);
+        }
+
+        const status = await getOnboardingStatus();
+        if (status && isSubscribed) {
+          const savedState = localStorage.getItem(STORAGE_KEY);
+          const currentSteps = savedState ? JSON.parse(savedState) : {};
+          
+          const mergedSteps = {
+            ...currentSteps,
+            profile: status.profile || currentSteps.profile,
+            batch: status.batch || currentSteps.batch,
+            invite: status.invite || currentSteps.invite,
+            attendance: status.attendance || currentSteps.attendance,
+            fee: status.fee || currentSteps.fee,
+            doubt: status.doubt || currentSteps.doubt,
+          };
+          setCompletedSteps(mergedSteps);
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(mergedSteps));
+        } else if (isSubscribed) {
+          const savedState = localStorage.getItem(STORAGE_KEY);
+          if (savedState) setCompletedSteps(JSON.parse(savedState));
+        }
+      } catch {
+        if (isSubscribed) {
+          const savedState = localStorage.getItem(STORAGE_KEY);
+          if (savedState) setCompletedSteps(JSON.parse(savedState));
+        }
       }
-      const savedDismissed = localStorage.getItem(DISMISSED_KEY);
-      if (savedDismissed === "true") {
-        setIsDismissed(true);
-      }
-    } catch {
-      // Fallback if localStorage is disabled
     }
+
+    fetchStatus();
+
+    return () => { isSubscribed = false; };
   }, []);
 
   const toggleStep = (id: string, e: React.MouseEvent) => {
@@ -134,7 +163,7 @@ export function OnboardingChecklist({ tutorName }: OnboardingChecklistProps) {
             Welcome to TutorMate{tutorName ? `, ${tutorName}` : ""}!
           </h2>
           <p className="text-xs text-indigo-200">
-            Follow these 6 steps to start managing your tuition batches smoothly.
+            Follow these 6 steps to start managing your tuition batches smoothly. <span className="font-medium text-emerald-200/90">(Auto-updates as you progress)</span>
           </p>
         </div>
 

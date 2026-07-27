@@ -248,3 +248,55 @@ CREATE POLICY "Public assignments" ON public.assignments FOR ALL USING (true) WI
 DROP POLICY IF EXISTS "Public assignment_submissions" ON public.assignment_submissions;
 CREATE POLICY "Public assignment_submissions" ON public.assignment_submissions FOR ALL USING (true) WITH CHECK (true);
 
+-- 14. Create Exams Table
+CREATE TABLE IF NOT EXISTS public.exams (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tutor_id UUID NOT NULL REFERENCES public.tutors(id) ON DELETE CASCADE,
+  batch_id UUID NOT NULL REFERENCES public.batches(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  subject TEXT,
+  exam_date DATE NOT NULL,
+  total_marks NUMERIC NOT NULL DEFAULT 100,
+  pass_marks NUMERIC,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 15. Create Exam Results Table
+CREATE TABLE IF NOT EXISTS public.exam_results (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  exam_id UUID NOT NULL REFERENCES public.exams(id) ON DELETE CASCADE,
+  student_id UUID NOT NULL REFERENCES public.students(id) ON DELETE CASCADE,
+  marks_obtained NUMERIC,
+  grade TEXT,            -- Auto-computed server-side: A+, A, B, C, D, F
+  position INT,          -- Rank within batch for this exam
+  remarks TEXT,
+  is_absent BOOLEAN NOT NULL DEFAULT false,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE (exam_id, student_id)
+);
+
+ALTER TABLE public.exams ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.exam_results ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Public exams" ON public.exams;
+CREATE POLICY "Public exams" ON public.exams FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Public exam_results" ON public.exam_results;
+CREATE POLICY "Public exam_results" ON public.exam_results FOR ALL USING (true) WITH CHECK (true);
+
+-- 16. Create Events Table (Calendar)
+CREATE TABLE IF NOT EXISTS public.events (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tutor_id UUID NOT NULL REFERENCES public.tutors(id) ON DELETE CASCADE,
+  batch_id UUID REFERENCES public.batches(id) ON DELETE SET NULL,
+  title TEXT NOT NULL,
+  event_date DATE NOT NULL,
+  type TEXT NOT NULL DEFAULT 'other'
+    CHECK (type IN ('holiday', 'announcement', 'other')),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.events ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Public events" ON public.events;
+CREATE POLICY "Public events" ON public.events FOR ALL USING (true) WITH CHECK (true);
+

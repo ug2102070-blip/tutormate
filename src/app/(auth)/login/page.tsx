@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -13,7 +13,7 @@ import type { User } from "@supabase/supabase-js";
 
 export default function LoginPage() {
   const router = useRouter();
-  const { refreshClaims } = useAuth();
+  const { user, loading: authLoading, refreshClaims } = useAuth();
   const supabase = createClient();
 
   // Auth Modes & Form States
@@ -36,6 +36,12 @@ export default function LoginPage() {
   const [onboardName, setOnboardName] = useState("");
   const [onboardInstitution, setOnboardInstitution] = useState("");
   const [onboardInviteCode, setOnboardInviteCode] = useState("");
+
+  useEffect(() => {
+    if (!authLoading && user && !pendingUser) {
+      handlePostSignIn(user);
+    }
+  }, [user, authLoading, pendingUser]);
 
   async function handlePostSignIn(user: User) {
     document.cookie = "__session=1; path=/; max-age=2592000; SameSite=Lax";
@@ -60,8 +66,29 @@ export default function LoginPage() {
       // Fallback
     }
 
+    let savedRole: "tutor" | "student" = "tutor";
+    let savedInstitution = "";
+    let savedInviteCode = "";
+    try {
+      const savedData = localStorage.getItem("tm_onboard_data");
+      if (savedData) {
+        const parsed = JSON.parse(savedData);
+        if (parsed.role === "tutor" || parsed.role === "student") savedRole = parsed.role;
+        if (parsed.institution) savedInstitution = parsed.institution;
+        if (parsed.inviteCode) savedInviteCode = parsed.inviteCode;
+      }
+    } catch (e) {
+      // ignore
+    }
+
     setPendingUser(user);
     setOnboardName(user.user_metadata?.full_name || user.user_metadata?.displayName || "");
+    setOnboardRole(savedRole);
+    setOnboardInstitution(savedInstitution);
+    setOnboardInviteCode(savedInviteCode);
+    
+    // Clear the data after pre-filling
+    localStorage.removeItem("tm_onboard_data");
   }
 
   async function handleEmailLogin(e: React.FormEvent) {

@@ -125,6 +125,12 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
+      localStorage.setItem("tm_onboard_data", JSON.stringify({
+        role,
+        institution,
+        inviteCode
+      }));
+
       const { error: oauthErr } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {

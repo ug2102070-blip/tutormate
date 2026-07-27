@@ -7,6 +7,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { createClient } from "@/lib/supabase/client";
 import { LogOut, User, Settings, ChevronDown } from "lucide-react";
 
+import { HeaderCalendar } from "@/components/HeaderCalendar";
+
 export function Header() {
   const router = useRouter();
   const { user, role } = useAuth();
@@ -45,6 +47,9 @@ export function Header() {
       </div>
 
       <div className="flex items-center gap-3 relative">
+        {/* Calendar Widget */}
+        {role && <HeaderCalendar role={role as "tutor" | "student"} />}
+
         {/* User Info Button */}
         <button
           onClick={() => setShowMenu(!showMenu)}

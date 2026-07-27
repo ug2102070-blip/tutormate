@@ -12,6 +12,7 @@ import {
   Settings,
   BookOpen,
   FileText,
+  Award,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -30,6 +31,7 @@ export function Sidebar({ role }: SidebarProps) {
     { href: "/tutor/doubts", label: "Student Doubts", icon: HelpCircle },
     { href: "/tutor/materials", label: "Study Materials", icon: BookOpen },
     { href: "/tutor/assignments", label: "Assignments", icon: FileText },
+    { href: "/tutor/exams", label: "Exams", icon: Award },
     { href: "/tutor/settings", label: "Settings", icon: Settings },
   ];
 
@@ -40,6 +42,7 @@ export function Sidebar({ role }: SidebarProps) {
     { href: "/student/doubts", label: "Ask Doubts", icon: HelpCircle },
     { href: "/student/materials", label: "Study Materials", icon: BookOpen },
     { href: "/student/assignments", label: "Assignments", icon: FileText },
+    { href: "/student/exams", label: "Exams", icon: Award },
   ];
 
   const items = role === "tutor" ? tutorNavItems : studentNavItems;

@@ -36,7 +36,7 @@ export async function getCalendarEvents(year: number, month: number, idToken?: s
       batchIdsToFilter = [];
     }
 
-    if (batchIdsToFilter.length > 0) {
+    if (batchIdsToFilter && batchIdsToFilter.length > 0) {
       const { data } = await supabase
         .from("batches")
         .select("id, name, schedule")

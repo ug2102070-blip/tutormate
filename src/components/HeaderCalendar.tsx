@@ -57,7 +57,7 @@ export function HeaderCalendar({ role }: { role: "tutor" | "student" }) {
   const daysInMonth = getDaysInMonth(monthStart);
   const startDayOfWeek = getDay(monthStart);
 
-  const days = Array.from({ length: startDayOfWeek }, () => null)
+  const days = (Array.from({ length: startDayOfWeek }, () => null) as (Date | null)[])
     .concat(Array.from({ length: daysInMonth }, (_, i) => new Date(currentDate.getFullYear(), currentDate.getMonth(), i + 1)));
 
   const selectedDateEvents = selectedDate 

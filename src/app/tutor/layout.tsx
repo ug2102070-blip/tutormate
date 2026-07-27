@@ -27,10 +27,10 @@ export default function TutorLayout({
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[var(--color-bg)]">
+      <div className="min-h-screen flex items-center justify-center" style={{ background: "var(--color-bg)" }}>
         <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-3 border-[var(--color-primary)] border-t-transparent rounded-full animate-spin" />
-          <span className="text-xs text-[var(--color-text-muted)] font-medium">
+          <div className="w-8 h-8 border-3 border-t-transparent rounded-full animate-spin" style={{ borderColor: "var(--color-primary)", borderTopColor: "transparent" }} />
+          <span className="text-xs font-medium" style={{ color: "var(--color-text-muted)" }}>
             Loading TutorMate...
           </span>
         </div>
@@ -43,11 +43,16 @@ export default function TutorLayout({
   }
 
   return (
-    <div className="flex min-h-screen bg-[var(--color-bg-secondary)] relative">
+    <div className="flex min-h-screen relative" style={{ background: "var(--color-bg-secondary)" }}>
       <Sidebar role="tutor" />
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <Header />
-        <main className="flex-1 p-4 md:p-6 pb-20 md:pb-6 overflow-y-auto">{children}</main>
+        <main
+          className="flex-1 p-4 md:p-6 overflow-y-auto"
+          style={{ paddingBottom: "calc(4.5rem + max(env(safe-area-inset-bottom), 8px))" }}
+        >
+          {children}
+        </main>
       </div>
       <MobileNav role="tutor" />
     </div>

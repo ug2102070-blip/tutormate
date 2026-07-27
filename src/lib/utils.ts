@@ -44,12 +44,13 @@ export function formatDate(dateStr: string): string {
 }
 
 /**
- * Parses raw Firebase Auth error codes into clean, user-friendly error messages.
+ * Parses raw Supabase Auth error codes into clean, user-friendly error messages.
  */
 export function formatAuthError(err: unknown): string {
   if (!(err instanceof Error)) return "An unexpected error occurred. Please try again.";
   const msg = err.message || "";
 
+  // Server-side rendering / React errors
   if (
     msg.includes("Server Components render") ||
     msg.includes("digest") ||
@@ -58,12 +59,48 @@ export function formatAuthError(err: unknown): string {
     return "A server communication error occurred. Please check your connection and try again.";
   }
 
+  // Supabase specific errors
+  if (msg.includes("Invalid login credentials") || msg.includes("invalid_credentials")) {
+    return "Invalid email or password. Please check your credentials.";
+  }
+  if (msg.includes("Email not confirmed")) {
+    return "Please verify your email address before signing in. Check your inbox for a confirmation link.";
+  }
+  if (msg.includes("User already registered") || msg.includes("already been registered")) {
+    return "This email address is already registered. Please sign in instead.";
+  }
+  if (msg.includes("Password should be at least")) {
+    return "Password is too weak. Please use at least 6 characters.";
+  }
+  if (msg.includes("Unable to validate email address")) {
+    return "Please enter a valid email address.";
+  }
+  if (msg.includes("Token has expired") || msg.includes("token is expired")) {
+    return "Your session has expired. Please sign in again.";
+  }
+  if (msg.includes("Phone number") || msg.includes("phone_number")) {
+    return "Please enter a valid phone number.";
+  }
+  if (msg.includes("OTP") || msg.includes("otp") || msg.includes("Token")) {
+    return "Invalid or expired verification code. Please try again.";
+  }
+  if (msg.includes("over_email_send_rate_limit") || msg.includes("too many requests") || msg.includes("rate limit")) {
+    return "Too many attempts. Please wait a moment and try again.";
+  }
+  if (msg.includes("unexpected response") || msg.includes("Unexpected response")) {
+    return "Server error. Please try again in a moment.";
+  }
+  if (msg.includes("network") || msg.includes("fetch") || msg.includes("Failed to fetch")) {
+    return "Network error. Please check your internet connection and try again.";
+  }
+
+  // Firebase error fallbacks (legacy, kept for safety)
   if (msg.includes("auth/operation-not-allowed")) {
-    return "Phone sign-in is disabled. Please enable 'Phone' in Firebase Console (Authentication -> Sign-in method -> Phone).";
+    return "This sign-in method is not enabled. Please contact support.";
   }
   if (msg.includes("auth/unauthorized-domain")) {
     const domain = typeof window !== "undefined" ? window.location.hostname : "your domain";
-    return `Unauthorized domain (${domain}): Please add '${domain}' to Authorized Domains in Firebase Console (Authentication -> Settings -> Authorized domains).`;
+    return `Unauthorized domain (${domain}). Please contact support.`;
   }
   if (msg.includes("auth/email-already-in-use")) {
     return "This email address is already registered. Please sign in instead.";
@@ -86,5 +123,6 @@ export function formatAuthError(err: unknown): string {
   }
 
   // Fallback clean message
-  return msg.replace(/^Firebase:\s*Error\s*\(auth\//i, "").replace(/\)\.?$/, "");
+  return msg.replace(/^Firebase:\s*Error\s*\(auth\//i, "").replace(/\)\.?$/, "") || "An unexpected error occurred. Please try again.";
 }
+

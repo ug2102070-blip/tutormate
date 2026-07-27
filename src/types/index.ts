@@ -1,7 +1,7 @@
 // ============================================
 // CUSTOM CLAIMS & USER ROLES
 // ============================================
-export type UserRole = "tutor" | "student" | "admin";
+export type UserRole = "tutor" | "student" | "admin" | "parent";
 
 export interface TutorClaims {
   role: "tutor";
@@ -18,7 +18,14 @@ export interface AdminClaims {
   role: "admin";
 }
 
-export type CustomClaims = TutorClaims | StudentClaims | AdminClaims;
+export interface ParentClaims {
+  role: "parent";
+  studentId: string;     // students.id of the linked child
+  studentAuthUid: string; // auth_uid of the linked child
+  tutorId: string;       // the tutor of the child
+}
+
+export type CustomClaims = TutorClaims | StudentClaims | AdminClaims | ParentClaims;
 
 // ============================================
 // DATABASE DOCUMENT / ROW TYPES
@@ -245,3 +252,32 @@ export type CalendarEvent = {
   color: string; // mapped from type
   extraData?: Record<string, unknown>; // For any extra context like marks, etc.
 };
+
+// ============================================
+// FEATURE 11: NOTIFICATIONS
+// ============================================
+
+export type NotificationType = 'assignment' | 'material' | 'exam' | 'fee' | 'doubt' | 'announcement';
+
+export interface NotificationDoc {
+  id: string;
+  userId: string;                // profiles.id of the recipient
+  title: string;
+  body: string | null;
+  type: NotificationType;
+  referenceId: string | null;   // e.g. exam_id, assignment_id
+  referenceType: string | null; // 'exam' | 'assignment' | etc.
+  isRead: boolean;
+  createdAt: string;
+}
+
+// ============================================
+// FEATURE 12: PARENT PORTAL
+// ============================================
+
+export interface ParentLinkDoc {
+  id: string;
+  parentUid: string;   // profiles.id of the parent
+  studentId: string;   // students.id of the child
+  createdAt: string;
+}

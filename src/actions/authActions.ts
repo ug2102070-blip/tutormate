@@ -35,23 +35,34 @@ export async function setTutorClaims(uidOrToken: string) {
 
   try {
     // Upsert into profiles table
-    await supabase.from("profiles").upsert({
+    const { error: profileErr } = await supabase.from("profiles").upsert({
       id: uid,
       role: "tutor",
       tutor_id: uid,
       updated_at: new Date().toISOString(),
     });
 
+    if (profileErr) {
+      console.warn("profiles upsert error:", profileErr);
+      return { success: false, error: profileErr.message };
+    }
+
     // Upsert into tutors table
-    await supabase.from("tutors").upsert({
+    const { error: tutorErr } = await supabase.from("tutors").upsert({
       id: uid,
       user_id: uid,
       full_name: user?.user_metadata?.full_name || "Tutor",
       institution: "Independent",
       contact_phone: user?.phone || "",
     });
+
+    if (tutorErr) {
+      console.warn("tutors upsert error:", tutorErr);
+      return { success: false, error: tutorErr.message };
+    }
   } catch (err) {
     console.warn("Could not write to Supabase profiles/tutors:", err);
+    return { success: false, error: String(err) };
   }
 
   return { success: true };
@@ -119,7 +130,7 @@ export async function onboardTutorUser(
 
   try {
     // 1. Create or update profile
-    await supabase.from("profiles").upsert({
+    const { error: profileErr } = await supabase.from("profiles").upsert({
       id: uid,
       email: email || "",
       display_name: displayName || "Tutor",
@@ -129,16 +140,27 @@ export async function onboardTutorUser(
       updated_at: new Date().toISOString(),
     });
 
+    if (profileErr) {
+      console.warn("profiles upsert error:", profileErr);
+      return { success: false, error: profileErr.message, role: "tutor" };
+    }
+
     // 2. Create or update tutor record
-    await supabase.from("tutors").upsert({
+    const { error: tutorErr } = await supabase.from("tutors").upsert({
       id: uid,
       user_id: uid,
       full_name: displayName || "Tutor",
       institution: institution || "Independent",
       contact_phone: phoneNumber || "",
     });
+
+    if (tutorErr) {
+      console.warn("tutors upsert error:", tutorErr);
+      return { success: false, error: tutorErr.message, role: "tutor" };
+    }
   } catch (err) {
     console.warn("Could not complete onboardTutorUser via Supabase:", err);
+    return { success: false, error: String(err), role: "tutor" };
   }
 
   return { success: true, role: "tutor" };

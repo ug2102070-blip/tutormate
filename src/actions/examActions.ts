@@ -11,6 +11,7 @@ import {
   type SaveExamResultsInput 
 } from "@/lib/validations/exam";
 import type { ExamDoc, ExamResultDoc } from "@/types";
+import { createNotification } from "@/actions/notificationActions";
 
 export async function createExam(formData: CreateExamInput, idToken: string) {
   const authState = await verifyUserAuth(idToken);
@@ -266,6 +267,38 @@ export async function saveExamResults(inputData: SaveExamResultsInput, idToken: 
     
   if (upsertError) throw new Error(`Failed to save exam results: ${upsertError.message}`);
   
+  // Notify each student that results are published
+  const { data: examInfo } = await supabase
+    .from("exams")
+    .select("title, batch_id")
+    .eq("id", validated.examId)
+    .single();
+
+  const examTitle = examInfo?.title ?? "Exam";
+
+  for (const r of validated.results) {
+    if (r.isAbsent) continue;
+    // Get student's auth_uid
+    const { data: studentRow } = await supabase
+      .from("students")
+      .select("auth_uid")
+      .eq("id", r.studentId)
+      .single();
+
+    if (studentRow?.auth_uid) {
+      await createNotification(
+        studentRow.auth_uid,
+        `Results Published: ${examTitle}`,
+        r.marksObtained !== null
+          ? `Your score: ${r.marksObtained} marks`
+          : "Results are now available",
+        "exam",
+        validated.examId,
+        "exam"
+      );
+    }
+  }
+
   return { success: true };
 }
 

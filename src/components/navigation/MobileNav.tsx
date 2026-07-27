@@ -8,8 +8,8 @@ import {
   CalendarCheck,
   CreditCard,
   HelpCircle,
+  Bell,
   BookOpen,
-  Award,
 } from "lucide-react";
 
 interface MobileNavProps {
@@ -20,29 +20,33 @@ export function MobileNav({ role }: MobileNavProps) {
   const pathname = usePathname();
 
   const tutorItems = [
-    { href: "/tutor/dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { href: "/tutor/dashboard", label: "Home", icon: LayoutDashboard },
     { href: "/tutor/batches", label: "Batches", icon: Users },
     { href: "/tutor/attendance", label: "Attendance", icon: CalendarCheck },
     { href: "/tutor/fees", label: "Fees", icon: CreditCard },
-    { href: "/tutor/materials", label: "Materials", icon: BookOpen },
     { href: "/tutor/doubts", label: "Doubts", icon: HelpCircle },
-    { href: "/tutor/exams", label: "Exams", icon: Award },
   ];
 
   const studentItems = [
-    { href: "/student/dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { href: "/student/dashboard", label: "Home", icon: LayoutDashboard },
     { href: "/student/attendance", label: "Attendance", icon: CalendarCheck },
     { href: "/student/fees", label: "Fees", icon: CreditCard },
-    { href: "/student/materials", label: "Materials", icon: BookOpen },
     { href: "/student/doubts", label: "Doubts", icon: HelpCircle },
-    { href: "/student/exams", label: "Exams", icon: Award },
+    { href: "/student/notifications", label: "Alerts", icon: Bell },
   ];
 
   const items = role === "tutor" ? tutorItems : studentItems;
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-30 border-t border-slate-200 bg-white/95 backdrop-blur-md md:hidden px-2 py-1.5 shadow-lg pb-safe">
-      <div className="flex items-center justify-around max-w-md mx-auto">
+    <nav
+      style={{
+        background: "var(--color-nav-bg)",
+        borderTop: "1px solid var(--color-nav-border)",
+        boxShadow: "var(--shadow-nav)",
+      }}
+      className="fixed bottom-0 left-0 right-0 z-40 md:hidden backdrop-blur-xl"
+    >
+      <div className="flex items-center justify-around px-2 pt-2 pb-safe">
         {items.map((item) => {
           const Icon = item.icon;
           const isActive =
@@ -52,22 +56,49 @@ export function MobileNav({ role }: MobileNavProps) {
             <Link
               key={item.href}
               href={item.href}
-              className={`flex flex-col items-center justify-center min-w-[56px] py-1 px-2 rounded-xl transition-all ${
-                isActive
-                  ? "text-indigo-600 font-extrabold"
-                  : "text-slate-500 font-semibold hover:text-slate-900"
-              }`}
+              className="flex flex-col items-center justify-center flex-1 gap-0.5 py-1 transition-all duration-200 active:scale-90"
             >
+              {/* Icon Container */}
               <div
-                className={`p-1 rounded-xl transition-colors ${
-                  isActive ? "bg-indigo-50" : ""
-                }`}
+                className="relative flex items-center justify-center w-10 h-7 rounded-2xl transition-all duration-200"
+                style={{
+                  backgroundColor: isActive
+                    ? "var(--color-nav-active-bg)"
+                    : "transparent",
+                }}
               >
-                <Icon className="w-5 h-5 shrink-0" />
+                <Icon
+                  className="w-5 h-5 transition-all duration-200"
+                  style={{
+                    color: isActive
+                      ? "var(--color-nav-active)"
+                      : "var(--color-nav-inactive)",
+                    strokeWidth: isActive ? 2.5 : 1.8,
+                    transform: isActive ? "scale(1.05)" : "scale(1)",
+                  }}
+                />
               </div>
-              <span className="text-[10px] tracking-tight mt-0.5 whitespace-nowrap">
+
+              {/* Label */}
+              <span
+                className="text-[10px] font-semibold tracking-tight transition-all duration-200"
+                style={{
+                  color: isActive
+                    ? "var(--color-nav-active)"
+                    : "var(--color-nav-inactive)",
+                  fontWeight: isActive ? 700 : 500,
+                }}
+              >
                 {item.label}
               </span>
+
+              {/* Active Dot Indicator */}
+              {isActive && (
+                <div
+                  className="absolute bottom-0 w-1 h-1 rounded-full"
+                  style={{ backgroundColor: "var(--color-nav-active)" }}
+                />
+              )}
             </Link>
           );
         })}

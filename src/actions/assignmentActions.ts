@@ -4,6 +4,7 @@ import { createAdminClient, getSupabaseServerClient } from "@/lib/supabase/serve
 import { verifyUserAuth } from "@/lib/authHelpers";
 import { createAssignmentSchema, updateAssignmentSchema, gradeSubmissionSchema, type CreateAssignmentInput, type UpdateAssignmentInput, type GradeSubmissionInput } from "@/lib/validations/assignment";
 import type { AssignmentDoc, SubmissionDoc } from "@/types";
+import { createNotification } from "@/actions/notificationActions";
 
 export async function createAssignment(formData: CreateAssignmentInput, idToken: string) {
   const authState = await verifyUserAuth(idToken);
@@ -103,6 +104,39 @@ export async function publishAssignment(assignmentId: string, idToken: string) {
     if (subError) {
       console.error("Error creating submissions:", subError);
       // Don't throw here to avoid failing the publish action completely if some submissions exist
+    }
+
+    // 4. Notify enrolled students
+    // Fetch assignment title for the notification
+    const { data: assignmentData } = await supabase
+      .from("assignments")
+      .select("title, deadline")
+      .eq("id", assignmentId)
+      .single();
+
+    const title = assignmentData?.title ?? "New Assignment";
+    const deadline = assignmentData?.deadline
+      ? new Date(assignmentData.deadline).toLocaleDateString("en-BD", { month: "short", day: "numeric" })
+      : "";
+
+    for (const student of enrolledStudents) {
+      // Look up the student's auth_uid (profiles.id)
+      const { data: studentRow } = await supabase
+        .from("students")
+        .select("auth_uid")
+        .eq("id", student.id)
+        .single();
+
+      if (studentRow?.auth_uid) {
+        await createNotification(
+          studentRow.auth_uid,
+          `New Assignment: ${title}`,
+          deadline ? `Due ${deadline}` : null,
+          "assignment",
+          assignmentId,
+          "assignment"
+        );
+      }
     }
   }
 

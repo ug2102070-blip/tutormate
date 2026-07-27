@@ -1,7 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-const PROTECTED_ROUTES = ["/tutor", "/student"];
+const PROTECTED_ROUTES = ["/tutor", "/student", "/parent"];
 const AUTH_ROUTES = ["/login", "/register", "/reset-password"];
 
 export async function proxy(request: NextRequest) {
@@ -33,6 +33,7 @@ export async function proxy(request: NextRequest) {
     },
   });
 
+  // IMPORTANT: Always call getUser() to refresh the session cookies
   let user = null;
   try {
     const { data } = await supabase.auth.getUser();
@@ -44,17 +45,27 @@ export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const hasSession = Boolean(user);
 
+  // Skip middleware for auth callback, API routes, and static assets
+  if (pathname.startsWith("/auth/") || pathname.startsWith("/api/")) {
+    return supabaseResponse;
+  }
+
   const isProtectedRoute = PROTECTED_ROUTES.some((route) =>
     pathname.startsWith(route)
   );
-  if (isProtectedRoute && !hasSession) {
+  // Allow /parent/login even if not authenticated (parents need to link account)
+  const isParentLogin = pathname.startsWith("/parent/login");
+  if (isProtectedRoute && !hasSession && !isParentLogin) {
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("redirect", pathname);
     return NextResponse.redirect(loginUrl);
   }
 
-  const isAuthRoute = AUTH_ROUTES.some((route) => pathname.startsWith(route));
-  if (isAuthRoute && hasSession) {
+  // Only redirect logged-in users away from login/register (NOT reset-password)
+  const isAuthOnlyRoute = ["/login", "/register"].some((route) =>
+    pathname.startsWith(route)
+  );
+  if (isAuthOnlyRoute && hasSession) {
     return NextResponse.redirect(new URL("/tutor/dashboard", request.url));
   }
 
@@ -63,6 +74,6 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|manifest.json|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|woff|woff2)$).*)",
   ],
 };

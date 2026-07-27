@@ -6,6 +6,7 @@ export interface VerifiedAuth {
   role: UserRole | null;
   tutorId?: string;
   studentDocId?: string;
+  studentAuthUid?: string;  // for parent role: the child's auth_uid
   email?: string;
 }
 
@@ -111,7 +112,26 @@ async function fetchProfileAuth(uid: string, email?: string): Promise<VerifiedAu
     }
   }
 
-  // 4. Default fallback if role is still unknown but uid exists
+  // 4. Check parent_links table
+  if (role === "parent" || !role) {
+    const { data: parentLink } = await supabase
+      .from("parent_links")
+      .select("student_id, students(id, auth_uid, tutor_id)")
+      .eq("parent_uid", uid)
+      .limit(1)
+      .maybeSingle();
+
+    if (parentLink) {
+      const student = parentLink.students as any;
+      studentDocId = parentLink.student_id;
+      if (student) {
+        tutorId = student.tutor_id || undefined;
+      }
+      if (!role) role = "parent";
+    }
+  }
+
+  // 5. Default fallback if role is still unknown but uid exists
   if (!role) {
     role = "tutor";
   }

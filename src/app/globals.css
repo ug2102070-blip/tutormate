@@ -1,6 +1,9 @@
 @import "tailwindcss";
 
-@theme {
+/* ========================
+   LIGHT MODE TOKENS
+======================== */
+:root {
   --color-primary: #6366f1;
   --color-primary-light: #818cf8;
   --color-primary-dark: #4f46e5;
@@ -17,18 +20,123 @@
   --color-error: #ef4444;
 
   --color-surface: #ffffff;
+  --color-bg: #ffffff;
   --color-bg-secondary: #f8fafc;
   --color-bg-tertiary: #f1f5f9;
   --color-border: #e2e8f0;
   --color-text: #0f172a;
   --color-text-secondary: #475569;
   --color-text-muted: #94a3b8;
+
+  /* Navigation */
+  --color-nav-bg: rgba(255, 255, 255, 0.92);
+  --color-nav-border: rgba(226, 232, 240, 0.8);
+  --color-nav-active: #6366f1;
+  --color-nav-inactive: #94a3b8;
+  --color-nav-active-bg: rgba(99, 102, 241, 0.1);
+
+  /* Header */
+  --color-header-bg: rgba(255, 255, 255, 0.95);
+  --color-header-border: #e2e8f0;
+
+  /* Sidebar */
+  --color-sidebar-bg: #ffffff;
+  --color-sidebar-border: #e2e8f0;
+
+  /* Shadows */
+  --shadow-nav: 0 -1px 0 rgba(0,0,0,0.05), 0 -4px 24px rgba(0,0,0,0.06);
+  --shadow-card: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-elevated: 0 4px 24px rgba(0,0,0,0.08), 0 1px 4px rgba(0,0,0,0.04);
 }
 
-/* Custom Scrollbar */
+/* ========================
+   DARK MODE TOKENS
+======================== */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-primary: #818cf8;
+    --color-primary-light: #a5b4fc;
+    --color-primary-dark: #6366f1;
+    --color-primary-50: rgba(99, 102, 241, 0.12);
+    --color-primary-100: rgba(99, 102, 241, 0.18);
+
+    --color-accent: #22d3ee;
+    --color-accent-light: #67e8f9;
+    --color-accent-dark: #06b6d4;
+
+    --color-success: #34d399;
+    --color-warning: #fbbf24;
+    --color-error: #f87171;
+
+    --color-surface: #1e1e2e;
+    --color-bg: #13131f;
+    --color-bg-secondary: #1a1a2e;
+    --color-bg-tertiary: #252535;
+    --color-border: rgba(255, 255, 255, 0.08);
+    --color-text: #f1f5f9;
+    --color-text-secondary: #94a3b8;
+    --color-text-muted: #64748b;
+
+    /* Navigation */
+    --color-nav-bg: rgba(30, 30, 46, 0.95);
+    --color-nav-border: rgba(255, 255, 255, 0.06);
+    --color-nav-active: #818cf8;
+    --color-nav-inactive: #475569;
+    --color-nav-active-bg: rgba(129, 140, 248, 0.15);
+
+    /* Header */
+    --color-header-bg: rgba(19, 19, 31, 0.95);
+    --color-header-border: rgba(255, 255, 255, 0.06);
+
+    /* Sidebar */
+    --color-sidebar-bg: #1e1e2e;
+    --color-sidebar-border: rgba(255, 255, 255, 0.06);
+
+    /* Shadows */
+    --shadow-nav: 0 -1px 0 rgba(0,0,0,0.3), 0 -4px 24px rgba(0,0,0,0.4);
+    --shadow-card: 0 1px 3px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.2);
+    --shadow-elevated: 0 4px 24px rgba(0,0,0,0.4), 0 1px 4px rgba(0,0,0,0.3);
+  }
+}
+
+/* ========================
+   BASE STYLES
+======================== */
+* {
+  -webkit-tap-highlight-color: transparent;
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overscroll-behavior: none;
+}
+
+/* ========================
+   SAFE AREA UTILITIES
+======================== */
+.pb-safe {
+  padding-bottom: max(env(safe-area-inset-bottom), 8px);
+}
+
+.pt-safe {
+  padding-top: env(safe-area-inset-top);
+}
+
+/* ========================
+   CUSTOM SCROLLBAR
+======================== */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 
 ::-webkit-scrollbar-track {
@@ -36,18 +144,30 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: var(--color-border);
   border-radius: 999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: var(--color-text-muted);
 }
 
-/* Custom Animations */
+/* ========================
+   ANIMATIONS
+======================== */
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(6px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.93); }
+  to { opacity: 1; transform: scale(1); }
 }
 
 @keyframes shimmer {
@@ -55,17 +175,50 @@
   100% { background-position: 200% 0; }
 }
 
+@keyframes pulse-soft {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+@keyframes bounce-dot {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.4); }
+}
+
 .animate-fade-in {
-  animation: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-slide-up {
+  animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-scale-in {
+  animation: scaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 .animate-shimmer {
   background: linear-gradient(
     90deg,
-    #f1f5f9 25%,
-    #f8fafc 50%,
-    #f1f5f9 75%
+    var(--color-bg-tertiary) 25%,
+    var(--color-bg-secondary) 50%,
+    var(--color-bg-tertiary) 75%
   );
   background-size: 200% 100%;
   animation: shimmer 1.5s ease-in-out infinite;
+}
+
+/* ========================
+   DARK MODE SHIMMER
+======================== */
+@media (prefers-color-scheme: dark) {
+  .animate-shimmer {
+    background: linear-gradient(
+      90deg,
+      #252535 25%,
+      #2d2d40 50%,
+      #252535 75%
+    );
+    background-size: 200% 100%;
+  }
 }

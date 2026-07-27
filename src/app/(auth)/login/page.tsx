@@ -41,7 +41,8 @@ export default function LoginPage() {
     if (!authLoading && user && !pendingUser) {
       handlePostSignIn(user);
     }
-  }, [user, authLoading, pendingUser]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id, authLoading, pendingUser]);
 
   async function handlePostSignIn(user: User) {
     document.cookie = "__session=1; path=/; max-age=2592000; SameSite=Lax";
@@ -121,7 +122,7 @@ export default function LoginPage() {
       const { error: oauthErr } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: `${window.location.origin}/login`,
+          redirectTo: `${window.location.origin}/auth/callback`,
         },
       });
       if (oauthErr) throw oauthErr;
@@ -201,7 +202,7 @@ export default function LoginPage() {
 
     try {
       if (onboardRole === "tutor") {
-        await onboardTutorUser(
+        const tutorRes = await onboardTutorUser(
           {
             email: pendingUser.email || null,
             displayName: onboardName || "Tutor",
@@ -210,6 +211,11 @@ export default function LoginPage() {
           },
           pendingUser.id
         );
+        if (tutorRes && !tutorRes.success && (tutorRes as any).error) {
+          setError((tutorRes as any).error);
+          setLoading(false);
+          return;
+        }
       } else {
         if (!onboardInviteCode) {
           setError("Invite code is required for student registration.");

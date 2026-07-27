@@ -4,6 +4,7 @@ import { createAdminClient, getSupabaseServerClient } from "@/lib/supabase/serve
 import { verifyUserAuth } from "@/lib/authHelpers";
 import { materialSchema, type MaterialFormValues } from "@/lib/validations/material";
 import type { MaterialDoc } from "@/types";
+import { createNotification } from "@/actions/notificationActions";
 
 /**
  * Creates a new material document. The actual file should be uploaded
@@ -51,6 +52,37 @@ export async function createMaterial(formData: MaterialFormValues, idToken: stri
 
   if (error || !material) {
     throw new Error(`Failed to save material: ${error?.message || "Unknown error"}`);
+  }
+
+  // Notify students if material is published
+  if (validated.isPublished) {
+    const adminSupabase = createAdminClient();
+    // Find students to notify: enrolled in the specific batch, or all if no batch
+    let studentsQuery = adminSupabase
+      .from("students")
+      .select("id, auth_uid, enrolled_batch_ids")
+      .eq("tutor_id", tutorId)
+      .eq("status", "active");
+
+    const { data: allStudents } = await studentsQuery;
+
+    const studentsToNotify = (allStudents || []).filter((s: any) => {
+      if (!validated.batchId) return true; // global material — notify all
+      return s.enrolled_batch_ids?.includes(validated.batchId);
+    });
+
+    for (const student of studentsToNotify) {
+      if (student.auth_uid) {
+        await createNotification(
+          student.auth_uid,
+          `New Material: ${validated.title}`,
+          validated.description || null,
+          "material",
+          material.id,
+          "material"
+        );
+      }
+    }
   }
 
   return { success: true, materialId: material.id };

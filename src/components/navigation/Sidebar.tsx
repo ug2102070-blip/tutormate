@@ -13,6 +13,7 @@ import {
   BookOpen,
   FileText,
   Award,
+  Bell,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -48,40 +49,62 @@ export function Sidebar({ role }: SidebarProps) {
   const items = role === "tutor" ? tutorNavItems : studentNavItems;
 
   return (
-    <aside className="hidden md:flex w-64 flex-col justify-between border-r border-slate-200 bg-white p-4 shrink-0 shadow-xs">
+    <aside
+      style={{
+        background: "var(--color-sidebar-bg)",
+        borderRight: "1px solid var(--color-sidebar-border)",
+      }}
+      className="hidden md:flex w-64 flex-col justify-between p-4 shrink-0"
+    >
       <div className="space-y-6">
         {/* Brand Header */}
         <div className="px-3 py-2">
           <Link href="/" className="flex items-center gap-2">
-            <span className="text-xl font-extrabold tracking-tight text-indigo-600">
+            <span
+              className="text-xl font-extrabold tracking-tight"
+              style={{ color: "var(--color-primary)" }}
+            >
               TutorMate
             </span>
-            <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600 border border-indigo-100">
+            <span
+              className="text-[10px] uppercase font-bold px-2 py-0.5 rounded-full border"
+              style={{
+                background: "var(--color-primary-50)",
+                color: "var(--color-primary)",
+                borderColor: "var(--color-primary-100)",
+              }}
+            >
               {role}
             </span>
           </Link>
         </div>
 
         {/* Navigation items */}
-        <nav className="space-y-1">
+        <nav className="space-y-0.5">
           {items.map((item) => {
             const Icon = item.icon;
-            const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
+            const isActive =
+              pathname === item.href || pathname.startsWith(item.href + "/");
 
             return (
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex items-center gap-3 px-3 py-2.5 text-sm font-semibold rounded-xl transition-all duration-150 ${
-                  isActive
-                    ? "bg-indigo-50 text-indigo-700 shadow-xs"
-                    : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
-                }`}
+                className="flex items-center gap-3 px-3 py-2.5 text-sm font-semibold rounded-xl transition-all duration-150"
+                style={{
+                  background: isActive ? "var(--color-primary-50)" : "transparent",
+                  color: isActive
+                    ? "var(--color-primary)"
+                    : "var(--color-text-secondary)",
+                }}
               >
                 <Icon
-                  className={`w-4 h-4 ${
-                    isActive ? "text-indigo-600" : "text-slate-400"
-                  }`}
+                  className="w-4 h-4 shrink-0"
+                  style={{
+                    color: isActive
+                      ? "var(--color-primary)"
+                      : "var(--color-text-muted)",
+                  }}
                 />
                 {item.label}
               </Link>
@@ -90,8 +113,15 @@ export function Sidebar({ role }: SidebarProps) {
         </nav>
       </div>
 
-      {/* Footer Info */}
-      <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 text-xs text-slate-500 font-medium">
+      {/* Footer */}
+      <div
+        className="p-3 rounded-xl text-xs font-medium"
+        style={{
+          background: "var(--color-bg-secondary)",
+          border: "1px solid var(--color-border)",
+          color: "var(--color-text-muted)",
+        }}
+      >
         TutorMate BD v1.0.0
       </div>
     </aside>

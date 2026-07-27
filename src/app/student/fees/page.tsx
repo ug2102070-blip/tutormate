@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { formatBDT } from "@/lib/utils";
 import type { FeeDoc } from "@/types";
-import { CreditCard, Check, AlertCircle } from "lucide-react";
+import { CreditCard, CheckCircle, AlertCircle, TrendingUp } from "lucide-react";
 
 export default function StudentFeesPage() {
   const { user, claims } = useAuth();
@@ -15,7 +15,7 @@ export default function StudentFeesPage() {
 
   const months = [
     "January", "February", "March", "April", "May", "June",
-    "July", "August", "September", "October", "November", "December"
+    "July", "August", "September", "October", "November", "December",
   ];
 
   useEffect(() => {
@@ -80,84 +80,233 @@ export default function StudentFeesPage() {
   const totalUnpaid = fees
     .filter((f) => f.status === "unpaid")
     .reduce((acc, f) => acc + (f.amountDue || 0), 0);
+  const paidCount = fees.filter((f) => f.status === "paid").length;
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto">
+    <div className="space-y-5 max-w-4xl mx-auto">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-[var(--color-text)]">
-          My Payment History
+        <h1
+          className="text-xl font-bold tracking-tight"
+          style={{ color: "var(--color-text)" }}
+        >
+          Payment History
         </h1>
-        <p className="text-sm text-[var(--color-text-secondary)]">
-          View monthly fee statements, payment statuses, and receipts
+        <p
+          className="text-sm mt-0.5"
+          style={{ color: "var(--color-text-muted)" }}
+        >
+          Monthly fee statements and payment status
         </p>
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div className="p-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] flex items-center justify-between">
-          <div>
-            <div className="text-xs text-[var(--color-text-muted)] font-medium">Total Paid</div>
-            <div className="text-2xl font-bold text-[var(--color-success)] mt-1">{formatBDT(totalPaid)}</div>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        {/* Total Paid */}
+        <div
+          className="p-4 rounded-2xl flex items-center gap-4"
+          style={{
+            background: "linear-gradient(135deg, rgba(16,185,129,0.12) 0%, rgba(16,185,129,0.06) 100%)",
+            border: "1px solid rgba(16,185,129,0.2)",
+          }}
+        >
+          <div
+            className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
+            style={{ background: "rgba(16,185,129,0.15)" }}
+          >
+            <CheckCircle className="w-5 h-5" style={{ color: "var(--color-success)" }} />
           </div>
-          <div className="p-3 rounded-xl bg-emerald-50 text-emerald-600">
-            <Check className="w-6 h-6" />
+          <div>
+            <div
+              className="text-[11px] font-semibold uppercase tracking-wider"
+              style={{ color: "var(--color-success)" }}
+            >
+              Total Paid
+            </div>
+            <div
+              className="text-xl font-extrabold tracking-tight"
+              style={{ color: "var(--color-success)" }}
+            >
+              {formatBDT(totalPaid)}
+            </div>
           </div>
         </div>
 
-        <div className="p-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] flex items-center justify-between">
-          <div>
-            <div className="text-xs text-[var(--color-text-muted)] font-medium">Total Due</div>
-            <div className="text-2xl font-bold text-rose-600 mt-1">{formatBDT(totalUnpaid)}</div>
+        {/* Total Due */}
+        <div
+          className="p-4 rounded-2xl flex items-center gap-4"
+          style={{
+            background: totalUnpaid > 0
+              ? "linear-gradient(135deg, rgba(239,68,68,0.12) 0%, rgba(239,68,68,0.06) 100%)"
+              : "var(--color-bg-secondary)",
+            border: totalUnpaid > 0
+              ? "1px solid rgba(239,68,68,0.2)"
+              : "1px solid var(--color-border)",
+          }}
+        >
+          <div
+            className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
+            style={{
+              background: totalUnpaid > 0 ? "rgba(239,68,68,0.15)" : "var(--color-bg-tertiary)",
+            }}
+          >
+            <AlertCircle
+              className="w-5 h-5"
+              style={{ color: totalUnpaid > 0 ? "var(--color-error)" : "var(--color-text-muted)" }}
+            />
           </div>
-          <div className="p-3 rounded-xl bg-rose-50 text-rose-600">
-            <AlertCircle className="w-6 h-6" />
+          <div>
+            <div
+              className="text-[11px] font-semibold uppercase tracking-wider"
+              style={{ color: totalUnpaid > 0 ? "var(--color-error)" : "var(--color-text-muted)" }}
+            >
+              Total Due
+            </div>
+            <div
+              className="text-xl font-extrabold tracking-tight"
+              style={{ color: totalUnpaid > 0 ? "var(--color-error)" : "var(--color-text)" }}
+            >
+              {formatBDT(totalUnpaid)}
+            </div>
+          </div>
+        </div>
+
+        {/* Paid Count */}
+        <div
+          className="p-4 rounded-2xl flex items-center gap-4"
+          style={{
+            background: "var(--color-surface)",
+            border: "1px solid var(--color-border)",
+          }}
+        >
+          <div
+            className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
+            style={{ background: "var(--color-primary-50)" }}
+          >
+            <TrendingUp className="w-5 h-5" style={{ color: "var(--color-primary)" }} />
+          </div>
+          <div>
+            <div
+              className="text-[11px] font-semibold uppercase tracking-wider"
+              style={{ color: "var(--color-text-muted)" }}
+            >
+              Months Paid
+            </div>
+            <div
+              className="text-xl font-extrabold tracking-tight"
+              style={{ color: "var(--color-text)" }}
+            >
+              {paidCount} / {fees.length}
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Fee History Table */}
+      {/* Fee History */}
       {loading ? (
-        <div className="h-64 rounded-2xl animate-shimmer border border-[var(--color-border)]" />
+        <div
+          className="h-64 rounded-2xl animate-shimmer"
+          style={{ border: "1px solid var(--color-border)" }}
+        />
       ) : fees.length === 0 ? (
-        <div className="py-16 text-center border border-dashed rounded-2xl border-[var(--color-border)] bg-[var(--color-surface)]">
-          <CreditCard className="w-10 h-10 mx-auto text-[var(--color-text-muted)] mb-3" />
-          <h3 className="text-base font-semibold text-[var(--color-text)]">
-            No fee statements generated yet
+        <div
+          className="py-16 text-center border border-dashed rounded-2xl"
+          style={{
+            borderColor: "var(--color-border)",
+            background: "var(--color-surface)",
+          }}
+        >
+          <CreditCard
+            className="w-10 h-10 mx-auto mb-3"
+            style={{ color: "var(--color-text-muted)" }}
+          />
+          <h3
+            className="text-base font-semibold"
+            style={{ color: "var(--color-text)" }}
+          >
+            No fee statements yet
           </h3>
-          <p className="text-xs text-[var(--color-text-muted)] mt-1 max-w-sm mx-auto">
-            Monthly fee invoices created by your tutor will appear here.
+          <p
+            className="text-xs mt-1 max-w-sm mx-auto"
+            style={{ color: "var(--color-text-muted)" }}
+          >
+            Monthly invoices from your tutor will appear here.
           </p>
         </div>
       ) : (
-        <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] overflow-hidden shadow-sm">
+        <div
+          className="rounded-2xl overflow-hidden"
+          style={{
+            background: "var(--color-surface)",
+            border: "1px solid var(--color-border)",
+            boxShadow: "var(--shadow-card)",
+          }}
+        >
           {/* Mobile Cards */}
-          <div className="divide-y divide-slate-100 md:hidden">
-            {fees.map((fee) => (
-              <div key={fee.id} className="p-4 space-y-2.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-extrabold text-slate-900">
-                    {months[fee.month - 1]} {fee.year}
+          <div className="md:hidden">
+            {fees.map((fee, index) => (
+              <div
+                key={fee.id}
+                className="p-4"
+                style={{
+                  borderBottom:
+                    index < fees.length - 1
+                      ? "1px solid var(--color-border)"
+                      : "none",
+                }}
+              >
+                <div className="flex items-center justify-between mb-2.5">
+                  <div>
+                    <span
+                      className="text-sm font-extrabold"
+                      style={{ color: "var(--color-text)" }}
+                    >
+                      {months[fee.month - 1]} {fee.year}
+                    </span>
+                  </div>
+                  <span
+                    className="px-2.5 py-1 rounded-full text-[10px] font-bold border"
+                    style={
+                      fee.status === "paid"
+                        ? {
+                            background: "rgba(16,185,129,0.1)",
+                            color: "var(--color-success)",
+                            borderColor: "rgba(16,185,129,0.25)",
+                          }
+                        : {
+                            background: "rgba(239,68,68,0.1)",
+                            color: "var(--color-error)",
+                            borderColor: "rgba(239,68,68,0.25)",
+                          }
+                    }
+                  >
+                    {fee.status === "paid" ? "✓ Paid" : "✗ Unpaid"}
                   </span>
-                  {fee.status === "paid" ? (
-                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                      Paid
-                    </span>
-                  ) : (
-                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
-                      Unpaid
-                    </span>
-                  )}
                 </div>
 
-                <div className="flex items-center justify-between text-xs font-semibold py-1">
-                  <span className="text-slate-500">Amount: <strong className="text-slate-900">{formatBDT(fee.amountDue)}</strong></span>
-                  <span className="text-slate-500">Paid: <strong className="text-emerald-600">{formatBDT(fee.amountPaid)}</strong></span>
+                <div className="flex items-center justify-between text-xs font-semibold">
+                  <span style={{ color: "var(--color-text-muted)" }}>
+                    Amount Due:{" "}
+                    <strong style={{ color: "var(--color-text)" }}>
+                      {formatBDT(fee.amountDue)}
+                    </strong>
+                  </span>
+                  <span style={{ color: "var(--color-text-muted)" }}>
+                    Paid:{" "}
+                    <strong style={{ color: "var(--color-success)" }}>
+                      {formatBDT(fee.amountPaid)}
+                    </strong>
+                  </span>
                 </div>
 
-                <div className="text-[11px] font-mono font-semibold text-slate-400 uppercase pt-0.5">
-                  Method: {fee.paymentMethod || "N/A"}
-                </div>
+                {fee.paymentMethod && (
+                  <div
+                    className="mt-1.5 text-[10px] font-semibold uppercase tracking-wider"
+                    style={{ color: "var(--color-text-muted)" }}
+                  >
+                    via {fee.paymentMethod}
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -165,42 +314,75 @@ export default function StudentFeesPage() {
           {/* Desktop Table */}
           <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="border-b border-[var(--color-border)] bg-[var(--color-bg-secondary)] text-[var(--color-text-secondary)] font-semibold">
+              <thead
+                style={{
+                  background: "var(--color-bg-secondary)",
+                  borderBottom: "1px solid var(--color-border)",
+                  color: "var(--color-text-secondary)",
+                }}
+              >
                 <tr>
-                  <th className="px-4 py-3">Billing Month</th>
-                  <th className="px-4 py-3">Amount Due</th>
-                  <th className="px-4 py-3">Amount Paid</th>
-                  <th className="px-4 py-3">Payment Status</th>
-                  <th className="px-4 py-3">Method</th>
+                  <th className="px-4 py-3 font-semibold">Billing Month</th>
+                  <th className="px-4 py-3 font-semibold">Amount Due</th>
+                  <th className="px-4 py-3 font-semibold">Amount Paid</th>
+                  <th className="px-4 py-3 font-semibold">Status</th>
+                  <th className="px-4 py-3 font-semibold">Method</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[var(--color-border)] text-[var(--color-text)]">
-                {fees.map((fee) => (
+              <tbody>
+                {fees.map((fee, index) => (
                   <tr
                     key={fee.id}
-                    className="hover:bg-[var(--color-bg-secondary)] transition-colors"
+                    style={{
+                      borderBottom:
+                        index < fees.length - 1
+                          ? "1px solid var(--color-border)"
+                          : "none",
+                      color: "var(--color-text)",
+                    }}
                   >
-                    <td className="px-4 py-3 font-semibold">
+                    <td
+                      className="px-4 py-3 font-semibold"
+                      style={{ color: "var(--color-text)" }}
+                    >
                       {months[fee.month - 1]} {fee.year}
                     </td>
-                    <td className="px-4 py-3 font-bold">
+                    <td
+                      className="px-4 py-3 font-bold"
+                      style={{ color: "var(--color-text)" }}
+                    >
                       {formatBDT(fee.amountDue)}
                     </td>
-                    <td className="px-4 py-3 font-bold text-[var(--color-success)]">
+                    <td
+                      className="px-4 py-3 font-bold"
+                      style={{ color: "var(--color-success)" }}
+                    >
                       {formatBDT(fee.amountPaid)}
                     </td>
                     <td className="px-4 py-3">
-                      {fee.status === "paid" ? (
-                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                          Paid
-                        </span>
-                      ) : (
-                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-rose-50 text-rose-700 border border-rose-200">
-                          Unpaid
-                        </span>
-                      )}
+                      <span
+                        className="px-2.5 py-0.5 rounded-full text-[10px] font-semibold border"
+                        style={
+                          fee.status === "paid"
+                            ? {
+                                background: "rgba(16,185,129,0.1)",
+                                color: "var(--color-success)",
+                                borderColor: "rgba(16,185,129,0.25)",
+                              }
+                            : {
+                                background: "rgba(239,68,68,0.1)",
+                                color: "var(--color-error)",
+                                borderColor: "rgba(239,68,68,0.25)",
+                              }
+                        }
+                      >
+                        {fee.status === "paid" ? "Paid" : "Unpaid"}
+                      </span>
                     </td>
-                    <td className="px-4 py-3 uppercase font-mono text-[11px] text-[var(--color-text-muted)]">
+                    <td
+                      className="px-4 py-3 uppercase font-mono text-[11px]"
+                      style={{ color: "var(--color-text-muted)" }}
+                    >
                       {fee.paymentMethod || "—"}
                     </td>
                   </tr>

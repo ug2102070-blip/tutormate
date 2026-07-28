@@ -2,6 +2,7 @@
 
 import { createAdminClient, getSupabaseServerClient } from "@/lib/supabase/server";
 import { verifyUserAuth } from "@/lib/authHelpers";
+import { hasRoleAtLeast } from "@/lib/permissions";
 import { materialSchema, type MaterialFormValues } from "@/lib/validations/material";
 import type { MaterialDoc } from "@/types";
 import { createNotification } from "@/actions/notificationActions";
@@ -12,7 +13,7 @@ import { createNotification } from "@/actions/notificationActions";
  */
 export async function createMaterial(formData: MaterialFormValues, idToken: string) {
   const authState = await verifyUserAuth(idToken);
-  if (authState.role !== "tutor") {
+  if (!hasRoleAtLeast(authState.role, "tutor")) {
     throw new Error("Unauthorized: Only tutors can create materials.");
   }
   const tutorId = authState.tutorId || authState.uid;
@@ -97,7 +98,7 @@ export async function updateMaterial(
   idToken: string
 ) {
   const authState = await verifyUserAuth(idToken);
-  if (authState.role !== "tutor") {
+  if (!hasRoleAtLeast(authState.role, "tutor")) {
     throw new Error("Unauthorized: Only tutors can update materials.");
   }
   const tutorId = authState.tutorId || authState.uid;
@@ -138,7 +139,7 @@ export async function updateMaterial(
  */
 export async function deleteMaterial(materialId: string, idToken: string) {
   const authState = await verifyUserAuth(idToken);
-  if (authState.role !== "tutor") {
+  if (!hasRoleAtLeast(authState.role, "tutor")) {
     throw new Error("Unauthorized");
   }
   const tutorId = authState.tutorId || authState.uid;
@@ -199,7 +200,7 @@ export async function deleteMaterial(materialId: string, idToken: string) {
  */
 export async function getTutorMaterials(idToken: string, batchId?: string) {
   const authState = await verifyUserAuth(idToken);
-  if (authState.role !== "tutor") {
+  if (!hasRoleAtLeast(authState.role, "tutor")) {
     throw new Error("Unauthorized");
   }
   const tutorId = authState.tutorId || authState.uid;

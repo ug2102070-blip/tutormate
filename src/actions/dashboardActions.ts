@@ -2,11 +2,12 @@
 
 import { createAdminClient } from "@/lib/supabase/server";
 import { verifyUserAuth } from "@/lib/authHelpers";
+import { hasRoleAtLeast } from "@/lib/permissions";
 
 export async function getOnboardingStatus(idToken?: string) {
   try {
     const authState = await verifyUserAuth(idToken);
-    if (authState.role !== "tutor") {
+    if (!hasRoleAtLeast(authState.role, "tutor")) {
       return null;
     }
     const tutorId = authState.tutorId || authState.uid;

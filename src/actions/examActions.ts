@@ -2,6 +2,7 @@
 
 import { createAdminClient, getSupabaseServerClient } from "@/lib/supabase/server";
 import { verifyUserAuth } from "@/lib/authHelpers";
+import { hasRoleAtLeast } from "@/lib/permissions";
 import { 
   createExamSchema, 
   updateExamSchema, 
@@ -15,7 +16,7 @@ import { createNotification } from "@/actions/notificationActions";
 
 export async function createExam(formData: CreateExamInput, idToken: string) {
   const authState = await verifyUserAuth(idToken);
-  if (authState.role !== "tutor") throw new Error("Unauthorized");
+  if (!hasRoleAtLeast(authState.role, "tutor")) throw new Error("Unauthorized");
   
   const tutorId = authState.tutorId || authState.uid;
   const validated = createExamSchema.parse(formData);
@@ -43,7 +44,7 @@ export async function createExam(formData: CreateExamInput, idToken: string) {
 
 export async function updateExam(examId: string, updates: UpdateExamInput, idToken: string) {
   const authState = await verifyUserAuth(idToken);
-  if (authState.role !== "tutor") throw new Error("Unauthorized");
+  if (!hasRoleAtLeast(authState.role, "tutor")) throw new Error("Unauthorized");
   
   const tutorId = authState.tutorId || authState.uid;
   const validated = updateExamSchema.parse(updates);
@@ -69,7 +70,7 @@ export async function updateExam(examId: string, updates: UpdateExamInput, idTok
 
 export async function deleteExam(examId: string, idToken: string) {
   const authState = await verifyUserAuth(idToken);
-  if (authState.role !== "tutor") throw new Error("Unauthorized");
+  if (!hasRoleAtLeast(authState.role, "tutor")) throw new Error("Unauthorized");
   
   const tutorId = authState.tutorId || authState.uid;
   const supabase = createAdminClient();
@@ -90,7 +91,7 @@ export async function getExams(batchId: string | null, idToken: string) {
   
   let query = supabase.from("exams").select("*");
   
-  if (authState.role === "tutor") {
+  if (hasRoleAtLeast(authState.role, "tutor")) {
     const tutorId = authState.tutorId || authState.uid;
     query = query.eq("tutor_id", tutorId);
     if (batchId) {
@@ -110,7 +111,8 @@ export async function getExams(batchId: string | null, idToken: string) {
     
     query = query.in("batch_id", student.enrolled_batch_ids);
   } else {
-    throw new Error("Unauthorized role");
+    // parent or other non-tutor/non-student role — return empty
+    return { success: true, exams: [] as ExamDoc[] };
   }
 
   query = query.order("exam_date", { ascending: false });
@@ -145,7 +147,7 @@ export async function getExamDetails(examId: string, idToken: string) {
     
   if (error || !exam) throw new Error(`Failed to fetch exam: ${error?.message}`);
   
-  if (authState.role === "tutor") {
+  if (hasRoleAtLeast(authState.role, "tutor")) {
     const tutorId = authState.tutorId || authState.uid;
     if (exam.tutor_id !== tutorId) throw new Error("Unauthorized");
   }

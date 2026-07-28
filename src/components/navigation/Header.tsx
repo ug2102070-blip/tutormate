@@ -18,10 +18,14 @@ export function Header() {
   const supabase = createClient();
 
   async function handleLogout() {
-    await supabase.auth.signOut();
+    try {
+      await supabase.auth.signOut();
+    } catch (err) {
+      console.error("Signout error:", err);
+    }
     document.cookie =
       "__session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
-    router.push("/login");
+    window.location.href = "/login";
   }
 
   const displayName =

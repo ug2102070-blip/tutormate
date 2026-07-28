@@ -83,11 +83,11 @@ async function fetchProfileAuth(uid: string, email?: string): Promise<VerifiedAu
   let studentDocId: string | undefined = undefined;
   let studentAuthUid: string | undefined = undefined;
 
-  // 1. First, check tutors table directly (If user_id matches, this user IS a tutor)
+  // 1. First, check tutors table directly (If user_id or id matches, this user IS a tutor)
   const { data: tutor } = await supabase
     .from("tutors")
     .select("id")
-    .eq("user_id", uid)
+    .or(`user_id.eq.${uid},id.eq.${uid}`)
     .limit(1)
     .maybeSingle();
 
@@ -104,12 +104,18 @@ async function fetchProfileAuth(uid: string, email?: string): Promise<VerifiedAu
     .maybeSingle();
 
   if (profile) {
-    if (!role) {
-      role = profile.role as UserRole;
+    if (profile.role) {
+      if (profile.role === "admin" || profile.role === "owner" || !role) {
+        role = profile.role as UserRole;
+      }
     }
-    // If tutorId wasn't found from tutors table, check profile
-    if (!tutorId && role === "tutor") {
-      tutorId = profile.tutor_id || undefined;
+    // If tutorId wasn't found from tutors table, check profile or default to uid for tutor/admin/owner
+    if (!tutorId) {
+      if (profile.tutor_id) {
+        tutorId = profile.tutor_id;
+      } else if (role === "tutor" || role === "admin" || role === "owner") {
+        tutorId = profile.id || uid;
+      }
     }
     if (!studentDocId) {
       studentDocId = profile.student_doc_id || undefined;
@@ -121,13 +127,13 @@ async function fetchProfileAuth(uid: string, email?: string): Promise<VerifiedAu
     const { data: student } = await supabase
       .from("students")
       .select("id, tutor_id")
-      .eq("auth_uid", uid)
+      .or(`auth_uid.eq.${uid},id.eq.${uid}`)
       .limit(1)
       .maybeSingle();
 
     if (student) {
       studentDocId = student.id;
-      tutorId = student.tutor_id || undefined;
+      if (!tutorId) tutorId = student.tutor_id || undefined;
       role = "student";
     }
   }
@@ -150,6 +156,11 @@ async function fetchProfileAuth(uid: string, email?: string): Promise<VerifiedAu
       }
       role = "parent";
     }
+  }
+
+  // Fallback for tutorId if user role has tutor level access or above
+  if (!tutorId && (role === "tutor" || role === "admin" || role === "owner")) {
+    tutorId = uid;
   }
 
   // 5. Fetch custom per-user permissions from user_permissions table

@@ -2,13 +2,14 @@
 
 import { createAdminClient, getSupabaseServerClient } from "@/lib/supabase/server";
 import { verifyUserAuth } from "@/lib/authHelpers";
+import { hasRoleAtLeast } from "@/lib/permissions";
 import { createAssignmentSchema, updateAssignmentSchema, gradeSubmissionSchema, type CreateAssignmentInput, type UpdateAssignmentInput, type GradeSubmissionInput } from "@/lib/validations/assignment";
 import type { AssignmentDoc, SubmissionDoc } from "@/types";
 import { createNotification } from "@/actions/notificationActions";
 
 export async function createAssignment(formData: CreateAssignmentInput, idToken: string) {
   const authState = await verifyUserAuth(idToken);
-  if (authState.role !== "tutor") throw new Error("Unauthorized");
+  if (!hasRoleAtLeast(authState.role, "tutor")) throw new Error("Unauthorized");
   
   const tutorId = authState.tutorId || authState.uid;
   const validated = createAssignmentSchema.parse(formData);
@@ -36,7 +37,7 @@ export async function createAssignment(formData: CreateAssignmentInput, idToken:
 
 export async function updateAssignment(assignmentId: string, updates: UpdateAssignmentInput, idToken: string) {
   const authState = await verifyUserAuth(idToken);
-  if (authState.role !== "tutor") throw new Error("Unauthorized");
+  if (!hasRoleAtLeast(authState.role, "tutor")) throw new Error("Unauthorized");
   
   const tutorId = authState.tutorId || authState.uid;
   const validated = updateAssignmentSchema.parse(updates);
@@ -62,7 +63,7 @@ export async function updateAssignment(assignmentId: string, updates: UpdateAssi
 
 export async function publishAssignment(assignmentId: string, idToken: string) {
   const authState = await verifyUserAuth(idToken);
-  if (authState.role !== "tutor") throw new Error("Unauthorized");
+  if (!hasRoleAtLeast(authState.role, "tutor")) throw new Error("Unauthorized");
   
   const tutorId = authState.tutorId || authState.uid;
   const supabase = createAdminClient();
@@ -196,7 +197,7 @@ export async function submitAssignment(submissionId: string, filePath: string, i
 
 export async function gradeSubmission(submissionId: string, data: GradeSubmissionInput, idToken: string) {
   const authState = await verifyUserAuth(idToken);
-  if (authState.role !== "tutor") throw new Error("Unauthorized");
+  if (!hasRoleAtLeast(authState.role, "tutor")) throw new Error("Unauthorized");
   
   const validated = gradeSubmissionSchema.parse(data);
   const supabase = createAdminClient();
@@ -219,7 +220,7 @@ export async function gradeSubmission(submissionId: string, data: GradeSubmissio
 
 export async function getAssignments(idToken: string, batchId?: string) {
   const authState = await verifyUserAuth(idToken);
-  const tutorId = authState.tutorId || (authState.role === "tutor" ? authState.uid : null);
+  const tutorId = authState.tutorId || (hasRoleAtLeast(authState.role, "tutor") ? authState.uid : null);
   
   if (!tutorId) throw new Error("Unauthorized");
 
@@ -268,7 +269,7 @@ export async function getAssignments(idToken: string, batchId?: string) {
 
 export async function getSubmissions(assignmentId: string, idToken: string) {
   const authState = await verifyUserAuth(idToken);
-  if (authState.role !== "tutor") throw new Error("Unauthorized");
+  if (!hasRoleAtLeast(authState.role, "tutor")) throw new Error("Unauthorized");
   
   const supabase = createAdminClient();
   const { data, error } = await supabase

@@ -60,6 +60,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (profile.role === "admin") {
           return { role: "admin" };
         }
+        if (profile.role === "owner") {
+          return { role: "owner" };
+        }
+        if (profile.role === "parent") {
+          return {
+            role: "parent",
+            studentId: profile.student_doc_id || "",
+            studentAuthUid: "",
+            tutorId: profile.tutor_id || "",
+          };
+        }
       }
       // If no profile exists, return null so they are forced to onboard
       return null;

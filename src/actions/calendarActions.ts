@@ -2,6 +2,7 @@
 
 import { createAdminClient } from "@/lib/supabase/server";
 import { verifyUserAuth } from "@/lib/authHelpers";
+import { hasRoleAtLeast } from "@/lib/permissions";
 import { CalendarEvent } from "@/types";
 import { getDaysInMonth, startOfMonth, endOfMonth, format, getDay } from "date-fns";
 
@@ -12,25 +13,31 @@ import { getDaysInMonth, startOfMonth, endOfMonth, format, getDay } from "date-f
 export async function getCalendarEvents(year: number, month: number, idToken?: string) {
   const auth = await verifyUserAuth(idToken);
   const supabase = createAdminClient();
-  const tutorId = auth.tutorId;
 
-  if (!tutorId) throw new Error("Tutor ID not found");
+  // Resolve tutorId: explicit field first, then fall back to uid for tutor+ roles
+  const tutorId = auth.tutorId || (hasRoleAtLeast(auth.role, "tutor") ? auth.uid : null);
+
+  // If user has no assigned tutor (e.g., student/parent not linked to a tutor yet), return empty events instead of throwing
+  if (!tutorId) {
+    return [];
+  }
 
   const startDate = format(startOfMonth(new Date(year, month - 1)), 'yyyy-MM-dd');
   const endDate = format(endOfMonth(new Date(year, month - 1)), 'yyyy-MM-dd');
 
   let batchIdsToFilter: string[] | null = null;
   let enrolledBatches: any[] = [];
+  const isStudentOrParent = auth.role === "student" || auth.role === "parent";
 
-  // If student, get their enrolled batches
-  if (auth.role === "student" && auth.studentDocId) {
+  // If student or parent, get enrolled batches for their student profile
+  if (isStudentOrParent && auth.studentDocId) {
     const { data: student } = await supabase
       .from("students")
       .select("enrolled_batch_ids")
       .eq("id", auth.studentDocId)
       .single();
     
-    if (student && student.enrolled_batch_ids) {
+    if (student && Array.isArray(student.enrolled_batch_ids)) {
       batchIdsToFilter = student.enrolled_batch_ids;
     } else {
       batchIdsToFilter = [];
@@ -45,7 +52,7 @@ export async function getCalendarEvents(year: number, month: number, idToken?: s
         .in("id", batchIdsToFilter);
       enrolledBatches = data || [];
     }
-  } else {
+  } else if (!isStudentOrParent) {
     // Tutor gets all batches
     const { data } = await supabase
       .from("batches")
@@ -66,9 +73,13 @@ export async function getCalendarEvents(year: number, month: number, idToken?: s
     .gte("event_date", startDate)
     .lte("event_date", endDate);
   
-  if (auth.role === "student" && batchIdsToFilter) {
-    // Student sees events for their batches OR shared events (batch_id IS NULL)
-    eventsQuery = eventsQuery.or(`batch_id.in.(${validBatchIds.join(',')}),batch_id.is.null`);
+  if (isStudentOrParent) {
+    // Student/Parent sees events for their batches OR shared events (batch_id IS NULL)
+    if (validBatchIds.length > 0) {
+      eventsQuery = eventsQuery.or(`batch_id.in.(${validBatchIds.join(',')}),batch_id.is.null`);
+    } else {
+      eventsQuery = eventsQuery.is("batch_id", null);
+    }
   }
 
   const { data: eventsData, error: eventsErr } = await eventsQuery;
@@ -87,7 +98,7 @@ export async function getCalendarEvents(year: number, month: number, idToken?: s
   }
 
   // 2. Fetch Exams
-  if (auth.role === "tutor" || validBatchIds.length > 0) {
+  if (!isStudentOrParent || validBatchIds.length > 0) {
     let examsQuery = supabase
       .from("exams")
       .select("id, title, exam_date, batch_id")
@@ -95,7 +106,7 @@ export async function getCalendarEvents(year: number, month: number, idToken?: s
       .gte("exam_date", startDate)
       .lte("exam_date", endDate);
 
-    if (auth.role === "student") {
+    if (isStudentOrParent) {
       examsQuery = examsQuery.in("batch_id", validBatchIds);
     }
     
@@ -123,7 +134,7 @@ export async function getCalendarEvents(year: number, month: number, idToken?: s
       .gte("deadline", startDate)
       .lte("deadline", endDate + " 23:59:59"); // Deadline is TIMESTAMPTZ
 
-    if (auth.role === "student") {
+    if (isStudentOrParent) {
       assignmentsQuery = assignmentsQuery.in("batch_id", validBatchIds).eq("is_published", true);
     }
 
@@ -132,16 +143,18 @@ export async function getCalendarEvents(year: number, month: number, idToken?: s
       assignmentsData.forEach(a => {
         const batchName = enrolledBatches.find(b => b.id === a.batch_id)?.name;
         // Format TIMESTAMPTZ to YYYY-MM-DD
-        const dateStr = a.deadline.split('T')[0];
-        calendarEvents.push({
-          id: a.id,
-          date: dateStr,
-          title: `Assignment due: ${a.title}`,
-          type: "assignment",
-          batchId: a.batch_id,
-          batchName,
-          color: "bg-blue-100 text-blue-800"
-        });
+        const dateStr = a.deadline ? a.deadline.split('T')[0] : "";
+        if (dateStr) {
+          calendarEvents.push({
+            id: a.id,
+            date: dateStr,
+            title: `Assignment due: ${a.title}`,
+            type: "assignment",
+            batchId: a.batch_id,
+            batchName,
+            color: "bg-blue-100 text-blue-800"
+          });
+        }
       });
     }
 
@@ -188,7 +201,7 @@ export async function getCalendarEvents(year: number, month: number, idToken?: s
 
 export async function createEvent(formData: FormData, idToken?: string) {
   const auth = await verifyUserAuth(idToken);
-  if (auth.role !== "tutor") throw new Error("Only tutors can create events");
+  if (!hasRoleAtLeast(auth.role, "tutor")) throw new Error("Only tutors can create events");
 
   const title = formData.get("title") as string;
   const eventDate = formData.get("eventDate") as string;
@@ -199,11 +212,12 @@ export async function createEvent(formData: FormData, idToken?: string) {
     throw new Error("Missing required fields");
   }
 
+  const tutorId = auth.tutorId || auth.uid;
   const supabase = createAdminClient();
   const { data, error } = await supabase
     .from("events")
     .insert({
-      tutor_id: auth.tutorId,
+      tutor_id: tutorId,
       batch_id: batchId || null,
       title,
       event_date: eventDate,
@@ -222,8 +236,9 @@ export async function createEvent(formData: FormData, idToken?: string) {
 
 export async function deleteEvent(eventId: string, idToken?: string) {
   const auth = await verifyUserAuth(idToken);
-  if (auth.role !== "tutor") throw new Error("Only tutors can delete events");
+  if (!hasRoleAtLeast(auth.role, "tutor")) throw new Error("Only tutors can delete events");
 
+  const tutorId = auth.tutorId || auth.uid;
   const supabase = createAdminClient();
   
   // Ensure the event belongs to this tutor
@@ -234,7 +249,7 @@ export async function deleteEvent(eventId: string, idToken?: string) {
     .single();
     
   if (getErr || !existingEvent) throw new Error("Event not found");
-  if (existingEvent.tutor_id !== auth.tutorId) throw new Error("Unauthorized");
+  if (existingEvent.tutor_id !== tutorId) throw new Error("Unauthorized");
 
   const { error } = await supabase
     .from("events")

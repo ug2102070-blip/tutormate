@@ -2,6 +2,7 @@
 
 import { createAdminClient, getSupabaseServerClient } from "@/lib/supabase/server";
 import { verifyUserAuth } from "@/lib/authHelpers";
+import { hasRoleAtLeast } from "@/lib/permissions";
 import { z } from "zod";
 
 const generateMonthlyFeesSchema = z.object({
@@ -31,7 +32,7 @@ export async function generateMonthlyFees(
   idToken: string
 ) {
   const authState = await verifyUserAuth(idToken);
-  if (authState.role !== "tutor") {
+  if (!hasRoleAtLeast(authState.role, "tutor")) {
     throw new Error("Unauthorized");
   }
   const tutorId = authState.tutorId || authState.uid;
@@ -144,7 +145,7 @@ export async function updateFeeStatus(
   idToken: string
 ) {
   const authState = await verifyUserAuth(idToken);
-  if (authState.role !== "tutor") {
+  if (!hasRoleAtLeast(authState.role, "tutor")) {
     throw new Error("Unauthorized");
   }
   const tutorId = authState.tutorId || authState.uid;

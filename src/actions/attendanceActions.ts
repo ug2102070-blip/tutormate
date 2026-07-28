@@ -2,6 +2,7 @@
 
 import { createAdminClient } from "@/lib/supabase/server";
 import { verifyUserAuth } from "@/lib/authHelpers";
+import { hasRoleAtLeast } from "@/lib/permissions";
 import { z } from "zod";
 import type { AttendanceDoc, AttendanceRecord } from "@/types";
 
@@ -31,7 +32,7 @@ export async function saveAttendance(
   idToken: string
 ) {
   const authState = await verifyUserAuth(idToken);
-  if (authState.role !== "tutor") {
+  if (!hasRoleAtLeast(authState.role, "tutor")) {
     throw new Error("Unauthorized: Only tutors can log attendance.");
   }
   const tutorId = authState.tutorId || authState.uid;

@@ -65,8 +65,12 @@ export default function ParentMainLayout({
   }, []);
 
   async function handleLogout() {
-    await supabase.auth.signOut();
-    router.push("/parent/login");
+    try {
+      await supabase.auth.signOut();
+    } catch (err) {
+      console.error("Signout error:", err);
+    }
+    window.location.href = "/parent/login";
   }
 
   if (checking) {

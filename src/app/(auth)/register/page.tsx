@@ -97,7 +97,7 @@ export default function RegisterPage() {
         }
       }
 
-      await refreshClaims().catch(() => {});
+      await refreshClaims(user).catch(() => {});
       document.cookie = "__session=1; path=/; max-age=2592000; SameSite=Lax";
       router.push(role === "tutor" ? "/tutor/dashboard" : "/student/dashboard");
     } catch (err: unknown) {
@@ -230,7 +230,7 @@ export default function RegisterPage() {
         }
       }
 
-      await refreshClaims().catch(() => {});
+      await refreshClaims(user).catch(() => {});
       document.cookie = "__session=1; path=/; max-age=2592000; SameSite=Lax";
       router.push(role === "tutor" ? "/tutor/dashboard" : "/student/dashboard");
     } catch (err: unknown) {

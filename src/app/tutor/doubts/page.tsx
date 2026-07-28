@@ -407,7 +407,7 @@ export default function TutorDoubtsPage({
   };
 
   return (
-    <div className="h-[calc(100vh-9.5rem)] md:h-[calc(100vh-6.5rem)] flex flex-col space-y-3">
+    <div className="h-[calc(100vh-9.5rem)] md:h-[calc(100vh-7rem)] flex flex-col space-y-3">
       {/* Header */}
       <div className="flex items-center justify-between px-1 shrink-0">
         <div>
@@ -427,10 +427,10 @@ export default function TutorDoubtsPage({
       </div>
 
       {/* Dual Panel Messenger Inbox */}
-      <div className="flex-1 grid grid-cols-1 md:grid-cols-12 gap-4 bg-white dark:bg-[#131b2e] border border-slate-200 dark:border-white/10 rounded-2xl shadow-xs overflow-hidden min-h-0">
+      <div className="flex-1 flex flex-col md:flex-row bg-white dark:bg-[#131b2e] border border-slate-200 dark:border-white/10 rounded-2xl shadow-xs overflow-hidden min-h-0">
         {/* LEFT SIDEBAR: Student Conversations List */}
         <div
-          className={`md:col-span-4 border-r border-slate-200 dark:border-white/10 flex flex-col bg-slate-50/50 dark:bg-[#0b0f19]/50 ${
+          className={`w-full md:w-80 lg:w-96 border-r border-slate-200 dark:border-white/10 flex flex-col bg-slate-50/50 dark:bg-[#0b0f19]/50 shrink-0 h-full ${
             selectedDoubtId ? "hidden md:flex" : "flex"
           }`}
         >
@@ -546,7 +546,7 @@ export default function TutorDoubtsPage({
 
         {/* RIGHT PANEL: Active Messenger Chat Area */}
         <div
-          className={`md:col-span-8 flex flex-col h-full min-h-0 bg-white dark:bg-[#131b2e] ${
+          className={`flex-1 flex flex-col h-full min-h-0 bg-white dark:bg-[#131b2e] ${
             selectedDoubtId ? "flex" : "hidden md:flex"
           }`}
         >

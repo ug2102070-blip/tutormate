@@ -21,6 +21,8 @@ export default function TutorLayout({
         router.push("/login");
       } else if (role === "student") {
         router.push("/student/dashboard");
+      } else if (role === "parent") {
+        router.push("/parent/dashboard");
       }
     }
   }, [loading, user, role, router]);
@@ -38,7 +40,7 @@ export default function TutorLayout({
     );
   }
 
-  if (!user || role === "student") {
+  if (!user || (role !== "tutor" && role !== "admin" && role !== "owner")) {
     return null;
   }
 
@@ -47,10 +49,7 @@ export default function TutorLayout({
       <Sidebar role="tutor" />
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <Header />
-        <main
-          className="flex-1 p-4 md:p-6 overflow-y-auto"
-          style={{ paddingBottom: "calc(4.5rem + max(env(safe-area-inset-bottom), 8px))" }}
-        >
+        <main className="flex-1 p-4 md:p-6 overflow-y-auto pb-[calc(4.5rem+max(env(safe-area-inset-bottom),8px))] md:pb-6">
           {children}
         </main>
       </div>

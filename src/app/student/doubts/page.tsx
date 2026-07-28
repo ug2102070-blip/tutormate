@@ -171,9 +171,20 @@ export default function StudentDoubtsPage({
       .subscribe();
 
     async function loadBatches() {
+      // Fetch student's enrolled batch IDs first
+      const { data: studentRow } = await supabase
+        .from("students")
+        .select("enrolled_batch_ids")
+        .eq("auth_uid", currentUserId)
+        .maybeSingle();
+
+      const enrolledIds: string[] = studentRow?.enrolled_batch_ids || [];
+      if (enrolledIds.length === 0) return;
+
       const { data: bData } = await supabase
         .from("batches")
-        .select("*");
+        .select("*")
+        .in("id", enrolledIds);
 
       if (bData) {
         const bList: BatchDoc[] = bData.map((b) => ({
@@ -498,7 +509,7 @@ export default function StudentDoubtsPage({
   };
 
   return (
-    <div className="h-[calc(100vh-9.5rem)] md:h-[calc(100vh-6.5rem)] flex flex-col space-y-3">
+    <div className="h-[calc(100vh-9.5rem)] md:h-[calc(100vh-7rem)] flex flex-col space-y-3">
       {/* Page Header */}
       <div className="flex items-center justify-between px-1 shrink-0">
         <div>
@@ -523,10 +534,10 @@ export default function StudentDoubtsPage({
       </div>
 
       {/* Main Inbox Dual Panel Layout */}
-      <div className="flex-1 grid grid-cols-1 md:grid-cols-12 gap-4 bg-white dark:bg-[#131b2e] border border-slate-200 dark:border-white/10 rounded-2xl shadow-xs overflow-hidden min-h-0">
+      <div className="flex-1 flex flex-col md:flex-row bg-white dark:bg-[#131b2e] border border-slate-200 dark:border-white/10 rounded-2xl shadow-xs overflow-hidden min-h-0">
         {/* LEFT SIDEBAR: Threads & Conversations List */}
         <div
-          className={`md:col-span-4 border-r border-slate-200 dark:border-white/10 flex flex-col bg-slate-50/50 dark:bg-[#0b0f19]/50 ${
+          className={`w-full md:w-80 lg:w-96 border-r border-slate-200 dark:border-white/10 flex flex-col bg-slate-50/50 dark:bg-[#0b0f19]/50 shrink-0 h-full ${
             selectedDoubtId ? "hidden md:flex" : "flex"
           }`}
         >
@@ -641,7 +652,7 @@ export default function StudentDoubtsPage({
 
         {/* RIGHT PANEL: Active Messenger Chat Area */}
         <div
-          className={`md:col-span-8 flex flex-col h-full min-h-0 bg-white dark:bg-[#131b2e] ${
+          className={`flex-1 flex flex-col h-full min-h-0 bg-white dark:bg-[#131b2e] ${
             selectedDoubtId ? "flex" : "hidden md:flex"
           }`}
         >

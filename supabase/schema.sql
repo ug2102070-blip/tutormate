@@ -157,30 +157,78 @@ ALTER TABLE public.doubt_messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.user_presence ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.feedback ENABLE ROW LEVEL SECURITY;
 
--- Permissive policies for server actions (using service key or authenticated users)
+-- Permissive policies for server actions & authenticated users
 DROP POLICY IF EXISTS "Public read profiles" ON public.profiles;
 DROP POLICY IF EXISTS "Public insert profiles" ON public.profiles;
 DROP POLICY IF EXISTS "Public update profiles" ON public.profiles;
-DROP POLICY IF EXISTS "Public all tutors" ON public.tutors;
-DROP POLICY IF EXISTS "Public all batches" ON public.batches;
-DROP POLICY IF EXISTS "Public all students" ON public.students;
-DROP POLICY IF EXISTS "Public all attendance" ON public.attendance;
-DROP POLICY IF EXISTS "Public all fees" ON public.fees;
-DROP POLICY IF EXISTS "Public all doubts" ON public.doubts;
-DROP POLICY IF EXISTS "Public all doubt_messages" ON public.doubt_messages;
-DROP POLICY IF EXISTS "Public all user_presence" ON public.user_presence;
-DROP POLICY IF EXISTS "Public all feedback" ON public.feedback;
+DROP POLICY IF EXISTS "Public profiles" ON public.profiles;
 
-CREATE POLICY "Public profiles" ON public.profiles FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Public tutors" ON public.tutors FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Public batches" ON public.batches FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Public students" ON public.students FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Public attendance" ON public.attendance FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Public fees" ON public.fees FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Public doubts" ON public.doubts FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Public doubt_messages" ON public.doubt_messages FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Public user_presence" ON public.user_presence FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Public feedback" ON public.feedback FOR ALL USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "Public all tutors" ON public.tutors;
+DROP POLICY IF EXISTS "Public tutors" ON public.tutors;
+
+DROP POLICY IF EXISTS "Public all batches" ON public.batches;
+DROP POLICY IF EXISTS "Public batches" ON public.batches;
+
+DROP POLICY IF EXISTS "Public all students" ON public.students;
+DROP POLICY IF EXISTS "Public students" ON public.students;
+
+DROP POLICY IF EXISTS "Public all attendance" ON public.attendance;
+DROP POLICY IF EXISTS "Public attendance" ON public.attendance;
+
+DROP POLICY IF EXISTS "Public all fees" ON public.fees;
+DROP POLICY IF EXISTS "Public fees" ON public.fees;
+
+DROP POLICY IF EXISTS "Public all doubts" ON public.doubts;
+DROP POLICY IF EXISTS "Public doubts" ON public.doubts;
+
+DROP POLICY IF EXISTS "Public all doubt_messages" ON public.doubt_messages;
+DROP POLICY IF EXISTS "Public doubt_messages" ON public.doubt_messages;
+
+DROP POLICY IF EXISTS "Public all user_presence" ON public.user_presence;
+DROP POLICY IF EXISTS "Public user_presence" ON public.user_presence;
+
+DROP POLICY IF EXISTS "Public all feedback" ON public.feedback;
+DROP POLICY IF EXISTS "Public feedback" ON public.feedback;
+
+CREATE POLICY "Profiles SELECT policy" ON public.profiles FOR SELECT USING (true);
+CREATE POLICY "Profiles INSERT policy" ON public.profiles FOR INSERT TO authenticated WITH CHECK (auth.uid() = id OR auth.role() = 'authenticated');
+CREATE POLICY "Profiles UPDATE policy" ON public.profiles FOR UPDATE TO authenticated USING (auth.uid() = id OR auth.role() = 'authenticated') WITH CHECK (auth.uid() = id OR auth.role() = 'authenticated');
+CREATE POLICY "Profiles DELETE policy" ON public.profiles FOR DELETE TO authenticated USING (auth.uid() = id OR auth.role() = 'authenticated');
+
+CREATE POLICY "Tutors SELECT policy" ON public.tutors FOR SELECT USING (true);
+CREATE POLICY "Tutors INSERT policy" ON public.tutors FOR INSERT TO authenticated WITH CHECK (auth.role() = 'authenticated');
+CREATE POLICY "Tutors UPDATE policy" ON public.tutors FOR UPDATE TO authenticated USING (auth.role() = 'authenticated') WITH CHECK (auth.role() = 'authenticated');
+CREATE POLICY "Tutors DELETE policy" ON public.tutors FOR DELETE TO authenticated USING (auth.role() = 'authenticated');
+
+CREATE POLICY "Batches SELECT policy" ON public.batches FOR SELECT USING (true);
+CREATE POLICY "Batches INSERT policy" ON public.batches FOR INSERT TO authenticated WITH CHECK (auth.role() = 'authenticated');
+CREATE POLICY "Batches UPDATE policy" ON public.batches FOR UPDATE TO authenticated USING (auth.role() = 'authenticated') WITH CHECK (auth.role() = 'authenticated');
+CREATE POLICY "Batches DELETE policy" ON public.batches FOR DELETE TO authenticated USING (auth.role() = 'authenticated');
+
+CREATE POLICY "Students SELECT policy" ON public.students FOR SELECT USING (true);
+CREATE POLICY "Students INSERT policy" ON public.students FOR INSERT TO authenticated WITH CHECK (auth.role() = 'authenticated');
+CREATE POLICY "Students UPDATE policy" ON public.students FOR UPDATE TO authenticated USING (auth.role() = 'authenticated') WITH CHECK (auth.role() = 'authenticated');
+CREATE POLICY "Students DELETE policy" ON public.students FOR DELETE TO authenticated USING (auth.role() = 'authenticated');
+
+CREATE POLICY "Attendance SELECT policy" ON public.attendance FOR SELECT USING (true);
+CREATE POLICY "Attendance WRITE policy" ON public.attendance FOR ALL TO authenticated USING (auth.role() = 'authenticated') WITH CHECK (auth.role() = 'authenticated');
+
+CREATE POLICY "Fees SELECT policy" ON public.fees FOR SELECT USING (true);
+CREATE POLICY "Fees WRITE policy" ON public.fees FOR ALL TO authenticated USING (auth.role() = 'authenticated') WITH CHECK (auth.role() = 'authenticated');
+
+CREATE POLICY "Doubts SELECT policy" ON public.doubts FOR SELECT USING (true);
+CREATE POLICY "Doubts WRITE policy" ON public.doubts FOR ALL TO authenticated USING (auth.role() = 'authenticated') WITH CHECK (auth.role() = 'authenticated');
+
+CREATE POLICY "Doubt Messages SELECT policy" ON public.doubt_messages FOR SELECT USING (true);
+CREATE POLICY "Doubt Messages WRITE policy" ON public.doubt_messages FOR ALL TO authenticated USING (auth.role() = 'authenticated') WITH CHECK (auth.role() = 'authenticated');
+
+CREATE POLICY "User Presence SELECT policy" ON public.user_presence FOR SELECT USING (true);
+CREATE POLICY "User Presence WRITE policy" ON public.user_presence FOR ALL TO authenticated USING (auth.role() = 'authenticated') WITH CHECK (auth.role() = 'authenticated');
+
+CREATE POLICY "Feedback SELECT policy" ON public.feedback FOR SELECT USING (true);
+CREATE POLICY "Feedback INSERT policy" ON public.feedback FOR INSERT TO authenticated WITH CHECK (auth.role() = 'authenticated');
+CREATE POLICY "Feedback UPDATE policy" ON public.feedback FOR UPDATE TO authenticated USING (auth.role() = 'authenticated');
+CREATE POLICY "Feedback DELETE policy" ON public.feedback FOR DELETE TO authenticated USING (auth.role() = 'authenticated');
 
 -- Enable Supabase Realtime for Doubts & Messages tables
 ALTER PUBLICATION supabase_realtime ADD TABLE public.doubts;
@@ -189,7 +237,16 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.doubt_messages;
 -- Create Storage Buckets (Execute in Supabase Storage UI or via SQL)
 INSERT INTO storage.buckets (id, name, public) VALUES ('attachments', 'attachments', true) ON CONFLICT (id) DO NOTHING;
 DROP POLICY IF EXISTS "Public attachment access" ON storage.objects;
-CREATE POLICY "Public attachment access" ON storage.objects FOR ALL USING (bucket_id = 'attachments') WITH CHECK (bucket_id = 'attachments');
+DROP POLICY IF EXISTS "Attachment select access" ON storage.objects;
+DROP POLICY IF EXISTS "Attachment insert access" ON storage.objects;
+DROP POLICY IF EXISTS "Attachment update access" ON storage.objects;
+DROP POLICY IF EXISTS "Attachment delete access" ON storage.objects;
+
+-- No SELECT policy: prevents bucket listing while public URLs still work
+-- Public bucket objects are accessible via https://<project>.supabase.co/storage/v1/object/public/attachments/...
+CREATE POLICY "Attachment insert access" ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id = 'attachments');
+CREATE POLICY "Attachment update access" ON storage.objects FOR UPDATE TO authenticated USING (bucket_id = 'attachments');
+CREATE POLICY "Attachment delete access" ON storage.objects FOR DELETE TO authenticated USING (bucket_id = 'attachments');
 
 -- 11. Create Materials Table
 CREATE TABLE IF NOT EXISTS public.materials (

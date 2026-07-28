@@ -16,7 +16,7 @@ interface AuthState {
   claims: CustomClaims | null;
   role: UserRole | null;
   loading: boolean;
-  refreshClaims: () => Promise<void>;
+  refreshClaims: (forUser?: User) => Promise<void>;
   refreshUser: () => Promise<void>;
 }
 
@@ -25,7 +25,7 @@ const AuthContext = createContext<AuthState>({
   claims: null,
   role: null,
   loading: true,
-  refreshClaims: async () => {},
+  refreshClaims: async (_forUser?: User) => {},
   refreshUser: async () => {},
 });
 
@@ -79,9 +79,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  async function refreshClaims() {
-    if (!user) return;
-    const newClaims = await fetchUserClaims(user);
+  async function refreshClaims(forUser?: User) {
+    const targetUser = forUser ?? user;
+    if (!targetUser) return;
+    const newClaims = await fetchUserClaims(targetUser);
     setClaims(newClaims);
   }
 

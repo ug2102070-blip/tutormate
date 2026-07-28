@@ -158,10 +158,8 @@ async function fetchProfileAuth(uid: string, email?: string): Promise<VerifiedAu
     }
   }
 
-  // Fallback for tutorId if user role has tutor level access or above
-  if (!tutorId && (role === "tutor" || role === "admin" || role === "owner")) {
-    tutorId = uid;
-  }
+  // NOTE: No fallback role — if role cannot be determined, it stays null.
+  // Callers (layouts, guards) should handle null role by redirecting to login.
 
   // 5. Fetch custom per-user permissions from user_permissions table
   const permissionsSet = new Set<Permission>(getRoleDefaultPermissions(role));

@@ -1,9 +1,9 @@
-﻿import type { Metadata } from "next";
+import type { Metadata } from "next";
 import Link from "next/link";
 import {
   ArrowRight, Users, CalendarCheck, CreditCard, HelpCircle,
   BookOpen, FileText, Award, Sparkles, Bell, ShieldCheck,
-  Building2, Video, Star,
+  Building2, Video, Star, CheckCircle2,
 } from "lucide-react";
 
 export const metadata: Metadata = {
@@ -34,78 +34,123 @@ const TESTIMONIALS = [
 
 export default function PublicHomePage() {
   return (
-    <div className="space-y-0">
+    <div className="space-y-0 overflow-x-hidden">
       {/* Hero Section */}
-      <section className="py-20 px-6 lg:px-16 text-center max-w-4xl mx-auto space-y-7">
+      <section className="relative py-14 sm:py-24 px-4 sm:px-6 lg:px-16 text-center max-w-5xl mx-auto space-y-6 sm:space-y-8">
+        {/* Subtle background glow */}
         <div
-          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold"
-          style={{ background: "var(--color-primary-50)", color: "var(--color-primary)", border: "1px solid var(--color-primary-100)" }}
-        >
-          <ShieldCheck className="w-3.5 h-3.5" />
-          Trusted by 500+ tutors across Bangladesh
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] sm:w-[500px] h-[300px] sm:h-[500px] rounded-full opacity-20 pointer-events-none blur-3xl"
+          style={{ background: "radial-gradient(circle, var(--color-primary) 0%, #a855f7 100%)" }}
+        />
+
+        <div className="relative z-10 space-y-6">
+          <div
+            className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold shadow-sm transition-transform hover:scale-105"
+            style={{
+              background: "var(--color-primary-50)",
+              color: "var(--color-primary)",
+              border: "1px solid var(--color-primary-100)",
+            }}
+          >
+            <ShieldCheck className="w-4 h-4 text-[var(--color-primary)]" />
+            <span>Built for Tutors & Coaching Centers in Bangladesh</span>
+          </div>
+
+          <h1
+            className="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-[1.15] sm:leading-[1.1]"
+            style={{ color: "var(--color-text)" }}
+          >
+            Manage Your Batches & Fees{" "}
+            <span
+              className="bg-clip-text text-transparent block sm:inline mt-1 sm:mt-0"
+              style={{
+                backgroundImage: "linear-gradient(135deg, var(--color-primary) 0%, #8b5cf6 50%, #06b6d4 100%)",
+              }}
+            >
+              Without the Stress
+            </span>
+          </h1>
+
+          <p
+            className="text-base sm:text-lg max-w-2xl mx-auto leading-relaxed px-2"
+            style={{ color: "var(--color-text-secondary)" }}
+          >
+            TutorMate is the all-in-one platform for private tutors and small coaching centers. Track attendance, collect monthly fees, and answer student questions effortlessly.
+          </p>
+
+          {/* Action CTAs */}
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 max-w-md mx-auto pt-2">
+            <Link
+              href="/register"
+              className="w-full sm:w-auto px-7 py-3.5 text-sm sm:text-base font-bold text-white rounded-xl shadow-lg shadow-indigo-500/25 transition-all hover:opacity-95 hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-2"
+              style={{
+                background: "linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%)",
+              }}
+            >
+              Start Free 30-Day Trial <ArrowRight className="w-4 h-4" />
+            </Link>
+
+            <Link
+              href="/pricing"
+              className="w-full sm:w-auto px-7 py-3.5 text-sm sm:text-base font-semibold rounded-xl border transition-all hover:bg-[var(--color-bg-secondary)] flex items-center justify-center"
+              style={{
+                borderColor: "var(--color-border)",
+                color: "var(--color-text)",
+                background: "var(--color-surface)",
+              }}
+            >
+              View Pricing
+            </Link>
+          </div>
+
+          <div className="flex items-center justify-center gap-4 text-xs font-medium pt-1" style={{ color: "var(--color-text-muted)" }}>
+            <span className="flex items-center gap-1">
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> No credit card required
+            </span>
+            <span>•</span>
+            <span className="flex items-center gap-1">
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> 1-min setup
+            </span>
+          </div>
         </div>
-
-        <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-[1.1]" style={{ color: "var(--color-text)" }}>
-          The Smart Way to{" "}
-          <span
-            className="bg-clip-text text-transparent"
-            style={{ backgroundImage: "linear-gradient(135deg, var(--color-primary) 0%, var(--color-accent, #a855f7) 100%)" }}
-          >
-            Run Your Classes
-          </span>
-        </h1>
-
-        <p className="text-lg max-w-2xl mx-auto leading-relaxed" style={{ color: "var(--color-text-secondary)" }}>
-          TutorMate handles attendance, fees, assignments, exams, and parent communication — so you can focus on teaching.
-        </p>
-
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-          <Link
-            href="/register"
-            className="w-full sm:w-auto px-8 py-3.5 text-base font-bold text-white rounded-xl shadow-lg transition-all hover:opacity-90 flex items-center justify-center gap-2"
-            style={{ background: "linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%)" }}
-          >
-            Start Free 30-Day Trial <ArrowRight className="w-4 h-4" />
-          </Link>
-          <Link
-            href="/pricing"
-            className="w-full sm:w-auto px-8 py-3.5 text-base font-semibold rounded-xl border transition-all hover:bg-[var(--color-bg-secondary)]"
-            style={{ borderColor: "var(--color-border)", color: "var(--color-text)" }}
-          >
-            View Pricing
-          </Link>
-        </div>
-
-        <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
-          No credit card required. Cancel anytime.
-        </p>
       </section>
 
       {/* Features Grid */}
-      <section className="py-16 px-6 lg:px-16" style={{ background: "var(--color-bg-secondary)" }}>
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-12 space-y-2">
-            <h2 className="text-2xl sm:text-3xl font-extrabold" style={{ color: "var(--color-text)" }}>
+      <section className="py-14 sm:py-20 px-4 sm:px-6 lg:px-16" style={{ background: "var(--color-bg-secondary)" }}>
+        <div className="max-w-6xl mx-auto space-y-10">
+          <div className="text-center space-y-2">
+            <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight" style={{ color: "var(--color-text)" }}>
               Everything you need, nothing you don&apos;t
             </h2>
-            <p style={{ color: "var(--color-text-secondary)" }} className="text-sm">
-              12+ features designed for Bangladesh&apos;s tutoring industry
+            <p style={{ color: "var(--color-text-secondary)" }} className="text-sm max-w-xl mx-auto">
+              12+ powerful features designed specifically for Bangladesh&apos;s tutoring industry
             </p>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {FEATURES.map(f => {
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+            {FEATURES.map((f) => {
               const Icon = f.icon;
               return (
                 <div
                   key={f.title}
-                  className="p-5 rounded-2xl transition-all hover:scale-[1.01] duration-200"
-                  style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
+                  className="p-5 rounded-2xl transition-all hover:shadow-md hover:-translate-y-0.5 duration-200 border"
+                  style={{
+                    background: "var(--color-surface)",
+                    borderColor: "var(--color-border)",
+                  }}
                 >
-                  <div className="w-9 h-9 rounded-xl flex items-center justify-center mb-3" style={{ background: `${f.color}18` }}>
-                    <Icon className="w-4.5 h-4.5" style={{ color: f.color }} />
+                  <div
+                    className="w-10 h-10 rounded-xl flex items-center justify-center mb-3.5 shadow-sm"
+                    style={{ background: `${f.color}15` }}
+                  >
+                    <Icon className="w-5 h-5" style={{ color: f.color }} />
                   </div>
-                  <h3 className="font-bold text-sm mb-1" style={{ color: "var(--color-text)" }}>{f.title}</h3>
-                  <p className="text-xs leading-relaxed" style={{ color: "var(--color-text-muted)" }}>{f.desc}</p>
+                  <h3 className="font-bold text-base mb-1.5" style={{ color: "var(--color-text)" }}>
+                    {f.title}
+                  </h3>
+                  <p className="text-xs sm:text-sm leading-relaxed" style={{ color: "var(--color-text-secondary)" }}>
+                    {f.desc}
+                  </p>
                 </div>
               );
             })}
@@ -114,21 +159,35 @@ export default function PublicHomePage() {
       </section>
 
       {/* Testimonials */}
-      <section className="py-16 px-6 lg:px-16">
-        <div className="max-w-5xl mx-auto">
-          <h2 className="text-2xl font-extrabold text-center mb-10" style={{ color: "var(--color-text)" }}>
-            Loved by tutors
-          </h2>
+      <section className="py-14 sm:py-20 px-4 sm:px-6 lg:px-16">
+        <div className="max-w-5xl mx-auto space-y-10">
+          <div className="text-center space-y-2">
+            <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight" style={{ color: "var(--color-text)" }}>
+              Loved by tutors across Bangladesh
+            </h2>
+            <p className="text-sm" style={{ color: "var(--color-text-secondary)" }}>
+              See how TutorMate transforms batch management for teachers.
+            </p>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-            {TESTIMONIALS.map(t => (
-              <div key={t.name} className="rounded-2xl p-5 space-y-3" style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}>
-                <div className="flex gap-0.5">
-                  {Array.from({ length: t.rating }).map((_, i) => (
-                    <Star key={i} className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-                  ))}
+            {TESTIMONIALS.map((t) => (
+              <div
+                key={t.name}
+                className="rounded-2xl p-6 space-y-4 border shadow-sm flex flex-col justify-between"
+                style={{ background: "var(--color-surface)", borderColor: "var(--color-border)" }}
+              >
+                <div className="space-y-3">
+                  <div className="flex gap-1">
+                    {Array.from({ length: t.rating }).map((_, i) => (
+                      <Star key={i} className="w-4 h-4 fill-amber-400 text-amber-400" />
+                    ))}
+                  </div>
+                  <p className="text-xs sm:text-sm leading-relaxed italic" style={{ color: "var(--color-text)" }}>
+                    &quot;{t.text}&quot;
+                  </p>
                 </div>
-                <p className="text-sm leading-relaxed" style={{ color: "var(--color-text-secondary)" }}>&quot;{t.text}&quot;</p>
-                <div>
+                <div className="pt-2 border-t" style={{ borderColor: "var(--color-border)" }}>
                   <p className="text-xs font-bold" style={{ color: "var(--color-text)" }}>{t.name}</p>
                   <p className="text-[11px]" style={{ color: "var(--color-text-muted)" }}>{t.role}</p>
                 </div>
@@ -138,21 +197,24 @@ export default function PublicHomePage() {
         </div>
       </section>
 
-      {/* CTA Banner */}
+      {/* Final CTA Banner */}
       <section
-        className="py-16 px-6 lg:px-16 text-center"
-        style={{ background: "var(--color-primary-50)", borderTop: "1px solid var(--color-primary-100)", borderBottom: "1px solid var(--color-primary-100)" }}
+        className="py-14 sm:py-20 px-4 sm:px-6 lg:px-16 text-center border-t border-b"
+        style={{
+          background: "var(--color-primary-50)",
+          borderColor: "var(--color-primary-100)",
+        }}
       >
         <div className="max-w-2xl mx-auto space-y-5">
-          <h2 className="text-2xl sm:text-3xl font-extrabold" style={{ color: "var(--color-text)" }}>
+          <h2 className="text-2xl sm:text-4xl font-extrabold tracking-tight" style={{ color: "var(--color-text)" }}>
             Start managing smarter today
           </h2>
-          <p className="text-sm" style={{ color: "var(--color-text-secondary)" }}>
+          <p className="text-sm sm:text-base max-w-lg mx-auto" style={{ color: "var(--color-text-secondary)" }}>
             Join hundreds of tutors who have simplified their teaching business with TutorMate.
           </p>
           <Link
             href="/register"
-            className="inline-flex items-center gap-2 px-8 py-3 text-sm font-bold text-white rounded-xl shadow-lg transition-all hover:opacity-90"
+            className="inline-flex items-center gap-2 px-8 py-3.5 text-sm sm:text-base font-bold text-white rounded-xl shadow-lg shadow-indigo-500/25 transition-all hover:opacity-95 hover:scale-105 active:scale-95"
             style={{ background: "linear-gradient(135deg, var(--color-primary), var(--color-primary-dark))" }}
           >
             Get Started Free <ArrowRight className="w-4 h-4" />

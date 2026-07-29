@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useLanguage } from "@/context/LanguageContext";
 import { formatBDT } from "@/lib/utils";
 import type { BatchDoc } from "@/types";
 import { Plus, Users, Calendar, Archive, CheckCircle } from "lucide-react";
@@ -11,6 +12,7 @@ import { toggleArchiveBatch } from "@/actions/batchActions";
 
 export default function BatchesPage() {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const [batches, setBatches] = useState<BatchDoc[]>([]);
   const [tab, setTab] = useState<"active" | "archived">("active");
   const [loading, setLoading] = useState(true);
@@ -25,7 +27,8 @@ export default function BatchesPage() {
     async function loadBatches() {
       const { data } = await supabase
         .from("batches")
-        .select("*");
+        .select("*")
+        .eq("tutor_id", user!.id);
 
       if (data) {
         setBatches(
@@ -67,10 +70,10 @@ export default function BatchesPage() {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
-            Batches & Classes
+            {t("batches.title")}
           </h1>
           <p className="text-sm text-slate-500 dark:text-slate-400 font-medium mt-0.5">
-            Manage your teaching batches, schedules, and monthly fees
+            {t("batches.subtitle")}
           </p>
         </div>
 
@@ -78,7 +81,7 @@ export default function BatchesPage() {
           href="/tutor/batches/new"
           className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-xs transition-all"
         >
-          <Plus className="w-4 h-4" /> Create New Batch
+          <Plus className="w-4 h-4" /> {t("batches.createNew")}
         </Link>
       </div>
 
@@ -92,7 +95,7 @@ export default function BatchesPage() {
               : "text-slate-500 dark:text-slate-400 hover:text-slate-900"
           }`}
         >
-          Active Batches ({batches.filter((b) => !b.isArchived).length})
+          {t("batches.activeBatches")} ({batches.filter((b) => !b.isArchived).length})
         </button>
         <button
           onClick={() => setTab("archived")}
@@ -102,7 +105,7 @@ export default function BatchesPage() {
               : "text-slate-500 dark:text-slate-400 hover:text-slate-900"
           }`}
         >
-          Archived ({batches.filter((b) => b.isArchived).length})
+          {t("batches.archivedBatches")} ({batches.filter((b) => b.isArchived).length})
         </button>
       </div>
 

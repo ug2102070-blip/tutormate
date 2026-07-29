@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { useLanguage } from "@/context/LanguageContext";
 import { createClient } from "@/lib/supabase/client";
 import { getStudentMaterials } from "@/actions/materialActions";
 import { getMediaSignedUrl } from "@/actions/mediaActions";
@@ -11,6 +12,7 @@ import type { BatchDoc, MaterialDoc } from "@/types";
 
 export default function StudentMaterialsPage() {
   const { user, loading: authLoading } = useAuth();
+  const { t } = useLanguage();
   const [batches, setBatches] = useState<BatchDoc[]>([]);
   const [materials, setMaterials] = useState<MaterialDoc[]>([]);
   const [selectedBatchId, setSelectedBatchId] = useState<string>("all");
@@ -107,9 +109,9 @@ export default function StudentMaterialsPage() {
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
             <BookOpen className="w-6 h-6 text-indigo-600" />
-            Study Materials
+            {t("materials.title")}
           </h1>
-          <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">Access lecture notes, assignments, and study resources from your tutor.</p>
+          <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">{t("materials.subtitle")}</p>
         </div>
 
         <Link

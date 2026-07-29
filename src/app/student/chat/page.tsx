@@ -33,6 +33,7 @@ export default function StudentChatPage() {
   const [toastMessage, setToastMessage] = useState<{ text: string; type: "success" | "error" } | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
   const supabase = createClient();
 
   const fetchConvs = async () => {
@@ -105,7 +106,12 @@ export default function StudentChatPage() {
   }, [activeConv?.id, user?.id]);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTo({
+        top: chatContainerRef.current.scrollHeight,
+        behavior: "smooth",
+      });
+    }
   }, [messages]);
 
   const showToast = (text: string, type: "success" | "error" = "success") => {
@@ -238,7 +244,7 @@ export default function StudentChatPage() {
                 </div>
               </div>
 
-              <div className="flex-1 p-4 overflow-y-auto space-y-3">
+              <div ref={chatContainerRef} className="flex-1 p-4 overflow-y-auto space-y-3">
                 {loadingMsgs ? (
                   <div className="py-12 flex justify-center items-center gap-2 text-xs text-gray-400">
                     <RefreshCw className="w-4 h-4 animate-spin" /> Loading messages...

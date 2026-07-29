@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { useLanguage } from "@/context/LanguageContext";
 import Link from "next/link";
 import {
   Users,
@@ -37,6 +38,7 @@ import { DonutChart } from "@/components/charts/DonutChart";
 
 export default function TutorDashboardPage() {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const [loading, setLoading] = useState(true);
 
   const [metrics, setMetrics] = useState<DashboardMetrics>({
@@ -92,7 +94,7 @@ export default function TutorDashboardPage() {
 
   const stats = [
     {
-      label: "Active Batches",
+      label: t("dashboard.activeBatches"),
       value: metrics.activeBatches,
       icon: Users,
       color: "#6366f1",
@@ -100,7 +102,7 @@ export default function TutorDashboardPage() {
       href: "/tutor/batches",
     },
     {
-      label: "Active Students",
+      label: t("dashboard.activeStudents"),
       value: metrics.activeStudents,
       icon: GraduationCap,
       color: "#06b6d4",
@@ -108,7 +110,7 @@ export default function TutorDashboardPage() {
       href: "/tutor/students",
     },
     {
-      label: "This Month Revenue",
+      label: t("dashboard.monthlyRevenue"),
       value: `৳${metrics.monthlyRevenue.toLocaleString()}`,
       icon: CreditCard,
       color: "#10b981",
@@ -116,7 +118,7 @@ export default function TutorDashboardPage() {
       href: "/tutor/fees",
     },
     {
-      label: "Pending Fees",
+      label: t("dashboard.pendingFees"),
       value: `৳${metrics.pendingFeeAmount.toLocaleString()}`,
       icon: AlertCircle,
       color: "#ef4444",
@@ -124,7 +126,7 @@ export default function TutorDashboardPage() {
       href: "/tutor/fees",
     },
     {
-      label: "Attendance Rate",
+      label: t("dashboard.attendanceRate"),
       value: `${metrics.attendancePercentage}%`,
       icon: CalendarCheck,
       color: "#8b5cf6",
@@ -132,7 +134,7 @@ export default function TutorDashboardPage() {
       href: "/tutor/attendance",
     },
     {
-      label: "Pending Doubts",
+      label: t("dashboard.pendingDoubts"),
       value: metrics.pendingDoubts,
       icon: HelpCircle,
       color: "#f59e0b",
@@ -142,16 +144,16 @@ export default function TutorDashboardPage() {
   ];
 
   const quickActions = [
-    { href: "/tutor/ai-assistant", label: "AI Assistant", icon: Sparkles, color: "#7c3aed", bg: "rgba(124, 58, 237, 0.1)" },
-    { href: "/tutor/batches", label: "Batches", icon: Users, color: "#6366f1", bg: "rgba(99, 102, 241, 0.1)" },
-    { href: "/tutor/attendance", label: "Attendance", icon: CalendarCheck, color: "#10b981", bg: "rgba(16, 185, 129, 0.1)" },
-    { href: "/tutor/assignments", label: "Assignments", icon: FileText, color: "#8b5cf6", bg: "rgba(139, 92, 246, 0.1)" },
-    { href: "/tutor/exams", label: "Exams", icon: Award, color: "#f59e0b", bg: "rgba(245, 158, 11, 0.1)" },
-    { href: "/tutor/materials", label: "Materials", icon: BookOpen, color: "#06b6d4", bg: "rgba(6, 182, 212, 0.1)" },
+    { href: "/tutor/ai-assistant", label: t("nav.aiAssistant"), icon: Sparkles, color: "#7c3aed", bg: "rgba(124, 58, 237, 0.1)" },
+    { href: "/tutor/batches", label: t("nav.batches"), icon: Users, color: "#6366f1", bg: "rgba(99, 102, 241, 0.1)" },
+    { href: "/tutor/attendance", label: t("nav.attendance"), icon: CalendarCheck, color: "#10b981", bg: "rgba(16, 185, 129, 0.1)" },
+    { href: "/tutor/assignments", label: t("nav.assignments"), icon: FileText, color: "#8b5cf6", bg: "rgba(139, 92, 246, 0.1)" },
+    { href: "/tutor/exams", label: t("nav.exams"), icon: Award, color: "#f59e0b", bg: "rgba(245, 158, 11, 0.1)" },
+    { href: "/tutor/materials", label: t("nav.materials"), icon: BookOpen, color: "#06b6d4", bg: "rgba(6, 182, 212, 0.1)" },
   ];
 
   const feeDonutData = feeDist.map((item) => ({
-    label: item.status === "paid" ? "Paid" : item.status === "partial" ? "Partial" : "Unpaid",
+    label: item.status === "paid" ? t("fees.paid") : item.status === "partial" ? t("fees.partial") : t("fees.unpaid"),
     value: item.count,
     color: item.status === "paid" ? "#10b981" : item.status === "partial" ? "#f59e0b" : "#ef4444",
   }));
@@ -185,13 +187,13 @@ export default function TutorDashboardPage() {
         <div className="relative z-10 flex items-center justify-between">
           <div>
             <p className="text-white/70 text-xs font-semibold uppercase tracking-wider mb-1">
-              Welcome back
+              {t("dashboard.welcome")}
             </p>
             <h1 className="text-xl sm:text-3xl font-extrabold tracking-tight">
               {tutorName} 👋
             </h1>
             <p className="mt-1 text-white/80 text-xs sm:text-sm max-w-md leading-relaxed">
-              Track live batch metrics, monthly fee revenue, and utilize your AI Teaching Assistant.
+              {t("dashboard.tutorSubtitle")}
             </p>
           </div>
 
@@ -200,7 +202,7 @@ export default function TutorDashboardPage() {
             className="hidden sm:flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/20 hover:bg-white/30 text-white font-bold text-xs backdrop-blur-md transition-all active:scale-95 shadow-md"
           >
             <Sparkles className="w-4 h-4 text-amber-300" />
-            Launch AI Assistant
+            {t("dashboard.launchAi")}
           </Link>
         </div>
       </div>
@@ -215,11 +217,11 @@ export default function TutorDashboardPage() {
             className="text-xs font-bold uppercase tracking-wider"
             style={{ color: "var(--color-text-muted)" }}
           >
-            Overview & Metrics
+            {t("dashboard.overviewMetrics")}
           </h2>
           {loading && (
             <span className="text-[11px] font-semibold text-indigo-500 animate-pulse">
-              Syncing live data...
+              {t("dashboard.syncingData")}
             </span>
           )}
         </div>

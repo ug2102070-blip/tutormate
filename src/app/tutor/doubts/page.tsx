@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef, useCallback, use } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useLanguage } from "@/context/LanguageContext";
 import { usePresence, useUserPresence } from "@/hooks/usePresence";
 import { postMessage, markDoubtAsRead, updateDoubtStatus } from "@/actions/doubtActions";
 import { getMediaSignedUrl } from "@/actions/mediaActions";
@@ -34,6 +35,7 @@ export default function TutorDoubtsPage({
   const initialSelectedId = unwrappedSearchParams?.id;
 
   const { user, claims } = useAuth();
+  const { t } = useLanguage();
   usePresence(user?.id);
   const supabase = createClient();
 
@@ -225,7 +227,12 @@ export default function TutorDoubtsPage({
     prevMessageCountRef.current = messages.length;
 
     if (isThreadChanged || (hasNewMessages && isAtBottomRef.current)) {
-      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      if (chatContainerRef.current) {
+        chatContainerRef.current.scrollTo({
+          top: chatContainerRef.current.scrollHeight,
+          behavior: isThreadChanged ? "auto" : "smooth",
+        });
+      }
     }
   }, [messages, selectedDoubtId]);
 
@@ -412,7 +419,7 @@ export default function TutorDoubtsPage({
       <div className="flex items-center justify-between px-1 shrink-0">
         <div>
           <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
-            Student Inbox & Doubts Chat
+            {t("doubts.title") || "Student Doubts & Questions"}
           </h1>
           <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
             Answer questions submitted by your batch students with images, files & voice messages
@@ -421,7 +428,7 @@ export default function TutorDoubtsPage({
 
         {pendingCount > 0 && (
           <span className="px-3 py-1 rounded-xl text-xs font-extrabold bg-amber-500 text-white shadow-xs">
-            {pendingCount} Pending Answers
+            {pendingCount} {t("doubts.pending") || "Pending"}
           </span>
         )}
       </div>

@@ -7,8 +7,8 @@ export const metadata: Metadata = {
 };
 
 const CONTACTS = [
-  { icon: Mail, label: "Email", value: "support@tutormate.app", href: "mailto:support@tutormate.app" },
-  { icon: Phone, label: "WhatsApp", value: "+880 1700-000000", href: "https://wa.me/8801700000000" },
+  { icon: Mail, label: "Email", value: "iamjahid.2025@gmail.com", href: "mailto:iamjahid.2025@gmail.com" },
+  { icon: Phone, label: "WhatsApp", value: "+880 1704-642575", href: "https://wa.me/8801704642575" },
   { icon: MapPin, label: "Location", value: "Dhaka, Bangladesh", href: null },
   { icon: MessageCircle, label: "Response Time", value: "Within 24 hours", href: null },
 ];

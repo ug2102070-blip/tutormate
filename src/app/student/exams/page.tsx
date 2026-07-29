@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { useLanguage } from "@/context/LanguageContext";
 import { createClient } from "@/lib/supabase/client";
 import { getStudentExamResults } from "@/actions/examActions";
 import { Award, Loader2, Calendar, BookOpen, AlertCircle, TrendingUp } from "lucide-react";
@@ -14,6 +15,7 @@ type ResultWithExam = {
 
 export default function StudentExamsPage() {
   const { user, loading: authLoading } = useAuth();
+  const { t } = useLanguage();
   const [results, setResults] = useState<ResultWithExam[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -69,9 +71,9 @@ export default function StudentExamsPage() {
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
             <Award className="w-6 h-6 text-indigo-600" />
-            My Exam Results
+            {t("exams.title")}
           </h1>
-          <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">Track your performance and grades across all batches.</p>
+          <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">{t("exams.subtitle")}</p>
         </div>
       </div>
 

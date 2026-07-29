@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef, useCallback, use } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useLanguage } from "@/context/LanguageContext";
 import { usePresence, useUserPresence } from "@/hooks/usePresence";
 import { createDoubt, postMessage, markDoubtAsRead, updateDoubtStatus } from "@/actions/doubtActions";
 import { getMediaSignedUrl } from "@/actions/mediaActions";
@@ -35,6 +36,7 @@ export default function StudentDoubtsPage({
   const initialSelectedId = unwrappedSearchParams?.id;
 
   const { user, claims } = useAuth();
+  const { t } = useLanguage();
   usePresence(user?.id);
   const supabase = createClient();
 
@@ -274,7 +276,12 @@ export default function StudentDoubtsPage({
     prevMessageCountRef.current = messages.length;
 
     if (isThreadChanged || (hasNewMessages && isAtBottomRef.current)) {
-      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      if (chatContainerRef.current) {
+        chatContainerRef.current.scrollTo({
+          top: chatContainerRef.current.scrollHeight,
+          behavior: isThreadChanged ? "auto" : "smooth",
+        });
+      }
     }
   }, [messages, selectedDoubtId]);
 
@@ -514,7 +521,7 @@ export default function StudentDoubtsPage({
       <div className="flex items-center justify-between px-1 shrink-0">
         <div>
           <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
-            Inbox & Teacher Chat
+            {t("doubts.studentTitle") || "Inbox & Teacher Chat"}
           </h1>
           <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
             Direct real-time chat with your teacher, send voice notes, images & study files

@@ -3,9 +3,17 @@
     "title": "TutorMate",
     "subtitle": "Smart Coaching & Student Management System"
   },
+  "navCategory": {
+    "overview": "Overview",
+    "academic": "Academic",
+    "finance": "Finance & Management",
+    "accountFinance": "Account & Finance"
+  },
   "nav": {
     "dashboard": "Dashboard",
     "aiAssistant": "AI Assistant 🤖",
+    "chat": "Internal Chat",
+    "classChat": "Class Chat",
     "coaching": "Coaching Center 🏫",
     "permissions": "Role Permissions 🔑",
     "subscription": "Subscription 💎",
@@ -23,6 +31,14 @@
     "myAttendance": "My Attendance",
     "paymentHistory": "Payment History"
   },
+  "header": {
+    "portal": "Portal",
+    "language": "Language",
+    "theme": "Theme",
+    "accountSettings": "Account Settings",
+    "subscriptionPlan": "Subscription Plan",
+    "signOut": "Sign Out"
+  },
   "common": {
     "loading": "Loading...",
     "save": "Save Changes",
@@ -34,7 +50,8 @@
     "action": "Action",
     "actions": "Actions",
     "status": "Status",
-    "active": "Active font",
+    "active": "Active",
+    "inactive": "Inactive",
     "search": "Search...",
     "filter": "Filter",
     "refresh": "Refresh",
@@ -42,7 +59,66 @@
     "error": "Error",
     "all": "All",
     "none": "None",
-    "back": "Back"
+    "back": "Back",
+    "add": "Add New",
+    "details": "Details",
+    "close": "Close"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "welcome": "Welcome back",
+    "hello": "Hello",
+    "tutorSubtitle": "Track live batch metrics, monthly fee revenue, and utilize your AI Teaching Assistant.",
+    "studentSubtitle": "Welcome to your student portal. Track your class attendance, monthly fee history, and ask questions to your teacher.",
+    "launchAi": "Launch AI Assistant",
+    "overviewMetrics": "Overview & Metrics",
+    "syncingData": "Syncing live data...",
+    "totalStudents": "Total Students",
+    "activeStudents": "Active Students",
+    "activeBatches": "Active Batches",
+    "monthlyRevenue": "This Month Revenue",
+    "pendingFees": "Pending Fees",
+    "attendanceRate": "Attendance Rate",
+    "pendingDoubts": "Pending Doubts",
+    "collectedFees": "Fees Collected",
+    "dueFees": "Total Dues",
+    "recentActivity": "Recent Activity",
+    "myAttendanceDesc": "View your class attendance logs",
+    "paymentHistoryDesc": "Check your monthly fee statuses",
+    "askYourTeacher": "Ask Your Teacher",
+    "askTeacherDesc": "Ask doubts with image attachments"
+  },
+  "batches": {
+    "title": "Batches & Classes",
+    "subtitle": "Manage your teaching batches, schedules, and monthly fees",
+    "createNew": "Create New Batch",
+    "activeBatches": "Active Batches",
+    "archivedBatches": "Archived Batches",
+    "noBatches": "No active batches found",
+    "perMonth": "per month",
+    "students": "students",
+    "schedule": "Schedule"
+  },
+  "students": {
+    "title": "Students Directory",
+    "subtitle": "Manage enrolled students, batch assignments, and contact details",
+    "addNewStudent": "Add New Student",
+    "parentPhone": "Parent Phone",
+    "enrolledBatches": "Enrolled Batches"
+  },
+  "settings": {
+    "title": "Account & Profile Settings",
+    "subtitle": "Manage your personal details, coaching branding, appearance, bKash/Nagad payment info, and subscription",
+    "appearanceTheme": "Appearance & Dark Mode Theme",
+    "langPref": "Language Preferences (Language Preferences)",
+    "updatedSuccess": "Settings updated successfully!"
+  },
+  "doubts": {
+    "title": "Student Doubts & Questions",
+    "studentTitle": "Ask Your Teacher (Doubts)",
+    "submitDoubt": "Submit Question",
+    "resolved": "Resolved",
+    "pending": "Pending"
   },
   "fees": {
     "title": "Fee Management & Ledger",
@@ -63,11 +139,53 @@
   },
   "attendance": {
     "title": "Class Attendance Engine",
+    "subtitle": "Track and record student attendance by batch",
     "markAttendance": "Mark Attendance",
     "present": "Present",
     "absent": "Absent",
     "late": "Late",
     "qrScan": "Scan QR Code 📷"
+  },
+  "materials": {
+    "title": "Study Materials & Notes",
+    "subtitle": "Share lecture notes, PDFs, and study guides with your students",
+    "uploadNew": "Upload Material",
+    "noMaterials": "No study materials uploaded yet"
+  },
+  "assignments": {
+    "title": "Student Assignments",
+    "subtitle": "Assign tasks, collect homework submissions, and grade work",
+    "createNew": "Create Assignment",
+    "dueDate": "Due Date",
+    "noAssignments": "No assignments created yet"
+  },
+  "exams": {
+    "title": "Exams & Test Results",
+    "subtitle": "Schedule tests, record student marks, and publish report cards",
+    "createExam": "Create New Exam",
+    "totalMarks": "Total Marks",
+    "noExams": "No exams scheduled yet"
+  },
+  "recordedClasses": {
+    "title": "Recorded Class Library 🎥",
+    "subtitle": "Upload and manage class video recordings for student review",
+    "uploadVideo": "Upload Class Video",
+    "noVideos": "No recorded class videos available yet"
+  },
+  "aiAssistant": {
+    "title": "TutorMate AI Assistant 🤖",
+    "subtitle": "Generate exam questions, lesson plans, and automated parent reports",
+    "promptPlaceholder": "Ask AI to generate a physics quiz, math explanation, or lesson plan...",
+    "generate": "Generate with AI"
+  },
+  "coaching": {
+    "title": "Coaching Center Profile 🏫",
+    "subtitle": "Manage institution branding, logo, banner, and location details"
+  },
+  "subscription": {
+    "title": "Subscription & Pricing 💎",
+    "subtitle": "Manage your TutorMate SaaS plan and upgrade features",
+    "currentPlan": "Current Plan"
   },
   "roles": {
     "student": "Student",

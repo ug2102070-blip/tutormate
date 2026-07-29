@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
+import { useAuth } from "@/hooks/useAuth";
 import {
   ShieldCheck,
   ShieldAlert,
@@ -31,6 +33,7 @@ import {
 import type { UserRole, Permission } from "@/types";
 
 export default function RolePermissionsPage() {
+  const { role, loading: authLoading } = useAuth();
   const [users, setUsers] = useState<UserPermissionSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -40,6 +43,8 @@ export default function RolePermissionsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<{ text: string; type: "success" | "error" } | null>(null);
+
+  const isAuthorized = role === "owner" || role === "admin";
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -120,6 +125,30 @@ export default function RolePermissionsPage() {
 
   const rolesList: UserRole[] = ["student", "parent", "tutor", "admin", "owner"];
   const allPermissionsList = Object.keys(PERMISSION_METADATA) as Permission[];
+
+  if (!authLoading && !isAuthorized) {
+    return (
+      <div className="max-w-2xl mx-auto my-12 p-8 rounded-2xl border border-rose-200 dark:border-rose-500/20 bg-rose-50/50 dark:bg-rose-500/5 text-center space-y-4 shadow-sm">
+        <div className="w-12 h-12 mx-auto rounded-2xl bg-rose-100 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400 flex items-center justify-center">
+          <ShieldAlert className="w-6 h-6" />
+        </div>
+        <h2 className="text-xl font-extrabold text-slate-900 dark:text-slate-100">
+          Access Restricted 🔒
+        </h2>
+        <p className="text-sm text-slate-600 dark:text-slate-400 max-w-md mx-auto leading-relaxed">
+          The Role & Permissions Engine is reserved exclusively for Organization Owners and System Administrators. Standard tutors, assistants, and students cannot modify system access tiers.
+        </p>
+        <div className="pt-2">
+          <Link
+            href="/tutor/dashboard"
+            className="inline-flex items-center gap-2 px-5 py-2.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl transition-all shadow-xs"
+          >
+            Return to Dashboard
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto pb-12">

@@ -4,11 +4,13 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useLanguage } from "@/context/LanguageContext";
 import type { StudentDoc } from "@/types";
 import { Plus, UserPlus, Search, Copy, Check, Phone } from "lucide-react";
 
 export default function StudentsPage() {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const [students, setStudents] = useState<StudentDoc[]>([]);
   const [batches, setBatches] = useState<Record<string, string>>({});
   const [search, setSearch] = useState("");
@@ -27,7 +29,8 @@ export default function StudentsPage() {
       // 1. Load Batches Map
       const { data: batchList } = await supabase
         .from("batches")
-        .select("id, name");
+        .select("id, name")
+        .eq("tutor_id", user!.id);
 
       const map: Record<string, string> = {};
       if (batchList) {
@@ -40,7 +43,8 @@ export default function StudentsPage() {
       // 2. Load Students List
       const { data: studentList } = await supabase
         .from("students")
-        .select("*");
+        .select("*")
+        .eq("tutor_id", user!.id);
 
       if (studentList) {
         setStudents(
@@ -89,10 +93,10 @@ export default function StudentsPage() {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
-            Student Management
+            {t("students.title")}
           </h1>
           <p className="text-sm text-slate-500 dark:text-slate-400 font-medium mt-0.5">
-            Add students, generate self-linking invite codes, and assign batches
+            {t("students.subtitle")}
           </p>
         </div>
 
@@ -100,7 +104,7 @@ export default function StudentsPage() {
           href="/tutor/students/new"
           className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-xs transition-all"
         >
-          <Plus className="w-4 h-4" /> Add Student
+          <Plus className="w-4 h-4" /> {t("students.addNewStudent")}
         </Link>
       </div>
 
@@ -112,7 +116,7 @@ export default function StudentsPage() {
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search student name, phone, or invite code..."
+            placeholder={t("common.search")}
             className="w-full pl-10 pr-4 py-2 text-xs font-medium rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#131b2e] text-slate-900 dark:text-slate-100 outline-none"
           />
         </div>
@@ -122,7 +126,7 @@ export default function StudentsPage() {
           onChange={(e) => setSelectedBatchId(e.target.value)}
           className="w-full sm:w-56 px-3 py-2 text-xs font-bold rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#131b2e] text-slate-900 dark:text-slate-100 outline-none"
         >
-          <option value="all">All Batches</option>
+          <option value="all">{t("common.all")} {t("nav.batches")}</option>
           {Object.entries(batches).map(([id, name]) => (
             <option key={id} value={id}>
               {name}

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { useLanguage } from "@/context/LanguageContext";
 import {
   Sparkles,
   BookOpen,
@@ -26,6 +27,7 @@ import {
 
 export default function AiAssistantPage() {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState<
     "questions" | "assignment" | "lesson" | "doubt" | "parent" | "summary"
   >("questions");
@@ -215,10 +217,10 @@ export default function AiAssistantPage() {
               <Sparkles className="w-3.5 h-3.5" /> Premium AI Assistant
             </div>
             <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
-              AI Tutor Assistant 🤖
+              {t("aiAssistant.title")}
             </h1>
             <p className="text-white/80 text-xs sm:text-sm leading-relaxed">
-              Instantly create practice questions, draft assignments & lesson plans, respond to student doubts, and format parent messages with AI.
+              {t("aiAssistant.subtitle")}
             </p>
           </div>
           <Zap className="w-16 h-16 text-white/20 hidden sm:block" />

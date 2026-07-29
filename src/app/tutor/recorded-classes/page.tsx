@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { useLanguage } from "@/context/LanguageContext";
 import { createClient } from "@/lib/supabase/client";
 import { getTutorMaterials, createMaterial, deleteMaterial, updateMaterial } from "@/actions/materialActions";
 import { VideoPlayerModal } from "@/components/VideoPlayerModal";
@@ -24,6 +25,7 @@ import Link from "next/link";
 
 export default function TutorRecordedClassesPage() {
   const { user, loading: authLoading } = useAuth();
+  const { t } = useLanguage();
   const [batches, setBatches] = useState<BatchDoc[]>([]);
   const [videoMaterials, setVideoMaterials] = useState<MaterialDoc[]>([]);
   const [selectedBatchId, setSelectedBatchId] = useState<string>("all");
@@ -57,6 +59,7 @@ export default function TutorRecordedClassesPage() {
       const { data: batchesData } = await supabase
         .from("batches")
         .select("*")
+        .eq("tutor_id", user!.id)
         .eq("is_archived", false)
         .order("created_at", { ascending: false });
 
@@ -196,10 +199,10 @@ export default function TutorRecordedClassesPage() {
           </div>
           <h1 className="text-2xl font-bold flex items-center gap-2 text-white">
             <Video className="w-6 h-6 text-indigo-400" />
-            Recorded Classes 🎥
+            {t("recordedClasses.title")} 🎥
           </h1>
           <p className="text-indigo-200 text-sm mt-1">
-            Upload and share high-definition lecture recordings for your students to review anytime.
+            {t("recordedClasses.subtitle")}
           </p>
         </div>
         <Link
@@ -217,7 +220,7 @@ export default function TutorRecordedClassesPage() {
           <div className="bg-white dark:bg-[#131b2e] rounded-2xl border border-slate-200 dark:border-white/10 p-5 shadow-sm sticky top-6">
             <h2 className="text-lg font-bold text-slate-800 dark:text-slate-200 mb-4 flex items-center gap-2">
               <Upload className="w-5 h-5 text-indigo-500" />
-              Upload Recorded Class
+              {t("recordedClasses.uploadVideo") || "Upload Recorded Class"}
             </h2>
 
             {uploadError && (
@@ -248,9 +251,8 @@ export default function TutorRecordedClassesPage() {
                 <textarea
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-50 dark:bg-[#0b0f19] border border-slate-200 dark:border-white/10 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none resize-none"
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-[#0b0f19] border border-slate-200 dark:border-white/10 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none min-h-[80px] resize-y"
                   placeholder="Details of what was covered in this session..."
-                  rows={3}
                 />
               </div>
 
@@ -276,13 +278,15 @@ export default function TutorRecordedClassesPage() {
                 <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">
                   Video File (.mp4, .webm, .mkv, .mov) *
                 </label>
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  accept="video/*"
-                  required
-                  className="w-full text-sm text-slate-500 dark:text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
-                />
+                <div className="flex items-center gap-3">
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    accept="video/mp4,video/webm,video/x-matroska,video/quicktime"
+                    className="block w-full text-sm text-slate-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-600 hover:file:bg-indigo-100 dark:file:bg-indigo-500/20 dark:file:text-indigo-400 cursor-pointer"
+                    required
+                  />
+                </div>
               </div>
 
               <div className="flex items-center gap-2 pt-1">
@@ -351,17 +355,17 @@ export default function TutorRecordedClassesPage() {
               <p className="text-sm font-medium">Loading class recordings...</p>
             </div>
           ) : videoMaterials.length === 0 ? (
-            <div className="bg-white dark:bg-[#131b2e] rounded-2xl border border-slate-200 dark:border-white/10 p-12 text-center">
-              <div className="w-16 h-16 bg-indigo-50 dark:bg-indigo-500/10 rounded-full flex items-center justify-center mx-auto mb-3 text-indigo-500">
-                <Video className="w-8 h-8" />
+            <div className="text-center p-12 bg-white dark:bg-[#131b2e] rounded-2xl border border-slate-200 dark:border-white/10 shadow-xs">
+              <div className="w-16 h-16 bg-slate-50 dark:bg-[#0b0f19] rounded-full flex items-center justify-center mx-auto mb-4">
+                <Video className="w-8 h-8 text-slate-400" />
               </div>
-              <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200 mb-1">
-                No Recorded Classes Found
+              <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200">
+                {t("recordedClasses.noVideos") || "No Recorded Classes Found"}
               </h3>
-              <p className="text-slate-500 dark:text-slate-400 text-sm max-w-sm mx-auto">
-                {selectedBatchId === "all"
+              <p className="text-slate-500 dark:text-slate-400 text-sm max-w-sm mx-auto mt-2">
+                {t("recordedClasses.noVideosDesc") || (selectedBatchId === "all"
                   ? "You haven't uploaded any recorded class videos yet. Use the upload panel to post your first video lecture."
-                  : "No recorded class videos available for this specific batch."}
+                  : "No recorded class videos available for this specific batch.")}
               </p>
             </div>
           ) : (

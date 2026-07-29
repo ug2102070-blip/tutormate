@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { CalendarDays, ChevronLeft, ChevronRight, Loader2, Plus } from "lucide-react";
+import Link from "next/link";
+import { CalendarDays, ChevronLeft, ChevronRight, Loader2, Plus, ExternalLink } from "lucide-react";
 import { getCalendarEvents, createEvent, deleteEvent } from "@/actions/calendarActions";
 import { CalendarEvent } from "@/types";
 import { format, startOfMonth, getDaysInMonth, getDay, addMonths, subMonths, isSameDay } from "date-fns";
@@ -106,7 +107,7 @@ export function HeaderCalendar({ role }: { role: "tutor" | "student" }) {
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 top-12 w-80 sm:w-96 bg-white dark:bg-[#131b2e] rounded-2xl border border-slate-200 dark:border-white/10 shadow-xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2">
+        <div className="absolute right-0 sm:right-0 top-12 w-[88vw] sm:w-96 max-w-sm bg-white dark:bg-[#131b2e] rounded-2xl border border-slate-200 dark:border-white/10 shadow-xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2">
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 dark:border-white/5 bg-slate-50/50 dark:bg-[#0b0f19]/50">
             <h3 className="font-bold text-slate-800 dark:text-slate-200">
@@ -204,6 +205,18 @@ export function HeaderCalendar({ role }: { role: "tutor" | "student" }) {
             ) : (
               <p className="text-sm text-slate-400 text-center py-4 font-medium">No events for this day.</p>
             )}
+          </div>
+
+          {/* Footer Link to Full Calendar Page */}
+          <div className="px-4 py-2.5 border-t border-slate-100 dark:border-white/5 bg-slate-50/80 dark:bg-[#0b0f19]/80 flex items-center justify-between text-xs">
+            <span className="text-slate-500 dark:text-slate-400 font-medium">Need full month view?</span>
+            <Link
+              href={role === "tutor" ? "/tutor/calendar" : "/student/calendar"}
+              onClick={() => setIsOpen(false)}
+              className="inline-flex items-center gap-1 font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 hover:underline transition-colors"
+            >
+              Full Calendar <ExternalLink className="w-3.5 h-3.5" />
+            </Link>
           </div>
 
           {/* Create Modal Overlay */}

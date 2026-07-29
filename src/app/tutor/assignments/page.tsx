@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { useLanguage } from "@/context/LanguageContext";
 import { createClient } from "@/lib/supabase/client";
 import { getAssignments, createAssignment, publishAssignment, deleteAssignment } from "@/actions/assignmentActions";
 import { BookOpen, Trash2, Plus, Loader2, Eye, Calendar, FileText, ArrowRight } from "lucide-react";
@@ -10,6 +11,7 @@ import Link from "next/link";
 
 export default function TutorAssignmentsPage() {
   const { user, loading: authLoading } = useAuth();
+  const { t } = useLanguage();
   const [batches, setBatches] = useState<BatchDoc[]>([]);
   const [assignments, setAssignments] = useState<AssignmentDoc[]>([]);
   const [selectedBatchId, setSelectedBatchId] = useState<string>("all");
@@ -39,6 +41,7 @@ export default function TutorAssignmentsPage() {
       const { data: batchesData } = await supabase
         .from("batches")
         .select("*")
+        .eq("tutor_id", user!.id)
         .eq("is_archived", false)
         .order("created_at", { ascending: false });
 
@@ -448,10 +451,10 @@ export default function TutorAssignmentsPage() {
           style={{ color: "var(--color-text)" }}
         >
           <FileText className="w-5 h-5" style={{ color: "var(--color-primary)" }} />
-          Assignments
+          {t("assignments.title")}
         </h1>
         <p className="text-sm mt-0.5" style={{ color: "var(--color-text-muted)" }}>
-          Create, track submissions, and grade students.
+          {t("assignments.subtitle")}
         </p>
       </div>
 

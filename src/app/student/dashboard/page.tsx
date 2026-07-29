@@ -2,10 +2,12 @@
 
 import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
+import { useLanguage } from "@/context/LanguageContext";
 import { CalendarCheck, CreditCard, HelpCircle, ArrowRight } from "lucide-react";
 
 export default function StudentDashboardPage() {
   const { user } = useAuth();
+  const { t } = useLanguage();
 
   return (
     <div className="space-y-6">
@@ -13,10 +15,10 @@ export default function StudentDashboardPage() {
       <div className="p-6 sm:p-8 rounded-2xl text-white bg-gradient-to-r from-cyan-600 via-indigo-600 to-indigo-700 shadow-md relative overflow-hidden">
         <div className="relative z-10">
           <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
-            Hello, {user?.user_metadata?.full_name || user?.email?.split("@")[0] || "Student"} 🎓
+            {t("dashboard.hello")}, {user?.user_metadata?.full_name || user?.email?.split("@")[0] || "Student"} 🎓
           </h1>
           <p className="mt-1.5 text-white/90 text-sm max-w-xl leading-relaxed">
-            Welcome to your student portal. Track your class attendance, monthly fee history, and ask questions to your teacher.
+            {t("dashboard.studentSubtitle")}
           </p>
         </div>
       </div>
@@ -33,10 +35,10 @@ export default function StudentDashboardPage() {
             </div>
             <div>
               <div className="text-base font-bold text-slate-900 dark:text-slate-100">
-                My Attendance
+                {t("nav.myAttendance")}
               </div>
               <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 font-medium">
-                View your class attendance logs
+                {t("dashboard.myAttendanceDesc")}
               </div>
             </div>
           </div>
@@ -53,10 +55,10 @@ export default function StudentDashboardPage() {
             </div>
             <div>
               <div className="text-base font-bold text-slate-900 dark:text-slate-100">
-                Payment History
+                {t("nav.paymentHistory")}
               </div>
               <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 font-medium">
-                Check your monthly fee statuses
+                {t("dashboard.paymentHistoryDesc")}
               </div>
             </div>
           </div>
@@ -73,10 +75,10 @@ export default function StudentDashboardPage() {
             </div>
             <div>
               <div className="text-base font-bold text-slate-900 dark:text-slate-100">
-                Ask Your Teacher
+                {t("dashboard.askYourTeacher")}
               </div>
               <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 font-medium">
-                Ask doubts with image attachments
+                {t("dashboard.askTeacherDesc")}
               </div>
             </div>
           </div>

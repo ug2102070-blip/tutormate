@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { useLanguage } from "@/context/LanguageContext";
 import { createClient } from "@/lib/supabase/client";
 import { getStudentMaterials } from "@/actions/materialActions";
 import { VideoPlayerModal } from "@/components/VideoPlayerModal";
@@ -20,6 +21,7 @@ import Link from "next/link";
 
 export default function StudentRecordedClassesPage() {
   const { user, loading: authLoading } = useAuth();
+  const { t } = useLanguage();
   const [batches, setBatches] = useState<BatchDoc[]>([]);
   const [videoMaterials, setVideoMaterials] = useState<MaterialDoc[]>([]);
   const [selectedBatchId, setSelectedBatchId] = useState<string>("all");
@@ -105,10 +107,10 @@ export default function StudentRecordedClassesPage() {
           </div>
           <h1 className="text-2xl font-bold flex items-center gap-2 text-white">
             <Video className="w-6 h-6 text-indigo-400" />
-            Recorded Classes 🎥
+            {t("recordedClasses.title")} 🎥
           </h1>
           <p className="text-indigo-200 text-sm mt-1">
-            Watch missed lectures, revise complex topics, and stream video classes uploaded by your tutor.
+            {t("recordedClasses.subtitle")}
           </p>
         </div>
         <Link
@@ -158,12 +160,12 @@ export default function StudentRecordedClassesPage() {
             <Video className="w-8 h-8" />
           </div>
           <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200 mb-1">
-            No Class Recordings Available
+            {t("recordedClasses.noVideos") || "No Recorded Classes Found"}
           </h3>
           <p className="text-slate-500 dark:text-slate-400 text-sm max-w-sm mx-auto">
             {selectedBatchId === "all"
-              ? "Your tutor hasn't uploaded any recorded class videos yet. Check back soon!"
-              : "No recorded class videos available for this specific subject."}
+              ? t("recordedClasses.noVideosStudentDesc") || "Your tutor hasn't uploaded any recorded class videos yet. When they do, they will appear here."
+              : "No recorded class videos available for this specific batch."}
           </p>
         </div>
       ) : (

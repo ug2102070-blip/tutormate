@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
+import { useLanguage } from "@/context/LanguageContext";
 import {
   Building2,
   Users,
@@ -38,6 +39,7 @@ import type {
 } from "@/types";
 
 export default function CoachingCenterPage() {
+  const { t } = useLanguage();
   const [loading, setLoading] = useState(true);
   const [centerData, setCenterData] = useState<{
     center: CoachingCenterDoc;
@@ -238,10 +240,10 @@ export default function CoachingCenterPage() {
               <Building2 className="w-4 h-4" /> Multi-Tutor Platform
             </div>
             <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight">
-              Coaching Center Mode 🏫
+              {t("coaching.title")}
             </h1>
             <p className="text-indigo-100 text-sm md:text-base leading-relaxed">
-              Expand your teaching practice into a multi-tutor institute. Collaborate with fellow tutors, generate center join codes, monitor center-wide student analytics, and track revenue seamlessly.
+              {t("coaching.subtitle")}
             </p>
           </div>
         </div>

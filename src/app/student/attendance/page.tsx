@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { useLanguage } from "@/context/LanguageContext";
 import { getStudentAttendanceHistory } from "@/actions/attendanceActions";
 import type { AttendanceDoc } from "@/types";
 import { CalendarCheck, Check, X, Clock, QrCode } from "lucide-react";
@@ -9,6 +10,7 @@ import { QRScannerModal } from "@/components/student/QRScannerModal";
 
 export default function StudentAttendancePage() {
   const { user, claims } = useAuth();
+  const { t } = useLanguage();
   const [attendanceLogs, setAttendanceLogs] = useState<AttendanceDoc[]>([]);
   const [loading, setLoading] = useState(true);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
@@ -32,8 +34,6 @@ export default function StudentAttendancePage() {
     loadAttendance();
   }, [user, claims]);
 
-
-
   const studentDocId = claims?.role === "student" ? claims.studentDocId : "";
   const presentCount = attendanceLogs.filter(
     (l) => l.records?.[studentDocId]?.status === "present"
@@ -54,10 +54,10 @@ export default function StudentAttendancePage() {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-[var(--color-text)]">
-            My Attendance History
+            {t("nav.myAttendance")}
           </h1>
           <p className="text-sm text-[var(--color-text-secondary)]">
-            Track your daily class attendance logs across enrolled batches
+            {t("attendance.subtitle")}
           </p>
         </div>
 

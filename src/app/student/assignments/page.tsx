@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { useLanguage } from "@/context/LanguageContext";
 import { createClient } from "@/lib/supabase/client";
 import { getStudentSubmissions } from "@/actions/assignmentActions";
 import { BookOpen, FileText, Loader2, ArrowRight, Clock, CheckCircle, FileDown, AlertCircle } from "lucide-react";
@@ -10,6 +11,7 @@ import Link from "next/link";
 
 export default function StudentAssignmentsPage() {
   const { user, loading: authLoading } = useAuth();
+  const { t } = useLanguage();
   const [batches, setBatches] = useState<BatchDoc[]>([]);
   const [submissions, setSubmissions] = useState<any[]>([]);
   const [selectedBatchId, setSelectedBatchId] = useState<string>("all");
@@ -79,9 +81,9 @@ export default function StudentAssignmentsPage() {
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
             <FileText className="w-6 h-6 text-indigo-600" />
-            My Assignments
+            {t("assignments.title")}
           </h1>
-          <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">Submit your homework and view your grades.</p>
+          <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">{t("assignments.subtitle")}</p>
         </div>
       </div>
 

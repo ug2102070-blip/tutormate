@@ -24,8 +24,10 @@ import {
   type SubscriptionUsageData,
 } from "@/actions/subscriptionActions";
 import { SUBSCRIPTION_PLANS, type PlanType } from "@/lib/subscriptions";
+import { useLanguage } from "@/context/LanguageContext";
 
 export default function SubscriptionPage() {
+  const { t } = useLanguage();
   const [data, setData] = useState<SubscriptionUsageData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -104,10 +106,12 @@ export default function SubscriptionPage() {
             >
               <Gem className="w-6 h-6 text-purple-600 dark:text-purple-400" />
             </span>
-            <h1 className="text-2xl font-extrabold tracking-tight">Subscription System & Limits</h1>
+            <h1 className="text-2xl font-extrabold tracking-tight">
+              {t("subscription.title") || "Subscription System & Limits"}
+            </h1>
           </div>
           <p className="text-sm mt-1" style={{ color: "var(--color-text-muted)" }}>
-            Monitor student & batch usage capacity, review subscription tiers, and upgrade your tutoring plan.
+            {t("subscription.subtitle") || "Monitor student & batch usage capacity, review subscription tiers, and upgrade your tutoring plan."}
           </p>
         </div>
 

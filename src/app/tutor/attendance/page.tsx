@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useLanguage } from "@/context/LanguageContext";
 import { saveAttendance } from "@/actions/attendanceActions";
 import type { BatchDoc, StudentDoc, AttendanceRecord } from "@/types";
 import { CalendarCheck, Save, Check, X, Clock, QrCode } from "lucide-react";
@@ -10,6 +11,7 @@ import { QRGeneratorModal } from "@/components/tutor/QRGeneratorModal";
 
 export default function AttendancePage() {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const [batches, setBatches] = useState<BatchDoc[]>([]);
   const [selectedBatchId, setSelectedBatchId] = useState<string>("");
   const [selectedDate, setSelectedDate] = useState<string>(
@@ -34,6 +36,7 @@ export default function AttendancePage() {
       const { data } = await supabase
         .from("batches")
         .select("*")
+        .eq("tutor_id", user!.id)
         .eq("is_archived", false);
 
       if (data) {
@@ -69,6 +72,7 @@ export default function AttendancePage() {
       const { data: studentData } = await supabase
         .from("students")
         .select("*")
+        .eq("tutor_id", user!.id)
         .eq("status", "active")
         .contains("enrolled_batch_ids", [selectedBatchId]);
 
@@ -175,10 +179,10 @@ export default function AttendancePage() {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
-            Daily Attendance
+            {t("attendance.title")}
           </h1>
           <p className="text-sm text-slate-500 dark:text-slate-400 font-medium mt-0.5">
-            Take 1-click attendance for your batches and save daily class logs
+            {t("attendance.subtitle")}
           </p>
         </div>
 

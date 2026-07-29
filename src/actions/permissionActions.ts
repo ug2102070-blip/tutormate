@@ -37,9 +37,9 @@ export async function listUsersWithPermissions(
   try {
     const auth = await verifyUserAuth(idToken);
 
-    // Require manage_roles or view permissions (or tutor/admin/owner role)
-    if (!hasRoleAtLeast(auth.role, "tutor") && !hasPermission(auth.role, "manage_roles", auth.permissions)) {
-      return { success: false, error: "Access denied: insufficient permission to list user roles." };
+    // Require manage_roles permission or admin/owner role
+    if (!hasRoleAtLeast(auth.role, "admin") && !hasPermission(auth.role, "manage_roles", auth.permissions)) {
+      return { success: false, error: "Access denied: Role Permissions management is restricted to Organization Owners and Administrators." };
     }
 
     const supabase = createAdminClient();

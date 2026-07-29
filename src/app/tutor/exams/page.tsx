@@ -2,15 +2,16 @@
 
 import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { useLanguage } from "@/context/LanguageContext";
 import { createClient } from "@/lib/supabase/client";
 import { getExams, createExam, deleteExam } from "@/actions/examActions";
 import { Award, Trash2, Plus, Loader2, Eye, Calendar, ArrowRight } from "lucide-react";
 import type { BatchDoc, ExamDoc } from "@/types";
 import Link from "next/link";
 
-
 export default function TutorExamsPage() {
   const { user, loading: authLoading } = useAuth();
+  const { t } = useLanguage();
   const [batches, setBatches] = useState<BatchDoc[]>([]);
   const [exams, setExams] = useState<ExamDoc[]>([]);
   const [selectedBatchId, setSelectedBatchId] = useState<string>("all");
@@ -40,6 +41,7 @@ export default function TutorExamsPage() {
       const { data: batchesData } = await supabase
         .from("batches")
         .select("*")
+        .eq("tutor_id", user!.id)
         .eq("is_archived", false)
         .order("created_at", { ascending: false });
 
@@ -127,9 +129,9 @@ export default function TutorExamsPage() {
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
             <Award className="w-6 h-6 text-indigo-600" />
-            Exams & Results
+            {t("exams.title")}
           </h1>
-          <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">Schedule exams, record marks, and publish results.</p>
+          <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">{t("exams.subtitle")}</p>
         </div>
       </div>
 

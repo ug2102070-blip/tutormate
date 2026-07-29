@@ -1,21 +1,41 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
+import { useLanguage } from "@/context/LanguageContext";
 import { createClient } from "@/lib/supabase/client";
-import { LogOut, Settings, ChevronDown, User } from "lucide-react";
+import { LogOut, Settings, ChevronDown, User, Menu, Gem } from "lucide-react";
 import { HeaderCalendar } from "@/components/HeaderCalendar";
 import { NotificationBell } from "@/components/NotificationBell";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { LanguageToggle } from "@/components/LanguageToggle";
+import { MobileDrawer } from "@/components/navigation/MobileDrawer";
 
 export function Header() {
   const router = useRouter();
   const { user, role } = useAuth();
+  const { t } = useLanguage();
   const [showMenu, setShowMenu] = useState(false);
+  const [showMobileDrawer, setShowMobileDrawer] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
   const supabase = createClient();
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setShowMenu(false);
+      }
+    }
+    
+    if (showMenu) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showMenu]);
 
   async function handleLogout() {
     try {
@@ -42,61 +62,69 @@ export function Header() {
     .toUpperCase();
 
   return (
-    <header
-      className="h-14 px-4 md:px-6 flex items-center justify-between shrink-0 z-20 relative sticky top-0 backdrop-blur-xl"
-      style={{
-        background: "var(--color-header-bg)",
-        borderBottom: "1px solid var(--color-header-border)",
-      }}
-    >
-      {/* Left: Brand (mobile) / Portal title (desktop) */}
-      <div className="flex items-center gap-2">
-        <div className="flex items-center gap-2 md:hidden">
-          <Link
-            href="/"
-            className="text-base font-black tracking-tight"
-            style={{ color: "var(--color-primary)" }}
-          >
-            TutorMate
-          </Link>
-          <span
-            className="text-[9px] uppercase font-bold px-1.5 py-0.5 rounded-full border"
+    <>
+      <header
+        className="h-14 px-4 md:px-6 flex items-center justify-between shrink-0 z-20 relative sticky top-0 backdrop-blur-xl"
+        style={{
+          background: "var(--color-header-bg)",
+          borderBottom: "1px solid var(--color-header-border)",
+        }}
+      >
+        {/* Left: Brand (mobile) / Portal title (desktop) */}
+        <div className="flex items-center gap-3">
+          {/* Hamburger Menu Button (mobile only) */}
+          <button
+            onClick={() => setShowMobileDrawer(true)}
+            className="p-1.5 rounded-xl md:hidden transition-colors active:scale-95 flex items-center justify-center"
             style={{
-              background: "var(--color-primary-50)",
-              color: "var(--color-primary)",
-              borderColor: "var(--color-primary-100)",
+              color: "var(--color-text)",
+              background: "var(--color-bg-secondary)",
+              border: "1px solid var(--color-border)",
             }}
+            aria-label="Open Navigation Menu"
           >
-            {role}
-          </span>
-        </div>
+            <Menu className="w-5 h-5" />
+          </button>
 
-        <h2
-          className="hidden md:block text-sm font-bold capitalize tracking-wide"
-          style={{ color: "var(--color-text)" }}
-        >
-          {role} Portal
-        </h2>
-      </div>
+          <div className="flex items-center gap-2 md:hidden">
+            <Link
+              href={role ? `/${role}/dashboard` : "/"}
+              className="text-base font-black tracking-tight"
+              style={{ color: "var(--color-primary)" }}
+            >
+              TutorMate
+            </Link>
+            <span
+              className="text-[9px] uppercase font-bold px-1.5 py-0.5 rounded-full border"
+              style={{
+                background: "var(--color-primary-50)",
+                color: "var(--color-primary)",
+                borderColor: "var(--color-primary-100)",
+              }}
+            >
+              {role}
+            </span>
+          </div>
+
+          <h2
+            className="hidden md:block text-sm font-bold capitalize tracking-wide"
+            style={{ color: "var(--color-text)" }}
+          >
+            {t(`roles.${role}`)} {t("header.portal")}
+          </h2>
+        </div>
 
       {/* Right: Calendar + Notifications + User */}
       <div className="flex items-center gap-2 relative">
-        {/* Calendar Widget — only on desktop */}
-        <div className="hidden md:block">
-          {role && <HeaderCalendar role={role as "tutor" | "student"} />}
-        </div>
-
-        {/* Language Toggle */}
-        <LanguageToggle />
-
-        {/* Theme Toggle */}
-        <ThemeToggle />
+        {/* Calendar Widget — available everywhere */}
+        {role && <HeaderCalendar role={role as "tutor" | "student"} />}
 
         {/* Notification Bell */}
         <NotificationBell />
 
-        {/* User Avatar Button */}
-        <button
+        <div ref={menuRef} className="relative">
+          {/* User Avatar Button */}
+          <button
           onClick={() => setShowMenu(!showMenu)}
           className="flex items-center gap-2 p-1 rounded-xl transition-all active:scale-95"
           style={{
@@ -147,30 +175,24 @@ export function Header() {
         {/* Dropdown Menu */}
         {showMenu && (
           <>
-            {/* Backdrop */}
-            <div
-              className="fixed inset-0 z-40"
-              onClick={() => setShowMenu(false)}
-            />
-
             {/* Menu Panel */}
             <div
-              className="absolute right-0 top-11 w-52 rounded-2xl py-1.5 z-50 animate-scale-in"
+              className="absolute right-0 top-11 w-60 rounded-2xl py-1.5 z-50 animate-scale-in space-y-1"
               style={{
                 background: "var(--color-surface)",
                 border: "1px solid var(--color-border)",
                 boxShadow: "var(--shadow-elevated)",
               }}
             >
-              {/* Mobile user info */}
+              {/* User info header */}
               <div
-                className="px-3 py-2.5 sm:hidden"
+                className="px-3.5 py-2.5 border-b"
                 style={{
-                  borderBottom: "1px solid var(--color-border)",
+                  borderColor: "var(--color-border)",
                 }}
               >
                 <div
-                  className="text-xs font-bold"
+                  className="text-xs font-bold truncate"
                   style={{ color: "var(--color-text)" }}
                 >
                   {displayName}
@@ -183,21 +205,56 @@ export function Header() {
                 </div>
               </div>
 
+              {/* Quick Language & Theme Options */}
+              <div
+                className="px-3 py-2 border-b space-y-2"
+                style={{ borderColor: "var(--color-border)" }}
+              >
+                <div className="flex items-center justify-between text-[11px] font-semibold" style={{ color: "var(--color-text-muted)" }}>
+                  <span>{t("header.language")}</span>
+                  <LanguageToggle />
+                </div>
+                <div className="flex items-center justify-between text-[11px] font-semibold" style={{ color: "var(--color-text-muted)" }}>
+                  <span>{t("header.theme")}</span>
+                  <ThemeToggle />
+                </div>
+              </div>
+
               {/* Settings link (tutor only) */}
               {role === "tutor" && (
-                <Link
-                  href="/tutor/settings"
-                  onClick={() => setShowMenu(false)}
-                  className="flex items-center gap-2.5 px-3 py-2 text-xs font-semibold transition-colors"
-                  style={{ color: "var(--color-text-secondary)" }}
-                  id="header-settings-link"
-                >
-                  <Settings
-                    className="w-4 h-4"
-                    style={{ color: "var(--color-text-muted)" }}
-                  />
-                  Account Settings
-                </Link>
+                <>
+                  <Link
+                    href="/tutor/settings"
+                    onClick={() => setShowMenu(false)}
+                    className="flex items-center gap-2.5 px-3.5 py-2 text-xs font-semibold transition-colors hover:bg-black/5 dark:hover:bg-white/5"
+                    style={{ color: "var(--color-text-secondary)" }}
+                    id="header-settings-link"
+                  >
+                    <Settings
+                      className="w-4 h-4"
+                      style={{ color: "var(--color-text-muted)" }}
+                    />
+                    {t("header.accountSettings")}
+                  </Link>
+
+                  <Link
+                    href="/tutor/subscription"
+                    onClick={() => setShowMenu(false)}
+                    className="flex items-center justify-between px-3.5 py-2 text-xs font-semibold transition-colors hover:bg-black/5 dark:hover:bg-white/5"
+                    style={{ color: "var(--color-text-secondary)" }}
+                    id="header-subscription-link"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <Gem
+                        className="w-4 h-4 text-amber-500"
+                      />
+                      {t("header.subscriptionPlan")}
+                    </div>
+                    <span className="text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-600 border border-amber-500/20">
+                      PRO
+                    </span>
+                  </Link>
+                </>
               )}
 
               {/* Logout button */}
@@ -206,17 +263,25 @@ export function Header() {
                   setShowMenu(false);
                   handleLogout();
                 }}
-                className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-left transition-colors"
+                className="w-full flex items-center gap-2.5 px-3.5 py-2 text-xs font-semibold text-left transition-colors hover:bg-rose-50 dark:hover:bg-rose-500/10"
                 style={{ color: "var(--color-error)" }}
                 id="header-logout-btn"
               >
                 <LogOut className="w-4 h-4" />
-                Sign Out
+                {t("header.signOut")}
               </button>
             </div>
           </>
         )}
+        </div>
       </div>
     </header>
+
+    <MobileDrawer
+      role={(role as "tutor" | "student") || "tutor"}
+      isOpen={showMobileDrawer}
+      onClose={() => setShowMobileDrawer(false)}
+    />
+  </>
   );
 }

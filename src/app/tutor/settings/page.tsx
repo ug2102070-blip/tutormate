@@ -5,11 +5,12 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import type { TutorDoc } from "@/types";
-import { Save, User, Phone, Wallet, ShieldCheck, Check, Palette } from "lucide-react";
+import { Save, User, Phone, Wallet, ShieldCheck, Check, Palette, Key, Bell, Globe } from "lucide-react";
 import { ThemeSelect } from "@/components/ThemeSelect";
+import { LanguageSelect } from "@/components/LanguageSelect";
 
 export default function TutorSettingsPage() {
-  const { user, refreshUser } = useAuth();
+  const { user, role, refreshUser } = useAuth();
   const [tutor, setTutor] = useState<TutorDoc | null>(null);
   const [fullName, setFullName] = useState("");
   const [institution, setInstitution] = useState("");
@@ -148,12 +149,58 @@ export default function TutorSettingsPage() {
         </div>
       )}
 
+      {/* Language Preferences Section */}
+      <div className="p-6 sm:p-8 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#131b2e] space-y-5 shadow-xs">
+        <div className="flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-slate-100 border-b border-slate-100 dark:border-white/5 pb-3">
+          <Globe className="w-4 h-4 text-indigo-600 dark:text-indigo-400" /> Language Preferences (ভাষা পছন্দ)
+        </div>
+        <LanguageSelect />
+      </div>
+
       {/* Appearance & Theme Section */}
       <div className="p-6 sm:p-8 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#131b2e] space-y-5 shadow-xs">
         <div className="flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-slate-100 border-b border-slate-100 dark:border-white/5 pb-3">
           <Palette className="w-4 h-4 text-indigo-600 dark:text-indigo-400" /> Appearance & Dark Mode Theme
         </div>
         <ThemeSelect />
+      </div>
+
+      {/* Role & Team Permissions Section (Visible to Owner/Admin) */}
+      {(role === "owner" || role === "admin") && (
+        <div className="p-6 sm:p-8 rounded-2xl border border-purple-200 dark:border-purple-500/20 bg-purple-50/40 dark:bg-purple-500/5 space-y-4 shadow-xs">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-slate-100">
+              <Key className="w-4 h-4 text-purple-600 dark:text-purple-400" /> System Roles & Access Control Engine
+            </div>
+            <Link
+              href="/tutor/permissions"
+              className="px-4 py-2 rounded-xl text-xs font-bold bg-purple-600 hover:bg-purple-700 text-white transition-all shadow-xs flex items-center gap-1.5"
+            >
+              Manage Permissions 🔑
+            </Link>
+          </div>
+          <p className="text-xs text-slate-600 dark:text-slate-400 font-medium">
+            Configure access tiers, custom permission overrides, and role hierarchies for tutors, assistant teachers, students, and system admins.
+          </p>
+        </div>
+      )}
+
+      {/* Notifications & System Alerts Section */}
+      <div className="p-6 sm:p-8 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#131b2e] space-y-4 shadow-xs">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-slate-100">
+            <Bell className="w-4 h-4 text-blue-600 dark:text-blue-400" /> Notifications & Communication History
+          </div>
+          <Link
+            href="/tutor/notifications"
+            className="px-4 py-2 rounded-xl text-xs font-bold bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-900 dark:text-slate-100 transition-all shadow-xs flex items-center gap-1.5"
+          >
+            View All Alerts 🔔
+          </Link>
+        </div>
+        <p className="text-xs text-slate-600 dark:text-slate-400 font-medium">
+          Access full notification logs, student fee reminders, doubt alerts, and system announcement history.
+        </p>
       </div>
 
       <form onSubmit={handleSaveSettings} className="space-y-6">

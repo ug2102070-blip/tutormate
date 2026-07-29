@@ -1,17 +1,15 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   Users,
+  CalendarCheck,
   CreditCard,
   HelpCircle,
   Video,
-  Menu,
 } from "lucide-react";
-import { MobileDrawer } from "./MobileDrawer";
 
 interface MobileNavProps {
   role: "tutor" | "student";
@@ -19,11 +17,11 @@ interface MobileNavProps {
 
 export function MobileNav({ role }: MobileNavProps) {
   const pathname = usePathname();
-  const [showDrawer, setShowDrawer] = useState(false);
 
   const tutorItems = [
     { href: "/tutor/dashboard", label: "Home", icon: LayoutDashboard },
     { href: "/tutor/batches", label: "Batches", icon: Users },
+    { href: "/tutor/attendance", label: "Attendance", icon: CalendarCheck },
     { href: "/tutor/fees", label: "Fees", icon: CreditCard },
     { href: "/tutor/doubts", label: "Doubts", icon: HelpCircle },
   ];
@@ -38,116 +36,72 @@ export function MobileNav({ role }: MobileNavProps) {
   const items = role === "tutor" ? tutorItems : studentItems;
 
   return (
-    <>
-      <nav
-        style={{
-          background: "var(--color-nav-bg)",
-          borderTop: "1px solid var(--color-nav-border)",
-          boxShadow: "var(--shadow-nav)",
-        }}
-        className="fixed bottom-0 left-0 right-0 z-40 md:hidden backdrop-blur-xl"
-      >
-        <div className="flex items-center justify-around px-2 pt-2 pb-safe">
-          {items.map((item) => {
-            const Icon = item.icon;
-            const isActive =
-              pathname === item.href || pathname.startsWith(item.href + "/");
+    <nav
+      style={{
+        background: "var(--color-nav-bg)",
+        borderTop: "1px solid var(--color-nav-border)",
+        boxShadow: "var(--shadow-nav)",
+      }}
+      className="fixed bottom-0 left-0 right-0 z-40 md:hidden backdrop-blur-xl"
+    >
+      <div className="flex items-center justify-around px-2 pt-2 pb-safe">
+        {items.map((item) => {
+          const Icon = item.icon;
+          const isActive =
+            pathname === item.href || pathname.startsWith(item.href + "/");
 
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="flex flex-col items-center justify-center flex-1 gap-0.5 py-1 transition-all duration-200 active:scale-90"
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className="flex flex-col items-center justify-center flex-1 gap-0.5 py-1 transition-all duration-200 active:scale-90"
+            >
+              {/* Icon Container */}
+              <div
+                className="relative flex items-center justify-center w-10 h-7 rounded-2xl transition-all duration-200"
+                style={{
+                  backgroundColor: isActive
+                    ? "var(--color-nav-active-bg)"
+                    : "transparent",
+                }}
               >
-                {/* Icon Container */}
-                <div
-                  className="relative flex items-center justify-center w-10 h-7 rounded-2xl transition-all duration-200"
-                  style={{
-                    backgroundColor: isActive
-                      ? "var(--color-nav-active-bg)"
-                      : "transparent",
-                  }}
-                >
-                  <Icon
-                    className="w-5 h-5 transition-all duration-200"
-                    style={{
-                      color: isActive
-                        ? "var(--color-nav-active)"
-                        : "var(--color-nav-inactive)",
-                      strokeWidth: isActive ? 2.5 : 1.8,
-                      transform: isActive ? "scale(1.05)" : "scale(1)",
-                    }}
-                  />
-                </div>
-
-                {/* Label */}
-                <span
-                  className="text-[10px] font-semibold tracking-tight transition-all duration-200"
+                <Icon
+                  className="w-5 h-5 transition-all duration-200"
                   style={{
                     color: isActive
                       ? "var(--color-nav-active)"
                       : "var(--color-nav-inactive)",
-                    fontWeight: isActive ? 700 : 500,
+                    strokeWidth: isActive ? 2.5 : 1.8,
+                    transform: isActive ? "scale(1.05)" : "scale(1)",
                   }}
-                >
-                  {item.label}
-                </span>
+                />
+              </div>
 
-                {/* Active Dot Indicator */}
-                {isActive && (
-                  <div
-                    className="absolute bottom-0 w-1 h-1 rounded-full"
-                    style={{ backgroundColor: "var(--color-nav-active)" }}
-                  />
-                )}
-              </Link>
-            );
-          })}
-
-          {/* 5th item: More Button */}
-          <button
-            onClick={() => setShowDrawer(true)}
-            className="flex flex-col items-center justify-center flex-1 gap-0.5 py-1 transition-all duration-200 active:scale-90"
-            aria-label="More options menu"
-          >
-            <div
-              className="relative flex items-center justify-center w-10 h-7 rounded-2xl transition-all duration-200"
-              style={{
-                backgroundColor: showDrawer
-                  ? "var(--color-nav-active-bg)"
-                  : "transparent",
-              }}
-            >
-              <Menu
-                className="w-5 h-5 transition-all duration-200"
+              {/* Label */}
+              <span
+                className="text-[10px] font-semibold tracking-tight transition-all duration-200"
                 style={{
-                  color: showDrawer
+                  color: isActive
                     ? "var(--color-nav-active)"
                     : "var(--color-nav-inactive)",
-                  strokeWidth: 2,
+                  fontWeight: isActive ? 700 : 500,
                 }}
-              />
-            </div>
-            <span
-              className="text-[10px] font-semibold tracking-tight transition-all duration-200"
-              style={{
-                color: showDrawer
-                  ? "var(--color-nav-active)"
-                  : "var(--color-nav-inactive)",
-              }}
-            >
-              More
-            </span>
-          </button>
-        </div>
-      </nav>
+              >
+                {item.label}
+              </span>
 
-      {/* Mobile Drawer */}
-      <MobileDrawer
-        role={role}
-        isOpen={showDrawer}
-        onClose={() => setShowDrawer(false)}
-      />
-    </>
+              {/* Active Dot Indicator */}
+              {isActive && (
+                <div
+                  className="absolute bottom-0 w-1 h-1 rounded-full"
+                  style={{ backgroundColor: "var(--color-nav-active)" }}
+                />
+              )}
+            </Link>
+          );
+        })}
+      </div>
+    </nav>
   );
 }
+

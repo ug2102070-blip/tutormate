@@ -21,6 +21,8 @@
   --color-bg-secondary: var(--color-bg-secondary);
   --color-bg-tertiary: var(--color-bg-tertiary);
   --color-border: var(--color-border);
+  --color-card-bg: var(--color-card-bg);
+  --color-card-border: var(--color-card-border);
   --color-text: var(--color-text);
   --color-text-secondary: var(--color-text-secondary);
   --color-text-muted: var(--color-text-muted);
@@ -53,6 +55,8 @@
   --color-bg-secondary: #ffffff;
   --color-bg-tertiary: #f1f5f9;
   --color-border: #e2e8f0;
+  --color-card-bg: #ffffff;
+  --color-card-border: #e2e8f0;
   --color-text: #0f172a;
   --color-text-secondary: #475569;
   --color-text-muted: #94a3b8;
@@ -102,6 +106,8 @@
   --color-bg-secondary: #162036;
   --color-bg-tertiary: #1e2b47;
   --color-border: rgba(255, 255, 255, 0.08);
+  --color-card-bg: #131b2e;
+  --color-card-border: rgba(255, 255, 255, 0.08);
   --color-text: #f8fafc;
   --color-text-secondary: #94a3b8;
   --color-text-muted: #64748b;

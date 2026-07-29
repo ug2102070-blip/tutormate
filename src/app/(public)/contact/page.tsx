@@ -1,4 +1,4 @@
-﻿import type { Metadata } from "next";
+import type { Metadata } from "next";
 import { Mail, Phone, MapPin, MessageCircle } from "lucide-react";
 
 export const metadata: Metadata = {
@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 const CONTACTS = [
   { icon: Mail, label: "Email", value: "iamjahid.2025@gmail.com", href: "mailto:iamjahid.2025@gmail.com" },
   { icon: Phone, label: "WhatsApp", value: "+880 1704-642575", href: "https://wa.me/8801704642575" },
-  { icon: MapPin, label: "Location", value: "Dhaka, Bangladesh", href: null },
+  { icon: MapPin, label: "Location", value: "Global Support", href: null },
   { icon: MessageCircle, label: "Response Time", value: "Within 24 hours", href: null },
 ];
 

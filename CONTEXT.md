@@ -8,7 +8,7 @@
 
 **TutorMate** is a modern, AI-powered Tutor Management SaaS designed specifically to streamline private tutoring, coaching management, student-parent-tutor communication, fee tracking, batch management, and attendance tracking.
 
-* **Target Market**: Bangladesh first, engineered for global SaaS scalability.
+* **Target Market**: Global, engineered for SaaS scalability.
 * **Core Philosophy**: Fast, mobile-first, highly secure, minimal UI, zero friction for tutors, students, and parents.
 
 ---

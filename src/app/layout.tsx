@@ -30,7 +30,7 @@ export const metadata: Metadata = {
     template: "%s | TutorMate",
   },
   description:
-    "Professional tutor management platform for private tutors and coaching centers in Bangladesh. Manage batches, attendance, fees, and student communication in one place.",
+    "Professional tutor management platform for private tutors and coaching centers worldwide. Manage batches, attendance, fees, and student communication in one place.",
   manifest: "/manifest.json",
   icons: {
     icon: "/favicon.ico",
@@ -44,7 +44,7 @@ export const metadata: Metadata = {
   keywords: [
     "tutor management",
     "coaching center",
-    "Bangladesh",
+    "Global",
     "attendance",
     "fee collection",
     "student management",

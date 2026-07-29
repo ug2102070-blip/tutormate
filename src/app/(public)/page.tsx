@@ -7,8 +7,8 @@ import {
 } from "lucide-react";
 
 export const metadata: Metadata = {
-  title: "TutorMate — Smart Tutoring Management Platform for Bangladesh",
-  description: "Manage students, batches, attendance, fees, assignments and more. The all-in-one platform for private tutors and coaching centers in Bangladesh.",
+  title: "TutorMate — Smart Tutoring Management Platform",
+  description: "Manage students, batches, attendance, fees, assignments and more. The all-in-one platform for private tutors and coaching centers worldwide.",
 };
 
 const FEATURES = [
@@ -53,7 +53,7 @@ export default function PublicHomePage() {
             }}
           >
             <ShieldCheck className="w-4 h-4 text-[var(--color-primary)]" />
-            <span>Built for Tutors & Coaching Centers in Bangladesh</span>
+            <span>Built for Tutors & Coaching Centers Worldwide</span>
           </div>
 
           <h1
@@ -123,7 +123,7 @@ export default function PublicHomePage() {
               Everything you need, nothing you don&apos;t
             </h2>
             <p style={{ color: "var(--color-text-secondary)" }} className="text-sm max-w-xl mx-auto">
-              12+ powerful features designed specifically for Bangladesh&apos;s tutoring industry
+              12+ powerful features designed specifically for the tutoring industry
             </p>
           </div>
 
@@ -163,7 +163,7 @@ export default function PublicHomePage() {
         <div className="max-w-5xl mx-auto space-y-10">
           <div className="text-center space-y-2">
             <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight" style={{ color: "var(--color-text)" }}>
-              Loved by tutors across Bangladesh
+              Loved by tutors worldwide
             </h2>
             <p className="text-sm" style={{ color: "var(--color-text-secondary)" }}>
               See how TutorMate transforms batch management for teachers.

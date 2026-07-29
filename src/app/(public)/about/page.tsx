@@ -1,14 +1,14 @@
-﻿import type { Metadata } from "next";
+import type { Metadata } from "next";
 import Link from "next/link";
 import { Users, Target, Heart, Globe } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "About — TutorMate",
-  description: "Learn about TutorMate, the platform built to empower private tutors and coaching centers across Bangladesh.",
+  description: "Learn about TutorMate, the platform built to empower private tutors and coaching centers worldwide.",
 };
 
 const VALUES = [
-  { icon: Target, title: "Built for Bangladesh", desc: "Designed with local tutors and coaching centers in mind — bKash payments, Bangla support, and Bangladesh-specific workflows." },
+  { icon: Target, title: "Built for Everyone", desc: "Designed with tutors and coaching centers in mind — comprehensive payment integrations, multi-language support, and flexible workflows." },
   { icon: Users, title: "Tutor-First Design", desc: "Every feature is built around making the tutor's job easier — not the other way around." },
   { icon: Heart, title: "Affordable Access", desc: "Premium software should not be a luxury. Our pricing is designed for teachers, not enterprises." },
   { icon: Globe, title: "Always Improving", desc: "We ship new features every week based on direct feedback from our tutor community." },
@@ -30,10 +30,10 @@ export default function AboutPage() {
           className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold"
           style={{ background: "var(--color-primary-50)", color: "var(--color-primary)", border: "1px solid var(--color-primary-100)" }}
         >
-          🇧🇩 Made in Bangladesh
+          🌍 Built for Global Tutors
         </div>
         <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight" style={{ color: "var(--color-text)" }}>
-          Empowering Tutors Across Bangladesh
+          Empowering Tutors Worldwide
         </h1>
         <p className="text-base max-w-2xl mx-auto leading-relaxed" style={{ color: "var(--color-text-secondary)" }}>
           TutorMate was born out of frustration. Our founders were private tutors who spent hours every week

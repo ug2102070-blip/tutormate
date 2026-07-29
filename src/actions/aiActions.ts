@@ -81,7 +81,7 @@ export async function generateQuestions(params: QuestionGenParams, idToken?: str
   if (authState.role !== "tutor" && authState.role !== "owner" && authState.role !== "admin") throw new Error("Unauthorized");
   await checkAiFeatureAccess(authState.tutorId || authState.uid);
 
-  const systemPrompt = "You are an expert Bangladeshi academic tutor. Generate clear, accurate questions in Bengali & English suitable for Bangladeshi national curriculum (NCTB / English Medium).";
+  const systemPrompt = "You are an expert academic tutor. Generate clear, accurate questions in multiple languages suitable for global curricula.";
   const userPrompt = `Generate ${params.count} ${params.difficulty} level ${params.questionType.toUpperCase()} questions for Class/Level ${params.classLevel}, Subject: ${params.subject}, Topic: "${params.topic}".
 Include complete answer keys and concise explanations for each question.
 Formatting rules:

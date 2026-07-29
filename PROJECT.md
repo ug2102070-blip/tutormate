@@ -6,7 +6,7 @@ TutorMate is a modern AI-powered Tutor Management SaaS designed for tutors, stud
 
 # Vision
 
-Build the best tutor operating system for Bangladesh first, then make it globally scalable.
+Build the best tutor operating system for global scalability.
 The product should feel polished, premium, and production-ready.
 
 ---

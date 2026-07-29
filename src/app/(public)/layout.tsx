@@ -4,8 +4,8 @@ import { PublicHeader } from "./PublicHeader";
 
 export const metadata: Metadata = {
   title: { default: "TutorMate — Smart Tutoring Management Platform", template: "%s | TutorMate" },
-  description: "TutorMate is the all-in-one platform for private tutors and coaching centers in Bangladesh. Manage students, batches, fees, attendance, and more.",
-  keywords: ["tutor management", "Bangladesh tutor", "coaching center", "student management", "fee collection"],
+  description: "TutorMate is the all-in-one platform for private tutors and coaching centers worldwide. Manage students, batches, fees, attendance, and more.",
+  keywords: ["tutor management", "global tutor", "coaching center", "student management", "fee collection"],
   openGraph: {
     type: "website",
     locale: "en_US",
@@ -28,7 +28,7 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
           <div>
             <p className="text-base font-black" style={{ color: "var(--color-primary)" }}>TutorMate</p>
             <p className="text-xs mt-2 leading-relaxed" style={{ color: "var(--color-text-muted)" }}>
-              Smart tutoring management for Bangladesh.
+              Smart tutoring management for modern educators.
             </p>
           </div>
           <div>
@@ -57,7 +57,7 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
           <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
             &copy; {new Date().getFullYear()} TutorMate. All rights reserved.
           </p>
-          <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>Made in Bangladesh 🇧🇩</p>
+          <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>Made for Tutors 🌍</p>
         </div>
       </footer>
     </div>

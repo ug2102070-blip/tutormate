@@ -9,6 +9,8 @@ import { createStudent } from "@/actions/tutorStudentActions";
 import type { BatchDoc } from "@/types";
 import { ArrowLeft, Copy, Check } from "lucide-react";
 
+import { getTutorBatches } from "@/actions/batchActions";
+
 export default function AddStudentPage() {
   const router = useRouter();
   const { user } = useAuth();
@@ -22,34 +24,19 @@ export default function AddStudentPage() {
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const supabase = createClient();
 
   useEffect(() => {
     if (!user) return;
     async function loadBatches() {
-      const { data } = await supabase
-        .from("batches")
-        .select("*")
-        .eq("tutor_id", user!.id)
-        .eq("is_archived", false);
-
-      if (data) {
-        const list: BatchDoc[] = data.map((b) => ({
-          id: b.id,
-          tutorId: b.tutor_id,
-          name: b.name,
-          subject: b.subject,
-          gradeClass: b.grade_class,
-          monthlyFee: b.monthly_fee,
-          schedule: b.schedule || [],
-          studentCount: b.student_count,
-          isArchived: b.is_archived,
-          createdAt: b.created_at,
-        }));
-        setBatches(list);
-        if (list.length > 0) {
-          setSelectedBatchIds([list[0].id]);
+      try {
+        const data = await getTutorBatches(user?.id);
+        const activeBatches = data.filter((b: any) => !b.isArchived);
+        setBatches(activeBatches);
+        if (activeBatches.length > 0) {
+          setSelectedBatchIds([activeBatches[0].id]);
         }
+      } catch (err) {
+        console.error("loadBatches error:", err);
       }
     }
     loadBatches();

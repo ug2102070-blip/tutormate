@@ -2,17 +2,62 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { tutorNavCategories, studentNavCategories, NavItem } from "./nav-data";
+import {
+  tutorNavCategories,
+  studentNavCategories,
+  ownerNavCategories,
+  parentNavCategories,
+  NavItem,
+} from "./nav-data";
 import { useLanguage } from "@/context/LanguageContext";
 
 interface SidebarProps {
-  role: "tutor" | "student";
+  role: "tutor" | "student" | "owner" | "parent";
 }
+
+const roleBadgeStyles: Record<string, { bg: string; text: string; border: string }> = {
+  tutor: {
+    bg: "var(--color-primary-50)",
+    text: "var(--color-primary)",
+    border: "var(--color-primary-100)",
+  },
+  owner: {
+    bg: "rgba(245, 158, 11, 0.12)",
+    text: "rgb(217, 119, 6)",
+    border: "rgba(245, 158, 11, 0.3)",
+  },
+  student: {
+    bg: "rgba(16, 185, 129, 0.12)",
+    text: "rgb(5, 150, 105)",
+    border: "rgba(16, 185, 129, 0.3)",
+  },
+  parent: {
+    bg: "rgba(139, 92, 246, 0.12)",
+    text: "rgb(109, 40, 217)",
+    border: "rgba(139, 92, 246, 0.3)",
+  },
+};
+
+const navCategoriesByRole = {
+  tutor: tutorNavCategories,
+  student: studentNavCategories,
+  owner: ownerNavCategories,
+  parent: parentNavCategories,
+};
+
+const dashboardByRole: Record<string, string> = {
+  tutor: "/tutor/dashboard",
+  student: "/student/dashboard",
+  owner: "/owner/dashboard",
+  parent: "/parent/dashboard",
+};
 
 export function Sidebar({ role }: SidebarProps) {
   const pathname = usePathname();
   const { t } = useLanguage();
-  const categories = role === "tutor" ? tutorNavCategories : studentNavCategories;
+  const categories = navCategoriesByRole[role] ?? tutorNavCategories;
+  const badgeStyle = roleBadgeStyles[role] ?? roleBadgeStyles.tutor;
+  const dashboardHref = dashboardByRole[role] ?? "/";
 
   return (
     <aside
@@ -25,7 +70,7 @@ export function Sidebar({ role }: SidebarProps) {
       <div className="space-y-6">
         {/* Brand Header */}
         <div className="px-2 py-1">
-          <Link href={role ? `/${role}/dashboard` : "/"} className="flex items-center justify-between">
+          <Link href={dashboardHref} className="flex items-center justify-between">
             <span
               className="text-xl font-extrabold tracking-tight"
               style={{ color: "var(--color-primary)" }}
@@ -35,12 +80,12 @@ export function Sidebar({ role }: SidebarProps) {
             <span
               className="text-[10px] uppercase font-bold px-2 py-0.5 rounded-full border"
               style={{
-                background: "var(--color-primary-50)",
-                color: "var(--color-primary)",
-                borderColor: "var(--color-primary-100)",
+                background: badgeStyle.bg,
+                color: badgeStyle.text,
+                borderColor: badgeStyle.border,
               }}
             >
-              {t(`roles.${role}`)}
+              {role === "owner" ? "Center" : t(`roles.${role}`)}
             </span>
           </Link>
         </div>
@@ -53,13 +98,13 @@ export function Sidebar({ role }: SidebarProps) {
                 className="px-3 text-[10px] font-bold uppercase tracking-wider mb-1"
                 style={{ color: "var(--color-text-muted)" }}
               >
-                {catGroup.key ? t(`navCategory.${catGroup.key}`) : catGroup.category}
+                {catGroup.key ? (t(`navCategory.${catGroup.key}`) || catGroup.category) : catGroup.category}
               </div>
               {catGroup.items.map((item: NavItem) => {
                 const Icon = item.icon;
                 const isActive =
                   pathname === item.href || pathname.startsWith(item.href + "/");
-                const translatedLabel = item.key ? t(`nav.${item.key}`) : item.label;
+                const translatedLabel = item.key ? (t(`nav.${item.key}`) || item.label) : item.label;
 
                 return (
                   <Link

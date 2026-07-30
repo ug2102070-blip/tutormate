@@ -15,14 +15,18 @@ import {
   Users,
   ChevronRight,
   Loader2,
+  Bell,
+  Settings,
 } from "lucide-react";
 
 const NAV_ITEMS = [
   { href: "/parent/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/parent/notifications", label: "Notifications", icon: Bell },
   { href: "/parent/attendance", label: "Attendance", icon: CalendarCheck },
   { href: "/parent/fees", label: "Fees", icon: CreditCard },
   { href: "/parent/results", label: "Results", icon: Award },
   { href: "/parent/assignments", label: "Assignments", icon: FileText },
+  { href: "/parent/settings", label: "Settings", icon: Settings },
 ];
 
 export default function ParentMainLayout({

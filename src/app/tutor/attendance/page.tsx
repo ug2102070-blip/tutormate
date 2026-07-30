@@ -9,6 +9,9 @@ import type { BatchDoc, StudentDoc, AttendanceRecord } from "@/types";
 import { CalendarCheck, Save, Check, X, Clock, QrCode } from "lucide-react";
 import { QRGeneratorModal } from "@/components/tutor/QRGeneratorModal";
 
+import { getTutorBatches } from "@/actions/batchActions";
+import { getTutorStudents } from "@/actions/tutorStudentActions";
+
 export default function AttendancePage() {
   const { user } = useAuth();
   const { t } = useLanguage();
@@ -33,29 +36,15 @@ export default function AttendancePage() {
   useEffect(() => {
     if (!user) return;
     async function loadBatches() {
-      const { data } = await supabase
-        .from("batches")
-        .select("*")
-        .eq("tutor_id", user!.id)
-        .eq("is_archived", false);
-
-      if (data) {
-        const list: BatchDoc[] = data.map((b) => ({
-          id: b.id,
-          tutorId: b.tutor_id,
-          name: b.name,
-          subject: b.subject,
-          gradeClass: b.grade_class,
-          monthlyFee: Number(b.monthly_fee),
-          schedule: b.schedule || [],
-          studentCount: b.student_count,
-          isArchived: b.is_archived,
-          createdAt: b.created_at,
-        }));
-        setBatches(list);
-        if (list.length > 0) {
-          setSelectedBatchId(list[0].id);
+      try {
+        const data = await getTutorBatches(user?.id);
+        const activeList = data.filter((b: any) => !b.isArchived);
+        setBatches(activeList);
+        if (activeList.length > 0) {
+          setSelectedBatchId(activeList[0].id);
         }
+      } catch (err) {
+        console.error("loadBatches error:", err);
       }
     }
     loadBatches();
@@ -68,27 +57,12 @@ export default function AttendancePage() {
     setError("");
 
     try {
-      // 1. Fetch active enrolled students
-      const { data: studentData } = await supabase
-        .from("students")
-        .select("*")
-        .eq("tutor_id", user!.id)
-        .eq("status", "active")
-        .contains("enrolled_batch_ids", [selectedBatchId]);
-
-      const studentList: StudentDoc[] = (studentData || []).map((s) => ({
-        id: s.id,
-        tutorId: s.tutor_id,
-        authUid: s.auth_uid,
-        inviteCode: s.invite_code,
-        fullName: s.full_name,
-        phone: s.phone,
-        guardianPhone: s.guardian_phone,
-        institution: s.institution,
-        enrolledBatchIds: s.enrolled_batch_ids || [],
-        status: s.status,
-        createdAt: s.created_at,
-      }));
+      // 1. Fetch active enrolled students using server action
+      const allStudents = await getTutorStudents(user.id);
+      const studentList: StudentDoc[] = allStudents.filter(
+        (s: any) =>
+          s.status === "active" && s.enrolledBatchIds?.includes(selectedBatchId)
+      );
       setStudents(studentList);
 
       // 2. Fetch existing attendance record

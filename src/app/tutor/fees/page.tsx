@@ -10,7 +10,7 @@ import type { BatchDoc, StudentDoc, FeeDoc } from "@/types";
 import { CreditCard, Sparkles, Check, DollarSign } from "lucide-react";
 
 export default function FeesPage() {
-  const { user } = useAuth();
+  const { user, claims, loading: authLoading } = useAuth();
   const { t } = useLanguage();
   const [batches, setBatches] = useState<BatchDoc[]>([]);
   const [studentsMap, setStudentsMap] = useState<Record<string, StudentDoc>>({});
@@ -32,12 +32,14 @@ export default function FeesPage() {
 
   // Load batches
   useEffect(() => {
+    if (authLoading) return;
     if (!user) return;
     async function loadBatches() {
+      const tutorId = (claims && "tutorId" in claims ? (claims as any).tutorId : null) || user!.id;
       const { data } = await supabase
         .from("batches")
         .select("*")
-        .eq("tutor_id", user!.id)
+        .eq("tutor_id", tutorId)
         .eq("is_archived", false);
 
       if (data) {
@@ -60,7 +62,7 @@ export default function FeesPage() {
       }
     }
     loadBatches();
-  }, [user]);
+  }, [user, claims, authLoading]);
 
   // Load fee ledger & student name map
   const loadFeeLedger = useCallback(async () => {
@@ -70,10 +72,11 @@ export default function FeesPage() {
 
     try {
       // 1. Load active students map
+      const tutorId = (claims && "tutorId" in claims ? (claims as any).tutorId : null) || user!.id;
       const { data: studentList } = await supabase
         .from("students")
         .select("*")
-        .eq("tutor_id", user!.id);
+        .eq("tutor_id", tutorId);
 
       const sMap: Record<string, StudentDoc> = {};
       if (studentList) {

@@ -8,7 +8,7 @@ import { useLanguage } from "@/context/LanguageContext";
 import { formatBDT } from "@/lib/utils";
 import type { BatchDoc } from "@/types";
 import { Plus, Users, Calendar, Archive, CheckCircle } from "lucide-react";
-import { toggleArchiveBatch } from "@/actions/batchActions";
+import { getTutorBatches, toggleArchiveBatch } from "@/actions/batchActions";
 
 export default function BatchesPage() {
   const { user } = useAuth();
@@ -16,7 +16,6 @@ export default function BatchesPage() {
   const [batches, setBatches] = useState<BatchDoc[]>([]);
   const [tab, setTab] = useState<"active" | "archived">("active");
   const [loading, setLoading] = useState(true);
-  const supabase = createClient();
 
   useEffect(() => {
     if (!user) {
@@ -25,28 +24,14 @@ export default function BatchesPage() {
     }
 
     async function loadBatches() {
-      const { data } = await supabase
-        .from("batches")
-        .select("*")
-        .eq("tutor_id", user!.id);
-
-      if (data) {
-        setBatches(
-          data.map((b) => ({
-            id: b.id,
-            tutorId: b.tutor_id,
-            name: b.name,
-            subject: b.subject,
-            gradeClass: b.grade_class,
-            monthlyFee: Number(b.monthly_fee),
-            schedule: b.schedule || [],
-            studentCount: b.student_count,
-            isArchived: b.is_archived,
-            createdAt: b.created_at,
-          }))
-        );
+      try {
+        const data = await getTutorBatches(user?.id);
+        setBatches(data);
+      } catch (err) {
+        console.error("loadBatches error:", err);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     }
 
     loadBatches();

@@ -4,28 +4,33 @@ import { verifyUserAuth } from "@/lib/authHelpers";
 import { createAdminClient } from "@/lib/supabase/server";
 import { checkAiFeatureAccess } from "@/lib/serverSubscriptions";
 
-interface QuestionGenParams {
+export interface QuestionGenParams {
   classLevel: string;
   subject: string;
   topic: string;
   questionType: "mcq" | "short" | "creative";
   count: number;
   difficulty: "easy" | "medium" | "hard";
+  cleanOutputOnly?: boolean;
+  outputMode?: "questions_only" | "with_answers" | "with_explanations";
 }
 
-interface AssignmentGenParams {
+export interface AssignmentGenParams {
   topic: string;
   subject: string;
   difficulty: "easy" | "medium" | "hard";
   maxMarks: number;
   instructions?: string;
+  cleanOutputOnly?: boolean;
+  outputMode?: "questions_only" | "with_answers" | "with_explanations";
 }
 
-interface LessonPlanParams {
+export interface LessonPlanParams {
   subject: string;
   chapter: string;
   durationMins: number;
   targetAudience: string;
+  cleanOutputOnly?: boolean;
 }
 
 interface ParentMessageParams {
@@ -35,41 +40,44 @@ interface ParentMessageParams {
   language: "bn" | "en" | "banglish";
 }
 
-// Call Gemini REST API
+// Call Gemini REST API with enhanced prompt engineering
 async function callGemini(prompt: string, systemInstruction?: string): Promise<string> {
   const apiKey = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY;
 
   if (apiKey) {
-    try {
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contents: [
-              {
-                role: "user",
-                parts: [{ text: `${systemInstruction ? systemInstruction + "\n\n" : ""}${prompt}` }],
+    const models = ["gemini-3-flash-preview", "gemini-3.6-flash", "gemini-flash-latest", "gemini-2.0-flash"];
+    for (const model of models) {
+      try {
+        const response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              contents: [
+                {
+                  role: "user",
+                  parts: [{ text: `${systemInstruction ? systemInstruction + "\n\n" : ""}${prompt}` }],
+                },
+              ],
+              generationConfig: {
+                temperature: 0.5,
+                maxOutputTokens: 3072,
               },
-            ],
-            generationConfig: {
-              temperature: 0.7,
-              maxOutputTokens: 2048,
-            },
-          }),
-        }
-      );
+            }),
+          }
+        );
 
-      if (response.ok) {
-        const json = await response.json();
-        const text = json.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (text) return text;
-      } else {
-        console.warn("Gemini API call non-ok response status:", response.status);
+        if (response.ok) {
+          const json = await response.json();
+          const text = json.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (text) return text;
+        } else {
+          console.warn(`Gemini API call to ${model} status:`, response.status);
+        }
+      } catch (err) {
+        console.error(`Gemini API error on ${model}:`, err);
       }
-    } catch (err) {
-      console.error("Gemini API error, falling back to smart generator:", err);
     }
   }
 
@@ -81,13 +89,47 @@ export async function generateQuestions(params: QuestionGenParams, idToken?: str
   if (authState.role !== "tutor" && authState.role !== "owner" && authState.role !== "admin") throw new Error("Unauthorized");
   await checkAiFeatureAccess(authState.tutorId || authState.uid);
 
-  const systemPrompt = "You are an expert academic tutor. Generate clear, accurate questions in multiple languages suitable for global curricula.";
-  const userPrompt = `Generate ${params.count} ${params.difficulty} level ${params.questionType.toUpperCase()} questions for Class/Level ${params.classLevel}, Subject: ${params.subject}, Topic: "${params.topic}".
-Include complete answer keys and concise explanations for each question.
-Formatting rules:
-- Number each question clearly.
-- For MCQs, provide 4 options (A, B, C, D) and mark the correct answer.
-- For Short/Creative questions, provide full sample answer breakdowns.`;
+  const cleanDirective = `
+CRITICAL FORMATTING & NOTATION RULES:
+1. Do NOT include any introductory greetings (e.g. 'Hello! I am TutorMate AI...'), pleasantries, meta-commentary, or conversational fluff. Start DIRECTLY with the exam title and questions immediately.
+2. MATH & UNIT NOTATION: Do NOT write raw LaTeX code wrapped in dollar signs (e.g. do NOT write '$\\frac{1}{9}$', '$F \\propto \\frac{1}{d^2}$', '$9 \\times 10^9 \\text{ N}$'). Write all numbers, units, fractions, and powers in clean, professional standard notation and Unicode symbols (e.g. 1/9, 50 N, 5 N/C, 9 × 10⁹ N, F ∝ 1/d²).
+3. Use pristine, high-level academic language adhering to board exam standards (NCTB / Cambridge O/A Level).`;
+
+  let modeDirective = "";
+  if (params.outputMode === "questions_only") {
+    modeDirective = "\n\nCONTENT MODE: Generate QUESTIONS ONLY. Do NOT include answer keys, solutions, or explanations under any circumstances.";
+  } else if (params.outputMode === "with_answers") {
+    modeDirective = "\n\nCONTENT MODE: Generate questions with concise Correct Answer / Final Model Answer key ONLY. Do NOT include lengthy step-by-step explanations.";
+  } else {
+    modeDirective = "\n\nCONTENT MODE: Generate questions with full Correct Answer key AND detailed step-by-step explanations (ব্যাখ্যা) and common misconceptions.";
+  }
+
+  const systemPrompt = `You are TutorMate AI — a Senior Board Examiner & Master Academic Controller specializing in NCTB (National Curriculum SSC/HSC) and Cambridge/Edexcel standards.
+Your goal is to generate ultra-professional, board-level, highly rigorous, and crystal-clear exam questions based on the requested content mode.${cleanDirective}`;
+
+  const userPrompt = `Generate ${params.count} ${params.difficulty.toUpperCase()} difficulty level ${params.questionType.toUpperCase()} questions for:
+- Class/Level: ${params.classLevel}
+- Subject: ${params.subject}
+- Topic: "${params.topic}"${modeDirective}
+
+Specific Formatting & Quality Guidelines:
+1. **If MCQ**:
+   - Provide 4 distinct options (A, B, C, D).
+   ${params.outputMode === "questions_only" ? "- Do NOT include the correct answer or explanation." : "- State the **Correct Answer** explicitly."}
+   ${params.outputMode === "with_explanations" ? "- Provide a **Detailed Explanation (ব্যাখ্যা)** for why the correct option is right and common mistakes to avoid." : ""}
+2. **If Creative Question (CQ / সৃজনশীল প্রশ্ন)**:
+   - Create a realistic, engaging Stem (উদ্দীপক).
+   - Divide into 4 sub-questions following standard curriculum structure:
+     a) Knowledge/জ্ঞানমূলক (1 Mark)
+     b) Comprehension/অনুধাবনমূলক (2 Marks)
+     c) Application/প্রয়োগমূলক (3 Marks)
+     d) Higher Order Thinking/উচ্চতর দক্ষতার (4 Marks)
+   ${params.outputMode === "questions_only" ? "- Do NOT include model answers." : "- Provide exemplary model answers for all 4 sub-questions!"}
+3. **If Short Answer (সংক্ষিপ্ত প্রশ্ন)**:
+   - Provide a clear, precise question.
+   ${params.outputMode === "questions_only" ? "- Do NOT include model answer." : "- Include complete step-by-step mathematical derivation/reasoning and final answer."}
+
+Ensure formatting is beautifully presented in Markdown with clear headers, bold emphasis, and line breaks.`;
 
   const aiResult = await callGemini(userPrompt, systemPrompt);
 
@@ -102,11 +144,17 @@ Formatting rules:
     if (params.questionType === "mcq") {
       fallbackText += `**Q${i}. What is the primary principle of ${params.topic} in ${params.subject}?**\n`;
       fallbackText += `A) Core concept A\nB) Essential principle B\nC) Secondary factor C\nD) Alternative hypothesis D\n\n`;
-      fallbackText += `> **Correct Answer**: B) Essential principle B\n`;
-      fallbackText += `> **Explanation**: Option B directly addresses the fundamental mechanism of ${params.topic}.\n\n`;
+      if (params.outputMode !== "questions_only") {
+        fallbackText += `> **Correct Answer**: B) Essential principle B\n`;
+      }
+      if (params.outputMode === "with_explanations") {
+        fallbackText += `> **Explanation**: Option B directly addresses the fundamental mechanism of ${params.topic}.\n\n`;
+      }
     } else if (params.questionType === "short") {
       fallbackText += `**Q${i}. Explain the concept of ${params.topic} with a suitable example.** (Marks: 4)\n`;
-      fallbackText += `> **Model Answer**: ${params.topic} refers to the process where fundamental rules of ${params.subject} apply. For example, when applying this in practice, key factors must be considered.\n\n`;
+      if (params.outputMode !== "questions_only") {
+        fallbackText += `> **Model Answer**: ${params.topic} refers to the process where fundamental rules of ${params.subject} apply. For example, when applying this in practice, key factors must be considered.\n\n`;
+      }
     } else {
       fallbackText += `**CQ ${i}. Read the stem and answer the questions below:**\n`;
       fallbackText += `*Stem*: A student conducted an experiment regarding ${params.topic} in ${params.subject} and recorded key parameters.\n`;
@@ -125,16 +173,37 @@ export async function generateAssignment(params: AssignmentGenParams, idToken?: 
   if (authState.role !== "tutor" && authState.role !== "owner" && authState.role !== "admin") throw new Error("Unauthorized");
   await checkAiFeatureAccess(authState.tutorId || authState.uid);
 
-  const systemPrompt = "You are a professional educational curriculum designer. Generate comprehensive homework assignment tasks with clear grading rubrics.";
-  const userPrompt = `Create a complete homework assignment for Subject: "${params.subject}", Topic: "${params.topic}".
-Difficulty: ${params.difficulty}, Total Marks: ${params.maxMarks}.
-Additional instructions from tutor: ${params.instructions || "None"}.
+  const cleanDirective = `
+CRITICAL FORMATTING & NOTATION RULES:
+1. Do NOT include any introductory greetings, pleasantries, meta-commentary, or conversational fluff. Start DIRECTLY with the assignment title and objectives immediately.
+2. MATH & UNIT NOTATION: Do NOT write raw LaTeX code wrapped in dollar signs (e.g. do NOT write '$\\frac{1}{9}$', '$F \\propto \\frac{1}{d^2}$', '$9 \\times 10^9 \\text{ N}$'). Write all numbers, units, fractions, and powers in clean, professional standard notation and Unicode symbols (e.g. 1/9, 50 N, 5 N/C, 9 × 10⁹ N, F ∝ 1/d²).
+3. Use pristine, high-level academic language adhering to board exam standards (NCTB / Cambridge O/A Level).`;
 
-Please include:
-1. Title & Objective
-2. Problem Statements / Tasks (structured clearly)
-3. Grading Rubric (Marks distribution)
-4. Submission Guidelines`;
+  let modeDirective = "";
+  if (params.outputMode === "questions_only") {
+    modeDirective = "\n\nCONTENT MODE: Generate questions and section tasks ONLY. Omit all answer keys, solutions, or model answers.";
+  } else if (params.outputMode === "with_answers") {
+    modeDirective = "\n\nCONTENT MODE: Generate assignment tasks along with concise Answer Keys / Model Solutions at the end.";
+  } else {
+    modeDirective = "\n\nCONTENT MODE: Generate comprehensive assignment tasks along with detailed step-by-step Model Solutions, explanations, and marking rubrics.";
+  }
+
+  const systemPrompt = `You are TutorMate AI — a Senior Board Curriculum Designer & Master Academic Controller. Your goal is to draft comprehensive, highly structured, and engaging student assignments with clear learning outcomes and evaluation rubrics.${cleanDirective}`;
+
+  const userPrompt = `Create an in-depth homework assignment for:
+- Subject: "${params.subject}"
+- Topic: "${params.topic}"
+- Difficulty: ${params.difficulty.toUpperCase()}
+- Total Marks: ${params.maxMarks}
+- Special Tutor Instructions: "${params.instructions || "Include real-world applications and step-by-step problem solving."}"${modeDirective}
+
+Include:
+1. **Assignment Header & Objectives**: Clear statement of learning goals.
+2. **Section A: Foundational Concepts & Definitions**: Short-answer conceptual checks.
+3. **Section B: Core Problem Solving & Application**: In-depth analytical tasks with breakdown of marks.
+4. **Section C: Critical Thinking / Case Study**: Real-world application question.
+5. **Detailed Rubric & Marking Scheme**: Breakdown of how marks are awarded (e.g. Accuracy, Steps, Presentation).
+6. **Submission Guidelines & Hints**: Helpful advice for students.`;
 
   const aiResult = await callGemini(userPrompt, systemPrompt);
 
@@ -165,17 +234,28 @@ export async function generateLessonPlan(params: LessonPlanParams, idToken?: str
   const authState = await verifyUserAuth(idToken);
   if (authState.role !== "tutor") throw new Error("Unauthorized");
 
-  const systemPrompt = "You are an experienced master teacher. Design detailed, structured lesson plans with realistic time allocations.";
-  const userPrompt = `Design a ${params.durationMins}-minute lesson plan for Subject: "${params.subject}", Chapter/Topic: "${params.chapter}".
-Target Class/Audience: "${params.targetAudience}".
+  const cleanDirective = (params.cleanOutputOnly ?? true)
+    ? "\n\nCRITICAL DIRECTIVE: Do NOT include any introductory greetings (e.g. 'Hello! I am TutorMate AI...'), pleasantries, meta-commentary, or conversational fluff. Start DIRECTLY with the lesson plan title and overview immediately in clean Markdown format."
+    : "";
 
-Structure the plan into:
-1. Lesson Overview & Key Concepts
-2. Warm-up & Hook (5-10 mins)
-3. Direct Instruction / Lecture Breakdown
-4. Interactive Class Activity / Discussion
-5. Assessment / Quick Quiz
-6. Homework / Next Steps`;
+  const systemPrompt = `You are an expert master educator and pedagogy specialist. Design an actionable, minute-by-minute lesson plan tailored for effective classroom and online private batch teaching.${cleanDirective}`;
+
+  const userPrompt = `Design a ${params.durationMins}-minute master lesson plan for:
+- Subject: "${params.subject}"
+- Chapter/Topic: "${params.chapter}"
+- Target Audience/Batch: "${params.targetAudience}"
+
+Format with rich Markdown headings:
+1. **Lesson Summary & Prerequisite Knowledge**
+2. **Key Learning Objectives & Formulas/Definitions**
+3. **Minute-by-Minute Session Timeline**:
+   - 0-5 Mins: Warm-up Hook & Attendance Check
+   - 5-25 Mins: Core Concept Explanation & Board Work (include key points to write on board)
+   - 25-40 Mins: Worked Examples & Guided Problem Solving
+   - 40-50 Mins: Student Practice & On-the-spot Doubt Clearing
+   - 50-${params.durationMins} Mins: Summary Recap, Exit Ticket Quiz & Homework Assignment
+4. **Common Student Misconceptions & How to Address Them**
+5. **Teacher's Note & Tips for Engagement**`;
 
   const aiResult = await callGemini(userPrompt, systemPrompt);
 
@@ -202,12 +282,60 @@ Structure the plan into:
   return { success: true, result: fallbackText };
 }
 
+export async function publishGeneratedContentAsAssignment(
+  params: {
+    batchId: string;
+    title: string;
+    content: string;
+    deadline: string;
+    maxMarks: number;
+  },
+  idToken?: string
+) {
+  const authState = await verifyUserAuth(idToken);
+  if (authState.role !== "tutor" && authState.role !== "owner" && authState.role !== "admin") {
+    throw new Error("Unauthorized");
+  }
+
+  const { createAssignment, publishAssignment } = await import("./assignmentActions");
+
+  // 1. Create the assignment in database
+  const createRes = await createAssignment(
+    {
+      title: params.title,
+      description: params.content,
+      batchId: params.batchId,
+      deadline: params.deadline,
+      maxMarks: params.maxMarks,
+    },
+    idToken || ""
+  );
+
+  if (!createRes?.assignmentId) {
+    throw new Error("Failed to create assignment record");
+  }
+
+  // 2. Immediately publish assignment to notify enrolled students
+  await publishAssignment(createRes.assignmentId, idToken || "");
+
+  return { success: true, assignmentId: createRes.assignmentId };
+}
+
 export async function suggestDoubtAnswer(doubtText: string, subject?: string, idToken?: string) {
   const authState = await verifyUserAuth(idToken);
   if (authState.role !== "tutor") throw new Error("Unauthorized");
 
-  const systemPrompt = "You are an empathetic, clear academic tutor answering a student's doubt. Provide clear step-by-step guidance in friendly language.";
-  const userPrompt = `A student asked the following doubt in ${subject || "their subject"}:\n"${doubtText}"\n\nDraft a clear, friendly, and accurate response explaining the answer step-by-step.`;
+  const systemPrompt = `You are an encouraging, expert academic tutor helping a student understand a challenging concept.
+Answer with extreme clarity, step-by-step explanation, friendly tone, and simple real-world analogies where helpful.`;
+
+  const userPrompt = `A student asked the following doubt in ${subject || "their course"}:
+"${doubtText}"
+
+Draft a clear, friendly, and complete solution:
+1. **Direct Answer / Summary**: Concise overview.
+2. **Step-by-Step Explanation**: Break down the reasoning or mathematical solution clearly.
+3. **Key Concept / Real-World Analogy**: Why this works.
+4. **Follow-up Question for Student**: A quick self-test question to confirm they understood.`;
 
   const aiResult = await callGemini(userPrompt, systemPrompt);
 
@@ -231,17 +359,21 @@ export async function generateParentMessage(params: ParentMessageParams, idToken
   if (authState.role !== "tutor") throw new Error("Unauthorized");
 
   const langInstruction = params.language === "bn"
-    ? "Write in polite, respectful standard Bengali (বাংলা)."
+    ? "Write in highly polite, respectful, standard Bengali (বাংলা) appropriate for Bangladeshi parents."
     : params.language === "banglish"
-    ? "Write in friendly Banglish (Bengali written in Latin script)."
-    : "Write in polite, professional English.";
+    ? "Write in friendly, easy-to-read Banglish (Bengali written in clear Latin/English script)."
+    : "Write in professional, polite, and reassuring English.";
 
-  const systemPrompt = `You are a professional tutor messaging a student's parent. ${langInstruction}`;
-  const userPrompt = `Draft a message to parent of student "${params.studentName}".
-Topic/Reason: ${params.issueType}
-Additional details: ${params.contextDetails || "None"}.
+  const systemPrompt = `You are a respectful, professional private tutor writing a communication message to a student's parent. ${langInstruction}`;
 
-Make it polite, professional, encouraging yet clear.`;
+  const userPrompt = `Draft a SMS / WhatsApp message to the parent of student "${params.studentName}".
+Reason/Topic: ${params.issueType}
+Additional details provided by tutor: "${params.contextDetails || "Regular update"}"
+
+Guidelines:
+- Keep it concise, polite, encouraging, and clear.
+- Include a respectful greeting and closing signature from "TutorMate / Teacher".
+- Clearly state the purpose without sounding overly harsh.`;
 
   const aiResult = await callGemini(userPrompt, systemPrompt);
 
@@ -265,6 +397,69 @@ Make it polite, professional, encouraging yet clear.`;
   }
 
   return { success: true, result: fallbackText };
+}
+
+export async function sendParentPortalNotification(params: {
+
+  studentId: string;
+  title: string;
+  message: string;
+}, idToken?: string) {
+  const authState = await verifyUserAuth(idToken);
+  if (authState.role !== "tutor" && authState.role !== "owner" && authState.role !== "admin") {
+    throw new Error("Unauthorized");
+  }
+
+  const adminSupabase = createAdminClient();
+
+  // Find linked parent user_id
+  const { data: links } = await adminSupabase
+    .from("parent_links")
+    .select("parent_uid")
+    .eq("student_id", params.studentId);
+
+  // Find student record
+  const { data: student } = await adminSupabase
+    .from("students")
+    .select("auth_uid, full_name")
+    .eq("id", params.studentId)
+    .single();
+
+  let sentCount = 0;
+
+  // Insert notification for linked parents
+  if (links && links.length > 0) {
+    for (const link of links) {
+      if (link.parent_uid) {
+        const { createNotification } = await import("./notificationActions");
+        await createNotification(
+          link.parent_uid,
+          params.title || `Tutor Notice: ${student?.full_name || "Student"}`,
+          params.message,
+          "announcement",
+          params.studentId,
+          "student"
+        );
+        sentCount++;
+      }
+    }
+  }
+
+  // Insert notification for student
+  if (student?.auth_uid) {
+    const { createNotification } = await import("./notificationActions");
+    await createNotification(
+      student.auth_uid,
+      params.title || "Tutor Message",
+      params.message,
+      "announcement",
+      params.studentId,
+      "student"
+    );
+    sentCount++;
+  }
+
+  return { success: true, sentCount };
 }
 
 export async function generateWeeklySummary(idToken?: string) {
@@ -291,15 +486,19 @@ export async function generateWeeklySummary(idToken?: string) {
   const pendingDoubts = doubtRes.data?.filter((d) => d.status === "pending").length || 0;
   const totalCollected = feeRes.data?.reduce((sum, f) => sum + (Number(f.amount_paid) || 0), 0) || 0;
 
-  const systemPrompt = "You are an AI teaching assistant writing a weekly executive summary for a private tutor.";
-  const userPrompt = `Generate a narrative weekly performance summary for a tutor with:
-- Active Students: ${studentCount}
-- Active Batches: ${batchCount}
-- Average Attendance Rate: ${attendanceRate}%
-- Total Monthly Income Collected: ৳${totalCollected}
-- Pending Doubts: ${pendingDoubts}
+  const systemPrompt = "You are TutorMate AI — an executive academic consultant analyzing tutor batch performance and financial/operational health.";
+  const userPrompt = `Generate a high-level weekly executive analysis report for a tutor with live database stats:
+- Total Enrolled Students: ${studentCount}
+- Active Teaching Batches: ${batchCount}
+- Average Student Attendance Rate: ${attendanceRate}%
+- Total Tuition Fees Collected: ৳${totalCollected.toLocaleString()}
+- Pending Unresolved Student Doubts: ${pendingDoubts}
 
-Provide 3 actionable tips to improve student engagement and fee collection.`;
+Structure:
+1. **Executive Performance Summary**
+2. **Academic & Engagement Analysis** (Attendance vs Doubts response)
+3. **Financial & Fee Management Status**
+4. **3 Strategic Actionable Recommendations** for next week to boost student satisfaction, retention, and timely fee payments.`;
 
   const aiResult = await callGemini(userPrompt, systemPrompt);
 

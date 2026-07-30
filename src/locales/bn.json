@@ -29,7 +29,8 @@
     "exams": "পরীক্ষাসমূহ",
     "settings": "সেটিংস",
     "myAttendance": "আমার উপস্থিতি",
-    "paymentHistory": "পেমেন্ট হিস্ট্রি"
+    "paymentHistory": "পেমেন্ট হিস্ট্রি",
+    "notes": "ব্যক্তিগত নোটস"
   },
   "header": {
     "portal": "পোর্টাল",

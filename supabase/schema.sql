@@ -500,6 +500,24 @@ CREATE INDEX IF NOT EXISTS idx_batch_enrollments_batch ON public.batch_enrollmen
 CREATE INDEX IF NOT EXISTS idx_parent_links_parent ON public.parent_links(parent_uid);
 CREATE INDEX IF NOT EXISTS idx_parent_links_student ON public.parent_links(student_id);
 
+-- 25. Feature: Personal Notes Table
+CREATE TABLE IF NOT EXISTS public.notes (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  content TEXT NOT NULL,
+  color TEXT DEFAULT 'default',
+  is_pinned BOOLEAN DEFAULT false,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.notes ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Public notes" ON public.notes;
+CREATE POLICY "Users can manage their own notes" 
+ON public.notes FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+
+
 
 
 

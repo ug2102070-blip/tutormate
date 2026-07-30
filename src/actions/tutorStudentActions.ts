@@ -53,3 +53,33 @@ export async function createStudent(formData: StudentFormValues, idToken: string
 
   return { success: true, studentId: student.id, inviteCode };
 }
+
+/**
+ * Fetches all students for the authenticated tutor reliably server-side.
+ */
+export async function getTutorStudents(idToken?: string): Promise<any[]> {
+  const authState = await verifyUserAuth(idToken);
+  const tutorId = authState.tutorId || authState.uid;
+  const adminSupabase = createAdminClient();
+
+  const { data, error } = await adminSupabase
+    .from("students")
+    .select("*")
+    .eq("tutor_id", tutorId)
+    .order("created_at", { ascending: false });
+
+  if (error || !data) return [];
+  return data.map((s) => ({
+    id: s.id,
+    tutorId: s.tutor_id,
+    authUid: s.auth_uid,
+    inviteCode: s.invite_code,
+    fullName: s.full_name,
+    phone: s.phone,
+    guardianPhone: s.guardian_phone,
+    institution: s.institution,
+    enrolledBatchIds: s.enrolled_batch_ids || [],
+    status: s.status,
+    createdAt: s.created_at,
+  }));
+}

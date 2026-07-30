@@ -8,6 +8,9 @@ import { useLanguage } from "@/context/LanguageContext";
 import type { StudentDoc } from "@/types";
 import { Plus, UserPlus, Search, Copy, Check, Phone } from "lucide-react";
 
+import { getTutorBatches } from "@/actions/batchActions";
+import { getTutorStudents } from "@/actions/tutorStudentActions";
+
 export default function StudentsPage() {
   const { user } = useAuth();
   const { t } = useLanguage();
@@ -17,7 +20,6 @@ export default function StudentsPage() {
   const [selectedBatchId, setSelectedBatchId] = useState<string>("all");
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const supabase = createClient();
 
   useEffect(() => {
     if (!user) {
@@ -26,44 +28,24 @@ export default function StudentsPage() {
     }
 
     async function loadData() {
-      // 1. Load Batches Map
-      const { data: batchList } = await supabase
-        .from("batches")
-        .select("id, name")
-        .eq("tutor_id", user!.id);
+      try {
+        const [batchList, studentList] = await Promise.all([
+          getTutorBatches(user?.id),
+          getTutorStudents(user?.id),
+        ]);
 
-      const map: Record<string, string> = {};
-      if (batchList) {
-        batchList.forEach((b) => {
+        const map: Record<string, string> = {};
+        batchList.forEach((b: any) => {
           map[b.id] = b.name;
         });
-      }
-      setBatches(map);
+        setBatches(map);
 
-      // 2. Load Students List
-      const { data: studentList } = await supabase
-        .from("students")
-        .select("*")
-        .eq("tutor_id", user!.id);
-
-      if (studentList) {
-        setStudents(
-          studentList.map((s) => ({
-            id: s.id,
-            tutorId: s.tutor_id,
-            authUid: s.auth_uid,
-            inviteCode: s.invite_code,
-            fullName: s.full_name,
-            phone: s.phone,
-            guardianPhone: s.guardian_phone,
-            institution: s.institution,
-            enrolledBatchIds: s.enrolled_batch_ids || [],
-            status: s.status,
-            createdAt: s.created_at,
-          }))
-        );
+        setStudents(studentList);
+      } catch (err) {
+        console.error("loadData error:", err);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     }
 
     loadData();

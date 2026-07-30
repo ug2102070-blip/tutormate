@@ -29,7 +29,8 @@
     "exams": "Exams",
     "settings": "Settings",
     "myAttendance": "My Attendance",
-    "paymentHistory": "Payment History"
+    "paymentHistory": "Payment History",
+    "notes": "Personal Notes"
   },
   "header": {
     "portal": "Portal",

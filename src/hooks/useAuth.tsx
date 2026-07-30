@@ -37,42 +37,51 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function fetchUserClaims(supabaseUser: User): Promise<CustomClaims | null> {
     try {
+      const { data: tutor } = await supabase
+        .from("tutors")
+        .select("id")
+        .or(`user_id.eq.${supabaseUser.id},id.eq.${supabaseUser.id}`)
+        .limit(1)
+        .maybeSingle();
+
       const { data: profile } = await supabase
         .from("profiles")
         .select("*")
         .eq("id", supabaseUser.id)
-        .single();
+        .maybeSingle();
 
-      if (profile) {
-        if (profile.role === "tutor") {
+      if (tutor || profile) {
+        const role = profile?.role || (tutor ? "tutor" : null);
+        const resolvedTutorId = tutor?.id || profile?.tutor_id || supabaseUser.id;
+
+        if (role === "tutor") {
           return {
             role: "tutor",
-            tutorId: profile.tutor_id || supabaseUser.id,
+            tutorId: resolvedTutorId,
           };
         }
-        if (profile.role === "student") {
+        if (role === "student") {
           return {
             role: "student",
-            tutorId: profile.tutor_id || "",
-            studentDocId: profile.student_doc_id || "",
+            tutorId: profile?.tutor_id || "",
+            studentDocId: profile?.student_doc_id || "",
           };
         }
-        if (profile.role === "admin") {
+        if (role === "admin") {
           return { role: "admin" };
         }
-        if (profile.role === "owner") {
+        if (role === "owner") {
           return { role: "owner" };
         }
-        if (profile.role === "parent") {
+        if (role === "parent") {
           return {
             role: "parent",
-            studentId: profile.student_doc_id || "",
+            studentId: profile?.student_doc_id || "",
             studentAuthUid: "",
-            tutorId: profile.tutor_id || "",
+            tutorId: profile?.tutor_id || "",
           };
         }
       }
-      // If no profile exists, return null so they are forced to onboard
       return null;
     } catch {
       return null;
@@ -89,23 +98,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function refreshUser() {
     const { data } = await supabase.auth.getUser();
     const currentUser = data?.user ?? null;
-    setUser(currentUser);
     if (currentUser) {
       const newClaims = await fetchUserClaims(currentUser);
+      setUser(currentUser);
       setClaims(newClaims);
+    } else {
+      setUser(null);
+      setClaims(null);
     }
   }
 
   useEffect(() => {
     async function initAuth() {
-      const { data } = await supabase.auth.getUser();
-      const currentUser = data?.user ?? null;
-      setUser(currentUser);
-      if (currentUser) {
-        const initialClaims = await fetchUserClaims(currentUser);
-        setClaims(initialClaims);
+      try {
+        const { data } = await supabase.auth.getUser();
+        const currentUser = data?.user ?? null;
+        if (currentUser) {
+          const initialClaims = await fetchUserClaims(currentUser);
+          setUser(currentUser);
+          setClaims(initialClaims);
+        } else {
+          setUser(null);
+          setClaims(null);
+        }
+      } catch (err) {
+        console.error("initAuth error:", err);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     }
 
     initAuth();
@@ -113,11 +133,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         const currentUser = session?.user ?? null;
-        setUser(currentUser);
         if (currentUser) {
           const newClaims = await fetchUserClaims(currentUser);
+          setUser(currentUser);
           setClaims(newClaims);
         } else {
+          setUser(null);
           setClaims(null);
         }
         setLoading(false);

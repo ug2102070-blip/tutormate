@@ -18,13 +18,14 @@ export const SUBSCRIPTION_PLANS: Record<PlanType, PlanMetadata> = {
     plan: "free_trial",
     name: "Free Trial",
     maxStudents: 20,
-    maxBatches: 2,
-    allowAiFeatures: false,
+    maxBatches: 10,
+    allowAiFeatures: true,
     priceBDT: 0,
     description: "Ideal for individual tutors trying out TutorMate features.",
+
     features: [
       "Up to 20 Enrolled Students",
-      "Up to 2 Active Batches",
+      "Up to 10 Active Batches",
       "Attendance & Fee Tracking",
       "Study Materials Upload",
       "Assignments & Exams",
@@ -80,7 +81,7 @@ export function normalizeSubscriptionInfo(rawSub?: any): SubscriptionInfo {
     validUntil: rawSub?.validUntil || "2099-12-31T23:59:59Z",
     maxStudents: rawSub?.maxStudents ?? specs.maxStudents,
     maxBatches: rawSub?.maxBatches ?? specs.maxBatches,
-    allowAiFeatures: rawSub?.allowAiFeatures ?? specs.allowAiFeatures,
+    allowAiFeatures: rawSub?.allowAiFeatures === true || specs.allowAiFeatures,
     priceBDT: rawSub?.priceBDT ?? specs.priceBDT,
   };
 }

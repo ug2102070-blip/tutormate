@@ -11,7 +11,7 @@ import { BookOpen, Upload, Trash2, FileText, Image as ImageIcon, Video, File, Fi
 import type { BatchDoc, MaterialDoc } from "@/types";
 
 export default function MaterialsPage() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, claims, loading: authLoading } = useAuth();
   const { t } = useLanguage();
   const [batches, setBatches] = useState<BatchDoc[]>([]);
   const [materials, setMaterials] = useState<MaterialDoc[]>([]);
@@ -33,18 +33,20 @@ export default function MaterialsPage() {
 
   // Load batches and materials
   useEffect(() => {
+    if (authLoading) return;
     if (!user) return;
     loadData();
-  }, [user, selectedBatchId]);
+  }, [user, claims, authLoading, selectedBatchId]);
 
   async function loadData() {
     setLoading(true);
     try {
       // 1. Load active batches
+      const tutorId = (claims && "tutorId" in claims ? (claims as any).tutorId : null) || user!.id;
       const { data: batchesData } = await supabase
         .from("batches")
         .select("*")
-        .eq("tutor_id", user!.id)
+        .eq("tutor_id", tutorId)
         .eq("is_archived", false)
         .order("created_at", { ascending: false });
 

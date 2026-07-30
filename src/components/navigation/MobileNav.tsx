@@ -9,31 +9,47 @@ import {
   CreditCard,
   HelpCircle,
   Video,
+  Building2,
+  Bell,
+  BookOpen,
 } from "lucide-react";
 
 interface MobileNavProps {
-  role: "tutor" | "student";
+  role: "tutor" | "student" | "owner" | "parent";
 }
 
-export function MobileNav({ role }: MobileNavProps) {
-  const pathname = usePathname();
-
-  const tutorItems = [
+const navItemsByRole: Record<string, { href: string; label: string; icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }> }[]> = {
+  tutor: [
     { href: "/tutor/dashboard", label: "Home", icon: LayoutDashboard },
     { href: "/tutor/batches", label: "Batches", icon: Users },
     { href: "/tutor/attendance", label: "Attendance", icon: CalendarCheck },
     { href: "/tutor/fees", label: "Fees", icon: CreditCard },
     { href: "/tutor/doubts", label: "Doubts", icon: HelpCircle },
-  ];
-
-  const studentItems = [
+  ],
+  student: [
     { href: "/student/dashboard", label: "Home", icon: LayoutDashboard },
     { href: "/student/recorded-classes", label: "Classes", icon: Video },
     { href: "/student/fees", label: "Fees", icon: CreditCard },
     { href: "/student/doubts", label: "Doubts", icon: HelpCircle },
-  ];
+  ],
+  owner: [
+    { href: "/owner/dashboard", label: "Center", icon: Building2 },
+    { href: "/owner/tutors", label: "Tutors", icon: Users },
+    { href: "/owner/batches", label: "Batches", icon: BookOpen },
+    { href: "/owner/fees", label: "Fees", icon: CreditCard },
+    { href: "/tutor/dashboard", label: "Teach", icon: LayoutDashboard },
+  ],
+  parent: [
+    { href: "/parent/dashboard", label: "Home", icon: LayoutDashboard },
+    { href: "/parent/attendance", label: "Attendance", icon: CalendarCheck },
+    { href: "/parent/fees", label: "Fees", icon: CreditCard },
+    { href: "/parent/notifications", label: "Alerts", icon: Bell },
+  ],
+};
 
-  const items = role === "tutor" ? tutorItems : studentItems;
+export function MobileNav({ role }: MobileNavProps) {
+  const pathname = usePathname();
+  const items = navItemsByRole[role] ?? navItemsByRole.tutor;
 
   return (
     <nav
@@ -104,4 +120,3 @@ export function MobileNav({ role }: MobileNavProps) {
     </nav>
   );
 }
-

@@ -24,7 +24,7 @@ import type { BatchDoc, MaterialDoc } from "@/types";
 import Link from "next/link";
 
 export default function TutorRecordedClassesPage() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, claims, loading: authLoading } = useAuth();
   const { t } = useLanguage();
   const [batches, setBatches] = useState<BatchDoc[]>([]);
   const [videoMaterials, setVideoMaterials] = useState<MaterialDoc[]>([]);
@@ -48,18 +48,20 @@ export default function TutorRecordedClassesPage() {
   const supabase = createClient();
 
   useEffect(() => {
+    if (authLoading) return;
     if (!user) return;
     loadData();
-  }, [user, selectedBatchId]);
+  }, [user, claims, authLoading, selectedBatchId]);
 
   async function loadData() {
     setLoading(true);
     try {
       // 1. Fetch batches
+      const tutorId = (claims && "tutorId" in claims ? (claims as any).tutorId : null) || user!.id;
       const { data: batchesData } = await supabase
         .from("batches")
         .select("*")
-        .eq("tutor_id", user!.id)
+        .eq("tutor_id", tutorId)
         .eq("is_archived", false)
         .order("created_at", { ascending: false });
 

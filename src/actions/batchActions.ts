@@ -238,3 +238,32 @@ export async function toggleArchiveBatch(batchId: string, idToken: string) {
 
   return { success: true, isArchived: nextArchived };
 }
+
+/**
+ * Fetches all batches for the authenticated tutor reliably server-side.
+ */
+export async function getTutorBatches(idToken?: string): Promise<any[]> {
+  const authState = await verifyUserAuth(idToken);
+  const tutorId = authState.tutorId || authState.uid;
+  const adminSupabase = createAdminClient();
+
+  const { data, error } = await adminSupabase
+    .from("batches")
+    .select("*")
+    .eq("tutor_id", tutorId)
+    .order("created_at", { ascending: false });
+
+  if (error || !data) return [];
+  return data.map((b) => ({
+    id: b.id,
+    tutorId: b.tutor_id,
+    name: b.name,
+    subject: b.subject,
+    gradeClass: b.grade_class,
+    monthlyFee: Number(b.monthly_fee),
+    schedule: b.schedule || [],
+    studentCount: b.student_count,
+    isArchived: b.is_archived,
+    createdAt: b.created_at,
+  }));
+}

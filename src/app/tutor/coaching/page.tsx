@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { useLanguage } from "@/context/LanguageContext";
 import Link from "next/link";
@@ -41,7 +41,7 @@ import type {
   CenterAnalyticsDoc,
 } from "@/types";
 
-export default function CoachingCenterPage() {
+function CoachingCenterContent() {
   const { t } = useLanguage();
   const searchParams = useSearchParams();
   const [loading, setLoading] = useState(true);
@@ -997,5 +997,24 @@ export default function CoachingCenterPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function CoachingCenterPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="flex flex-col items-center gap-3">
+            <div className="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+            <p className="text-sm font-medium" style={{ color: "var(--color-text-muted)" }}>
+              Loading...
+            </p>
+          </div>
+        </div>
+      }
+    >
+      <CoachingCenterContent />
+    </Suspense>
   );
 }

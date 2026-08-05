@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -12,7 +12,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Phone, Mail, Sparkles, ArrowRight, Eye, EyeOff, Loader2 } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 
-export default function LoginPage() {
+function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, loading: authLoading, refreshClaims } = useAuth();
@@ -760,5 +760,13 @@ export default function LoginPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="flex justify-center p-8"><Loader2 className="w-8 h-8 animate-spin text-indigo-500" /></div>}>
+      <LoginContent />
+    </Suspense>
   );
 }

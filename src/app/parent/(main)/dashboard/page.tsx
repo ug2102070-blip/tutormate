@@ -16,10 +16,10 @@ import {
   CheckCircle2,
   XCircle,
   Clock,
-  TrendingUp,
   BookOpen,
   Bell,
   GraduationCap,
+  Megaphone,
 } from "lucide-react";
 
 const MONTH_NAMES = [
@@ -194,6 +194,7 @@ export default function ParentDashboardPage() {
   const feeStyle = fee ? (STATUS_STYLES[fee.status] ?? STATUS_STYLES.unpaid) : null;
   const pendingCount = data?.pendingAssignments?.length ?? 0;
   const lastExam = data?.upcomingExams?.[0] ?? null;
+  const recentNotice = data?.recentNotice ?? null;
 
   // Recent attendance (up to 4 records)
   const recentAttendance: any[] = data?.recentAttendance ?? [];
@@ -260,6 +261,27 @@ export default function ParentDashboardPage() {
           </div>
         </div>
       </div>
+
+      {recentNotice && (
+        <div className="bg-white dark:bg-[#131b2e] p-5 rounded-2xl border border-indigo-200 dark:border-indigo-500/20 shadow-sm relative overflow-hidden flex items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="p-3 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600">
+              <Megaphone className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-0.5">
+                {t("dashboard.recentNotice") || "Recent Notice"}
+              </div>
+              <div className="text-sm font-extrabold text-slate-900 dark:text-white line-clamp-1">
+                {recentNotice.title}
+              </div>
+            </div>
+          </div>
+          <Link href="/parent/notifications" className="shrink-0 p-2 rounded-xl bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 transition-colors">
+             <ChevronRight className="w-4 h-4 text-slate-500" />
+          </Link>
+        </div>
+      )}
 
       {/* ── 4-Metric Stat Grid ───────────────────────────────────────────── */}
       <div className="grid grid-cols-2 gap-3">
@@ -347,14 +369,14 @@ export default function ParentDashboardPage() {
               style={{ color: "var(--color-text-muted)" }} />
           </div>
           <div>
-            <p className="text-xl font-extrabold" style={{ color: pendingCount > 0 ? "var(--color-warning, #d97706)" : "var(--color-text)" }}>
+            <div className="text-xl font-extrabold flex items-center h-7" style={{ color: pendingCount > 0 ? "var(--color-warning, #d97706)" : "var(--color-text)" }}>
               {pendingCount}
-            </p>
+            </div>
             <p className="text-[11px] font-medium" style={{ color: "var(--color-text-muted)" }}>
               {t("dashboard.pendingAssignments")}
             </p>
-            <p className="text-[10px] mt-0.5" style={{ color: "var(--color-text-muted)" }}>
-              {pendingCount === 0 ? (isBn ? "সব জমা দেওয়া ✓" : "All submitted ✓") : (isBn ? "জমা বাকি আছে" : "Due soon")}
+            <p className="text-[10px] mt-0.5 font-bold" style={{ color: pendingCount > 0 ? "var(--color-warning, #d97706)" : "var(--color-success, #16a34a)" }}>
+              {pendingCount === 0 ? (isBn ? "সব জমা দেওয়া ✓" : "All submitted ✓") : (isBn ? "জমা বাকি আছে" : "Action Required")}
             </p>
           </div>
         </Link>

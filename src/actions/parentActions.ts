@@ -228,6 +228,20 @@ export async function getParentDashboard() {
     }
   }
 
+  // Recent Notice
+  let recentNotice = null;
+  const { data: notices } = await supabase
+    .from("notices")
+    .select("title, type, created_at, audience")
+    .eq("tutor_id", tutorId)
+    .eq("is_published", true)
+    .order("created_at", { ascending: false })
+    .limit(5);
+
+  if (notices) {
+    recentNotice = notices.find((n: any) => n.audience === 'all' || n.audience === 'parents') || null;
+  }
+
   return {
     studentId,
     attendancePct,
@@ -256,6 +270,7 @@ export async function getParentDashboard() {
       deadline: s.assignments?.deadline,
     })),
     recentAttendance,
+    recentNotice,
   };
 }
 

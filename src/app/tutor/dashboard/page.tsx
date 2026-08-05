@@ -17,6 +17,7 @@ import {
   CreditCard,
   TrendingUp,
   AlertCircle,
+  Loader2,
 } from "lucide-react";
 import { OnboardingChecklist } from "@/components/tutor/OnboardingChecklist";
 import { FeedbackWidget } from "@/components/FeedbackWidget";
@@ -179,9 +180,9 @@ export default function TutorDashboardPage() {
     <div className="space-y-6 max-w-5xl mx-auto pb-12">
       {/* Welcome Banner */}
       <div
-        className="p-6 sm:p-7 rounded-2xl text-white relative overflow-hidden shadow-lg"
+        className="p-6 sm:p-8 rounded-2xl text-white relative overflow-hidden shadow-lg"
         style={{
-          background: "linear-gradient(135deg, #6366f1 0%, #4f46e5 50%, #06b6d4 100%)",
+          background: "linear-gradient(135deg, #6366f1 0%, #7c3aed 50%, #06b6d4 100%)",
         }}
       >
         <div className="relative z-10 flex items-center justify-between">
@@ -249,10 +250,14 @@ export default function TutorDashboardPage() {
                   </div>
                 </div>
                 <div
-                  className="text-lg sm:text-xl font-extrabold tracking-tight truncate"
+                  className="text-lg sm:text-xl font-extrabold tracking-tight truncate flex items-center h-7"
                   style={{ color: "var(--color-text)" }}
                 >
-                  {stat.value}
+                  {loading ? (
+                    <Loader2 className="w-5 h-5 animate-spin text-indigo-400" />
+                  ) : (
+                    stat.value
+                  )}
                 </div>
                 <div
                   className="text-[11px] font-semibold mt-0.5 truncate"

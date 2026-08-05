@@ -52,8 +52,7 @@ export default function CreateBatchPage() {
           gradeClass,
           monthlyFee: Number(monthlyFee),
           schedule,
-        },
-        user.id
+        }
       );
       router.push("/tutor/batches");
     } catch (err: unknown) {

@@ -26,7 +26,7 @@ export default function BatchesPage() {
 
     async function loadBatches() {
       try {
-        const data = await getTutorBatches(user?.id);
+        const data = await getTutorBatches();
         setBatches(data);
       } catch (err) {
         console.error("loadBatches error:", err);
@@ -44,7 +44,7 @@ export default function BatchesPage() {
 
   async function handleToggleArchive(batchId: string) {
     if (!user) return;
-    await toggleArchiveBatch(batchId, user.id);
+    await toggleArchiveBatch(batchId);
     setBatches((prev) =>
       prev.map((b) => (b.id === batchId ? { ...b, isArchived: !b.isArchived } : b))
     );

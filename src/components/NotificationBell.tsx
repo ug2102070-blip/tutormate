@@ -49,7 +49,7 @@ export function NotificationBell() {
     if (!user) return;
     setLoading(true);
     try {
-      const data = await getNotifications(user.id);
+      const data = await getNotifications();
       setNotifications(data);
     } catch {
       // Silently fail — notifications are non-critical
@@ -115,13 +115,13 @@ export function NotificationBell() {
 
   async function handleMarkAll() {
     if (!user) return;
-    await markAllAsRead(user.id);
+    await markAllAsRead();
     setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
   }
 
   async function handleClickNotification(n: NotificationDoc) {
     if (!n.isRead && user) {
-      await markAsRead(n.id, user.id);
+      await markAsRead(n.id);
       setNotifications((prev) =>
         prev.map((x) => (x.id === n.id ? { ...x, isRead: true } : x))
       );

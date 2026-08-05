@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/hooks/useAuth";
@@ -49,7 +49,7 @@ export default function TutorCalendarPage() {
     if (!user?.id) return;
     setLoading(true);
     try {
-      const data = await getCalendarEvents(year, month, user.id);
+      const data = await getCalendarEvents(year, month);
       setEvents(data);
     } catch (err) {
       console.error(err);
@@ -95,7 +95,7 @@ export default function TutorCalendarPage() {
     setAddLoading(true);
     try {
       const formData = new FormData(e.currentTarget);
-      await createEvent(formData, user?.id);
+      await createEvent(formData);
       setShowAddModal(false);
       await loadEvents();
     } catch (err: any) {
@@ -108,7 +108,7 @@ export default function TutorCalendarPage() {
   async function handleDelete(eventId: string) {
     if (!confirm("Delete this event?")) return;
     try {
-      await deleteEvent(eventId, user?.id);
+      await deleteEvent(eventId);
       await loadEvents();
       setSelectedDay(null);
     } catch (err: any) {

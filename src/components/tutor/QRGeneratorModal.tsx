@@ -44,7 +44,7 @@ export function QRGeneratorModal({
   const fetchActiveSession = useCallback(async () => {
     if (!batchId || !userId) return;
     try {
-      const active = await getActiveQRSession(batchId, userId);
+      const active = await getActiveQRSession(batchId);
       if (active) {
         setSession(active);
         const remaining = Math.max(0, Math.floor((new Date(active.expiresAt).getTime() - Date.now()) / 1000));
@@ -92,7 +92,7 @@ export function QRGeneratorModal({
     setLoading(true);
     setError("");
     try {
-      const res = await generateQRSession({ batchId, durationMinutes: mins }, userId);
+      const res = await generateQRSession({ batchId, durationMinutes: mins });
       if (res.success && res.qrToken) {
         setSession({
           id: res.qrToken.id,

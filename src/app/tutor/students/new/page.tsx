@@ -29,7 +29,7 @@ export default function AddStudentPage() {
     if (!user) return;
     async function loadBatches() {
       try {
-        const data = await getTutorBatches(user?.id);
+        const data = await getTutorBatches();
         const activeBatches = data.filter((b: any) => !b.isArchived);
         setBatches(activeBatches);
         if (activeBatches.length > 0) {
@@ -61,16 +61,13 @@ export default function AddStudentPage() {
     setLoading(true);
 
     try {
-      const result = await createStudent(
-        {
-          fullName,
-          phone,
-          guardianPhone: guardianPhone || null,
-          institution: institution || null,
-          enrolledBatchIds: selectedBatchIds,
-        },
-        user.id
-      );
+      const result = await createStudent({
+        fullName,
+        phone,
+        guardianPhone: guardianPhone || null,
+        institution: institution || null,
+        enrolledBatchIds: selectedBatchIds,
+      });
       setCreatedInviteCode(result.inviteCode);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to add student.";

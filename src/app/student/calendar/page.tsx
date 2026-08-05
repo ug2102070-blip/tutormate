@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/hooks/useAuth";
@@ -44,7 +44,7 @@ export default function StudentCalendarPage() {
     if (!user?.id) return;
     setLoading(true);
     try {
-      const data = await getCalendarEvents(year, month, user.id);
+      const data = await getCalendarEvents(year, month);
       setEvents(data);
     } catch (err) {
       console.error(err);

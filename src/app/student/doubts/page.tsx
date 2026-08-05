@@ -227,7 +227,7 @@ export default function StudentDoubtsPage({
       prev.map((d) => (d.id === selectedDoubtId ? { ...d, unreadByStudent: false } : d))
     );
 
-    markDoubtAsRead(selectedDoubtId, user.id);
+    markDoubtAsRead(selectedDoubtId);
 
     fetchMessagesForThread(selectedDoubtId);
 
@@ -302,7 +302,7 @@ export default function StudentDoubtsPage({
       for (const path of pathsToFetch) {
         if (!signedUrls[path]) {
           try {
-            const url = await getMediaSignedUrl(path, user!.id);
+            const url = await getMediaSignedUrl(path);
             if (url) newUrls[path] = url;
           } catch (err) {
             console.error("Signed URL error:", err);
@@ -357,8 +357,7 @@ export default function StudentDoubtsPage({
           attachmentType,
           attachmentName,
           attachmentSize,
-        },
-        user.id
+        }
       );
 
       setNewMessageText("");
@@ -410,8 +409,7 @@ export default function StudentDoubtsPage({
           attachmentType: "audio",
           attachmentName: fileName,
           attachmentSize: audioBlob.size,
-        },
-        user.id
+        }
       );
 
       setShowVoiceRecorder(false);
@@ -473,8 +471,7 @@ export default function StudentDoubtsPage({
           attachmentName,
           attachmentSize,
         },
-        user.user_metadata?.full_name || user.email?.split("@")[0] || "Student",
-        user.id
+        user.user_metadata?.full_name || user.email?.split("@")[0] || "Student"
       );
 
       setTitle("");
@@ -493,7 +490,7 @@ export default function StudentDoubtsPage({
   async function handleMarkResolved() {
     if (!user || !selectedDoubtId) return;
     try {
-      await updateDoubtStatus(selectedDoubtId, "resolved", user.id);
+      await updateDoubtStatus(selectedDoubtId, "resolved");
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to mark resolved.";
       setError(msg);

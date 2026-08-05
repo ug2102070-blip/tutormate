@@ -214,8 +214,7 @@ export default function AiAssistantPage() {
           studentId: selectedStudentId,
           title: `Tutor Notice for ${pName}`,
           message: output,
-        },
-        user?.id
+        }
       );
       setPortalSent(true);
       setTimeout(() => setPortalSent(false), 3000);
@@ -381,8 +380,7 @@ export default function AiAssistantPage() {
           difficulty: qDiff,
           cleanOutputOnly,
           outputMode,
-        },
-        user?.id
+        }
       );
       setOutput(res.result);
     } catch (err: any) {
@@ -405,8 +403,7 @@ export default function AiAssistantPage() {
           instructions: aNotes,
           cleanOutputOnly,
           outputMode,
-        },
-        user?.id
+        }
       );
       setOutput(res.result);
     } catch (err: any) {
@@ -427,8 +424,7 @@ export default function AiAssistantPage() {
           durationMins: lDuration,
           targetAudience: lTarget,
           cleanOutputOnly,
-        },
-        user?.id
+        }
       );
       setOutput(res.result);
     } catch (err: any) {
@@ -442,7 +438,7 @@ export default function AiAssistantPage() {
     setLoading(true);
     setOutput("");
     try {
-      const res = await suggestDoubtAnswer(dText, dSubject, user?.id);
+      const res = await suggestDoubtAnswer(dText, dSubject);
       setOutput(res.result);
     } catch (err: any) {
       setOutput(`Error: ${err.message || "Failed to solve doubt."}`);
@@ -461,8 +457,7 @@ export default function AiAssistantPage() {
           issueType: pIssue,
           contextDetails: pDetails,
           language: pLang,
-        },
-        user?.id
+        }
       );
       setOutput(res.result);
     } catch (err: any) {
@@ -476,7 +471,7 @@ export default function AiAssistantPage() {
     setLoading(true);
     setOutput("");
     try {
-      const res = await generateWeeklySummary(user?.id);
+      const res = await generateWeeklySummary();
       setOutput(res.result);
     } catch (err: any) {
       setOutput(`Error: ${err.message || "Failed to generate summary."}`);

@@ -38,7 +38,7 @@ export default function AttendancePage() {
     if (!user) return;
     async function loadBatches() {
       try {
-        const data = await getTutorBatches(user?.id);
+        const data = await getTutorBatches();
         const activeList = data.filter((b: any) => !b.isArchived);
         setBatches(activeList);
         if (activeList.length > 0) {
@@ -59,7 +59,7 @@ export default function AttendancePage() {
 
     try {
       // 1. Fetch active enrolled students using server action
-      const allStudents = await getTutorStudents(user.id);
+      const allStudents = await getTutorStudents();
       const studentList: StudentDoc[] = allStudents.filter(
         (s: any) =>
           s.status === "active" && s.enrolledBatchIds?.includes(selectedBatchId)
@@ -120,14 +120,11 @@ export default function AttendancePage() {
     setError("");
 
     try {
-      await saveAttendance(
-        {
-          batchId: selectedBatchId,
-          date: selectedDate,
-          records: attendanceRecords,
-        },
-        user.id
-      );
+      await saveAttendance({
+        batchId: selectedBatchId,
+        date: selectedDate,
+        records: attendanceRecords,
+      });
       setSavedSuccess(true);
       setTimeout(() => setSavedSuccess(false), 3000);
     } catch (err: unknown) {

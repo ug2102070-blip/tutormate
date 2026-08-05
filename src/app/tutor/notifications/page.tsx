@@ -75,7 +75,7 @@ export default function TutorNotificationsPage() {
     if (!user) return;
     setLoading(true);
     try {
-      const data = await getNotifications(user.id);
+      const data = await getNotifications();
       setNotifications(data);
     } finally {
       setLoading(false);
@@ -124,14 +124,14 @@ export default function TutorNotificationsPage() {
   async function handleMarkAll() {
     if (!user) return;
     setMarkingAll(true);
-    await markAllAsRead(user.id);
+    await markAllAsRead();
     setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
     setMarkingAll(false);
   }
 
   async function handleMarkOne(id: string) {
     if (!user) return;
-    await markAsRead(id, user.id);
+    await markAsRead(id);
     setNotifications((prev) =>
       prev.map((n) => (n.id === id ? { ...n, isRead: true } : n))
     );

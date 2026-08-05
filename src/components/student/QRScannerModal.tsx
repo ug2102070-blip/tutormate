@@ -40,7 +40,7 @@ export function QRScannerModal({
     setSuccessData(null);
 
     try {
-      const res = await scanQRAttendance(inputCode, userId);
+      const res = await scanQRAttendance(inputCode);
       if (res.success) {
         setSuccessData({
           batchName: res.batchName,

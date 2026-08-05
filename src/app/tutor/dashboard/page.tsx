@@ -61,11 +61,11 @@ export default function TutorDashboardPage() {
       try {
         const userId = user?.id;
         const [m, inc, fee, att, grd] = await Promise.all([
-          getDashboardMetrics(userId),
-          getMonthlyIncomeChart(6, userId),
-          getFeeDistribution(undefined, undefined, userId),
-          getAttendanceTrend(undefined, userId),
-          getGradeDistribution(userId),
+          getDashboardMetrics(),
+          getMonthlyIncomeChart(6),
+          getFeeDistribution(undefined, undefined),
+          getAttendanceTrend(undefined),
+          getGradeDistribution(),
         ]);
 
         setMetrics(m);

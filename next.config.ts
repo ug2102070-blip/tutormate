@@ -25,6 +25,9 @@ const nextConfig: NextConfig = {
 
   // React strict mode বন্ধ রাখলে double-render কমবে dev এ
   reactStrictMode: false,
+
+  // Silence Vercel Turbopack build error by explicitly passing an empty turbopack config
+  turbopack: {},
 };
 
 export default nextConfig;

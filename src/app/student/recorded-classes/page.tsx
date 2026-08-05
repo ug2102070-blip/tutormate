@@ -40,9 +40,6 @@ export default function StudentRecordedClassesPage() {
   async function loadData() {
     setLoading(true);
     try {
-      const token = (await supabase.auth.getSession()).data.session?.access_token;
-      if (!token) throw new Error("No auth token");
-
       // 1. Get student's enrolled batches
       const { data: studentDoc } = await supabase
         .from("students")
@@ -76,7 +73,7 @@ export default function StudentRecordedClassesPage() {
 
       // 2. Load materials and filter for video fileType
       const batchFilter = selectedBatchId === "all" ? undefined : selectedBatchId;
-      const mats = await getStudentMaterials(token, batchFilter);
+      const mats = await getStudentMaterials(batchFilter);
       const videos = mats.filter((m) => m.fileType === "video");
       setVideoMaterials(videos);
     } catch (err) {

@@ -93,15 +93,12 @@ export default function EditMaterialPage({ params }: { params: Promise<{ id: str
 
     setSaving(true);
     try {
-      const token = (await supabase.auth.getSession()).data.session?.access_token;
-      if (!token) throw new Error("Not authenticated");
-
       await updateMaterial(resolvedParams.id, {
         title: formData.title,
         description: formData.description || undefined,
         batchId: formData.batchId === "all" ? undefined : formData.batchId,
         isPublished: formData.isPublished,
-      }, token);
+      });
 
       router.push("/tutor/materials");
     } catch (err: any) {

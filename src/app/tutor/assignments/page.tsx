@@ -8,6 +8,7 @@ import { getAssignments, createAssignment, publishAssignment, deleteAssignment }
 import { BookOpen, Trash2, Plus, Loader2, Eye, Calendar, FileText, ArrowRight } from "lucide-react";
 import type { BatchDoc, AssignmentDoc } from "@/types";
 import Link from "next/link";
+import { EmptyState } from "@/components/EmptyState";
 
 export default function TutorAssignmentsPage() {
   const { user, claims, loading: authLoading } = useAuth();
@@ -65,11 +66,8 @@ export default function TutorAssignmentsPage() {
         }
       }
 
-      const token = (await supabase.auth.getSession()).data.session?.access_token;
-      if (!token) throw new Error("No auth token");
-
       const batchFilter = selectedBatchId === "all" ? undefined : selectedBatchId;
-      const data = await getAssignments(token, batchFilter);
+      const data = await getAssignments(batchFilter);
       setAssignments(data);
     } catch (err) {
       console.error("Failed to load assignments data:", err);
@@ -89,16 +87,13 @@ export default function TutorAssignmentsPage() {
 
     try {
       setIsCreating(true);
-      const token = (await supabase.auth.getSession()).data.session?.access_token;
-      if (!token || !user) throw new Error("Authentication error");
-
       await createAssignment({
         title: formData.title,
         description: formData.description || undefined,
         batchId: formData.batchId,
         deadline: formData.deadline,
         maxMarks: formData.maxMarks,
-      }, token);
+      });
 
       setFormData(prev => ({ ...prev, title: "", description: "", deadline: "" }));
       await loadData();
@@ -112,9 +107,7 @@ export default function TutorAssignmentsPage() {
   const handleDelete = async (id: string) => {
     if (!window.confirm("Are you sure you want to delete this assignment? All submissions will be lost.")) return;
     try {
-      const token = (await supabase.auth.getSession()).data.session?.access_token;
-      if (!token) return;
-      await deleteAssignment(id, token);
+      await deleteAssignment(id);
       setAssignments(assignments.filter(a => a.id !== id));
     } catch (err) {
       console.error(err);
@@ -125,11 +118,8 @@ export default function TutorAssignmentsPage() {
   const handlePublish = async (id: string) => {
     if (!window.confirm("Publishing will create submission records for all students currently enrolled in the batch. Do you want to continue?")) return;
     try {
-      const token = (await supabase.auth.getSession()).data.session?.access_token;
-      if (!token) return;
-      
       setAssignments(assignments.map(a => a.id === id ? { ...a, isPublished: true } : a));
-      await publishAssignment(id, token);
+      await publishAssignment(id);
       await loadData();
     } catch (err) {
       console.error(err);
@@ -310,20 +300,16 @@ export default function TutorAssignmentsPage() {
             <p className="text-sm">Loading assignments...</p>
           </div>
         ) : assignments.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-64 text-center px-4">
-            <div
-              className="w-16 h-16 rounded-full flex items-center justify-center mb-3"
-              style={{ background: "var(--color-bg-secondary)" }}
-            >
-              <BookOpen className="w-8 h-8" style={{ color: "var(--color-text-muted)" }} />
-            </div>
-            <h3 className="font-bold mb-1" style={{ color: "var(--color-text)" }}>No Assignments Found</h3>
-            <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
-              {selectedBatchId === "all"
-                ? "Create your first assignment!"
-                : "No assignments for this batch."}
-            </p>
-          </div>
+          <EmptyState
+            variant="assignments"
+            title="No assignments found"
+            description={
+              selectedBatchId === "all"
+                ? "Create your first assignment to track student homework and submissions."
+                : "No assignments for this batch yet."
+            }
+            action={{ label: "Create assignment", href: "/tutor/assignments/new" }}
+          />
         ) : (
           <div
             style={{ borderTop: "none" }}

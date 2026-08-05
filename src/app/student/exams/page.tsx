@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/context/LanguageContext";
-import { createClient } from "@/lib/supabase/client";
 import { getStudentExamResults } from "@/actions/examActions";
 import { Award, Loader2, Calendar, BookOpen, AlertCircle, TrendingUp } from "lucide-react";
 import type { ExamDoc, ExamResultDoc } from "@/types";
@@ -20,7 +19,6 @@ export default function StudentExamsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const supabase = createClient();
 
   useEffect(() => {
     if (!user) return;
@@ -31,14 +29,10 @@ export default function StudentExamsPage() {
     setLoading(true);
     setError("");
     try {
-      const token = (await supabase.auth.getSession()).data.session?.access_token;
-      if (!token) throw new Error("No auth token");
-
-      const data = await getStudentExamResults(token);
+      const data = await getStudentExamResults();
       setResults(data.results);
-    } catch (err: any) {
-      console.error(err);
-      setError(err.message || "Failed to load exam results");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to load exam results");
     } finally {
       setLoading(false);
     }

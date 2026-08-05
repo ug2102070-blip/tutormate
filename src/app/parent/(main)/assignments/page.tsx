@@ -22,7 +22,7 @@ export default function ParentAssignmentsPage() {
     async function load() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-      const data = await getParentAssignments(user.id);
+      const data = await getParentAssignments();
       setAssignments(data);
       setLoading(false);
     }

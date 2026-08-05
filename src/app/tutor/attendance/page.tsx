@@ -11,6 +11,7 @@ import { QRGeneratorModal } from "@/components/tutor/QRGeneratorModal";
 
 import { getTutorBatches } from "@/actions/batchActions";
 import { getTutorStudents } from "@/actions/tutorStudentActions";
+import { EmptyState } from "@/components/EmptyState";
 
 export default function AttendancePage() {
   const { user } = useAuth();
@@ -262,15 +263,11 @@ export default function AttendancePage() {
       {loading ? (
         <div className="h-64 rounded-2xl animate-shimmer border border-slate-200 dark:border-white/10 bg-white dark:bg-[#131b2e]" />
       ) : students.length === 0 ? (
-        <div className="py-16 text-center border border-dashed rounded-2xl border-slate-200 dark:border-white/10 bg-white dark:bg-[#131b2e] shadow-xs">
-          <CalendarCheck className="w-10 h-10 mx-auto text-slate-400 mb-3" />
-          <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
-            No active students in this batch
-          </h3>
-          <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-1 max-w-sm mx-auto">
-            Enroll students into this batch first to start taking attendance.
-          </p>
-        </div>
+        <EmptyState
+          variant="attendance"
+          title="No active students in this batch"
+          description="Enroll students into this batch first to start taking attendance."
+        />
       ) : (
         <div className="rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#131b2e] overflow-hidden shadow-xs">
           <div className="divide-y divide-slate-100">
@@ -338,7 +335,7 @@ export default function AttendancePage() {
           </div>
 
           {/* Mobile Sticky Save Floating Bar */}
-          <div className="sticky bottom-16 sm:hidden p-3 bg-white/95 backdrop-blur-md border-t border-slate-200 dark:border-white/10 flex items-center justify-between shadow-lg">
+          <div className="sticky bottom-16 sm:hidden p-3 bg-white/95 dark:bg-[#131b2e]/95 backdrop-blur-md border-t border-slate-200 dark:border-white/10 flex items-center justify-between shadow-lg">
             <span className="text-xs font-bold text-slate-600 dark:text-slate-400">
               {students.length} Students Logged
             </span>

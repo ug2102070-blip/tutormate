@@ -8,6 +8,9 @@ import {
   type ReactNode,
 } from "react";
 import { createClient } from "@/lib/supabase/client";
+
+// Created once at module level — not inside AuthProvider — to prevent duplicate instances
+const supabase = createClient();
 import type { UserRole, CustomClaims } from "@/types";
 import type { User } from "@supabase/supabase-js";
 
@@ -33,9 +36,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [claims, setClaims] = useState<CustomClaims | null>(null);
   const [loading, setLoading] = useState(true);
-  const supabase = createClient();
 
-  async function fetchUserClaims(supabaseUser: User): Promise<CustomClaims | null> {
+  async function fetchUserClaims(supabaseUser: User, forceDbCheck = false): Promise<CustomClaims | null> {
+    // 1. Fast Path: Check user_metadata (no DB queries needed!)
+    const meta = supabaseUser.user_metadata;
+    if (!forceDbCheck && meta?.role) {
+      if (meta.role === "tutor") {
+        return {
+          role: "tutor",
+          tutorId: meta.tutorId || supabaseUser.id,
+        };
+      }
+      if (meta.role === "student") {
+        return {
+          role: "student",
+          tutorId: meta.tutorId || "",
+          studentDocId: meta.studentDocId || "",
+        };
+      }
+      if (meta.role === "admin") {
+        return { role: "admin" };
+      }
+      if (meta.role === "owner") {
+        return { role: "owner" };
+      }
+      if (meta.role === "parent") {
+        return {
+          role: "parent",
+          studentId: meta.studentId || meta.studentDocId || "",
+          studentAuthUid: meta.studentAuthUid || "",
+          tutorId: meta.tutorId || "",
+        };
+      }
+    }
+
+    // 2. Fallback Path: Query database if metadata isn't synced yet
     try {
       const { data: tutor } = await supabase
         .from("tutors")
@@ -54,33 +89,50 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const role = profile?.role || (tutor ? "tutor" : null);
         const resolvedTutorId = tutor?.id || profile?.tutor_id || supabaseUser.id;
 
+        let metaDataToSync: Record<string, any> | null = null;
+        let claimsObj: CustomClaims | null = null;
+
         if (role === "tutor") {
-          return {
-            role: "tutor",
-            tutorId: resolvedTutorId,
-          };
-        }
-        if (role === "student") {
-          return {
+          claimsObj = { role: "tutor", tutorId: resolvedTutorId };
+          metaDataToSync = { role: "tutor", tutorId: resolvedTutorId };
+        } else if (role === "student") {
+          claimsObj = {
             role: "student",
             tutorId: profile?.tutor_id || "",
             studentDocId: profile?.student_doc_id || "",
           };
-        }
-        if (role === "admin") {
-          return { role: "admin" };
-        }
-        if (role === "owner") {
-          return { role: "owner" };
-        }
-        if (role === "parent") {
-          return {
+          metaDataToSync = {
+            role: "student",
+            tutorId: profile?.tutor_id || "",
+            studentDocId: profile?.student_doc_id || "",
+          };
+        } else if (role === "admin") {
+          claimsObj = { role: "admin" };
+          metaDataToSync = { role: "admin" };
+        } else if (role === "owner") {
+          claimsObj = { role: "owner" };
+          metaDataToSync = { role: "owner" };
+        } else if (role === "parent") {
+          claimsObj = {
+            role: "parent",
+            studentId: profile?.student_doc_id || "",
+            studentAuthUid: "",
+            tutorId: profile?.tutor_id || "",
+          };
+          metaDataToSync = {
             role: "parent",
             studentId: profile?.student_doc_id || "",
             studentAuthUid: "",
             tutorId: profile?.tutor_id || "",
           };
         }
+
+        if (metaDataToSync) {
+          // Asynchronously sync to Supabase Auth user_metadata so future loads use fast-path
+          supabase.auth.updateUser({ data: metaDataToSync }).catch(() => {});
+        }
+
+        return claimsObj;
       }
       return null;
     } catch {
@@ -88,18 +140,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  async function refreshClaims(forUser?: User) {
+  async function refreshClaims(forUser?: User, forceDbCheck = false) {
     const targetUser = forUser ?? user;
     if (!targetUser) return;
-    const newClaims = await fetchUserClaims(targetUser);
+    const newClaims = await fetchUserClaims(targetUser, forceDbCheck);
     setClaims(newClaims);
   }
 
-  async function refreshUser() {
+  async function refreshUser(forceDbCheck = false) {
     const { data } = await supabase.auth.getUser();
     const currentUser = data?.user ?? null;
     if (currentUser) {
-      const newClaims = await fetchUserClaims(currentUser);
+      const newClaims = await fetchUserClaims(currentUser, forceDbCheck);
       setUser(currentUser);
       setClaims(newClaims);
     } else {

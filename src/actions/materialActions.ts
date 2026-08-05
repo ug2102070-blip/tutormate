@@ -11,8 +11,8 @@ import { createNotification } from "@/actions/notificationActions";
  * Creates a new material document. The actual file should be uploaded
  * client-side to Supabase Storage before calling this.
  */
-export async function createMaterial(formData: MaterialFormValues, idToken?: string) {
-  const authState = await verifyUserAuth(idToken);
+export async function createMaterial(formData: MaterialFormValues) {
+  const authState = await verifyUserAuth();
   if (!hasRoleAtLeast(authState.role, "tutor")) {
     throw new Error("Unauthorized: Only tutors can create materials.");
   }
@@ -94,10 +94,9 @@ export async function createMaterial(formData: MaterialFormValues, idToken?: str
  */
 export async function updateMaterial(
   materialId: string,
-  updates: Partial<MaterialFormValues>,
-  idToken?: string
+  updates: Partial<MaterialFormValues>
 ) {
-  const authState = await verifyUserAuth(idToken);
+  const authState = await verifyUserAuth();
   if (!hasRoleAtLeast(authState.role, "tutor")) {
     throw new Error("Unauthorized: Only tutors can update materials.");
   }
@@ -137,8 +136,8 @@ export async function updateMaterial(
 /**
  * Deletes a material row. Storage file must be deleted separately.
  */
-export async function deleteMaterial(materialId: string, idToken?: string) {
-  const authState = await verifyUserAuth(idToken);
+export async function deleteMaterial(materialId: string) {
+  const authState = await verifyUserAuth();
   if (!hasRoleAtLeast(authState.role, "tutor")) {
     throw new Error("Unauthorized");
   }
@@ -198,8 +197,8 @@ export async function deleteMaterial(materialId: string, idToken?: string) {
 /**
  * Gets materials for a tutor (all of them, optionally filtered by batch)
  */
-export async function getTutorMaterials(idToken?: string, batchId?: string) {
-  const authState = await verifyUserAuth(idToken);
+export async function getTutorMaterials(batchId?: string) {
+  const authState = await verifyUserAuth();
   if (!hasRoleAtLeast(authState.role, "tutor")) {
     throw new Error("Unauthorized");
   }
@@ -240,8 +239,8 @@ export async function getTutorMaterials(idToken?: string, batchId?: string) {
 /**
  * Gets materials for a student (filtered to their batches and global materials)
  */
-export async function getStudentMaterials(idToken?: string, batchId?: string) {
-  const authState = await verifyUserAuth(idToken);
+export async function getStudentMaterials(batchId?: string) {
+  const authState = await verifyUserAuth();
   if (authState.role !== "student" || !authState.studentDocId || !authState.tutorId) {
     throw new Error("Unauthorized");
   }

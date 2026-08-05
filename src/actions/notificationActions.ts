@@ -42,8 +42,8 @@ export async function createNotification(
 // PUBLIC — called from client with idToken
 // ----------------------------------------------------------------
 
-export async function getNotifications(idToken: string): Promise<NotificationDoc[]> {
-  const authState = await verifyUserAuth(idToken);
+export async function getNotifications(): Promise<NotificationDoc[]> {
+  const authState = await verifyUserAuth();
   const supabase = createAdminClient();
 
   const { data, error } = await supabase
@@ -68,8 +68,8 @@ export async function getNotifications(idToken: string): Promise<NotificationDoc
   })) as NotificationDoc[];
 }
 
-export async function getUnreadCount(idToken: string): Promise<number> {
-  const authState = await verifyUserAuth(idToken);
+export async function getUnreadCount(): Promise<number> {
+  const authState = await verifyUserAuth();
   const supabase = createAdminClient();
 
   const { count, error } = await supabase
@@ -83,10 +83,9 @@ export async function getUnreadCount(idToken: string): Promise<number> {
 }
 
 export async function markAsRead(
-  notificationId: string,
-  idToken: string
+  notificationId: string
 ): Promise<{ success: boolean }> {
-  const authState = await verifyUserAuth(idToken);
+  const authState = await verifyUserAuth();
   const supabase = createAdminClient();
 
   const { error } = await supabase
@@ -99,10 +98,8 @@ export async function markAsRead(
   return { success: true };
 }
 
-export async function markAllAsRead(
-  idToken: string
-): Promise<{ success: boolean }> {
-  const authState = await verifyUserAuth(idToken);
+export async function markAllAsRead(): Promise<{ success: boolean }> {
+  const authState = await verifyUserAuth();
   const supabase = createAdminClient();
 
   const { error } = await supabase

@@ -66,7 +66,29 @@ CREATE INDEX IF NOT EXISTS idx_coaching_centers_owner
 CREATE INDEX IF NOT EXISTS idx_tutors_coaching_center
   ON public.tutors (coaching_center_id);
 
--- 6. Force PostgREST schema cache reload
+-- 6. Fix FK constraint: ensure owner_uid has ON DELETE CASCADE
+--    (Repairs live databases where the constraint was created without CASCADE)
+DO $$
+BEGIN
+  -- Drop the old constraint if it exists (with or without CASCADE)
+  IF EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'coaching_centers_owner_uid_fkey'
+      AND conrelid = 'public.coaching_centers'::regclass
+  ) THEN
+    ALTER TABLE public.coaching_centers
+      DROP CONSTRAINT coaching_centers_owner_uid_fkey;
+  END IF;
+
+  -- Re-add the constraint WITH ON DELETE CASCADE
+  ALTER TABLE public.coaching_centers
+    ADD CONSTRAINT coaching_centers_owner_uid_fkey
+      FOREIGN KEY (owner_uid)
+      REFERENCES public.profiles(id)
+      ON DELETE CASCADE;
+END $$;
+
+-- 7. Force PostgREST schema cache reload
 NOTIFY pgrst, 'reload schema';
 
 -- ==============================================================================
@@ -80,4 +102,10 @@ NOTIFY pgrst, 'reload schema';
 -- SELECT column_name FROM information_schema.columns
 -- WHERE table_schema = 'public' AND table_name = 'tutors'
 --   AND column_name = 'coaching_center_id';
+--
+-- Verify CASCADE is set:
+-- SELECT conname, confdeltype
+-- FROM pg_constraint
+-- WHERE conname = 'coaching_centers_owner_uid_fkey';
+-- (confdeltype = 'c' means CASCADE ✓)
 -- ==============================================================================

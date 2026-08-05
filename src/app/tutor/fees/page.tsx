@@ -8,6 +8,7 @@ import { generateMonthlyFees, updateFeeStatus } from "@/actions/feeActions";
 import { formatBDT } from "@/lib/utils";
 import type { BatchDoc, StudentDoc, FeeDoc } from "@/types";
 import { CreditCard, Sparkles, Check, DollarSign } from "lucide-react";
+import { EmptyState } from "@/components/EmptyState";
 
 export default function FeesPage() {
   const { user, claims, loading: authLoading } = useAuth();
@@ -137,22 +138,23 @@ export default function FeesPage() {
   }, [loadFeeLedger]);
 
   async function handleGenerateFees() {
-    if (!user || !selectedBatchId) return;
+    if (!selectedBatchId) return;
     setGenerating(true);
     setError("");
     setSuccessMsg("");
 
     try {
-      const res = await generateMonthlyFees(
-        {
-          batchId: selectedBatchId,
-          year: selectedYear,
-          month: selectedMonth,
-        },
-        user.id
-      );
+      const res = await generateMonthlyFees({
+        batchId: selectedBatchId,
+        year: selectedYear,
+        month: selectedMonth,
+      });
 
-      setSuccessMsg(`Generated ${res.count} new fee ledger entries for ${months[selectedMonth - 1]} ${selectedYear}.`);
+      setSuccessMsg(
+        res.count > 0
+          ? `Generated ${res.count} new fee entries for ${months[selectedMonth - 1]} ${selectedYear}.`
+          : `All fee entries already exist for ${months[selectedMonth - 1]} ${selectedYear}.`
+      );
       loadFeeLedger();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to generate monthly fees.";
@@ -167,18 +169,13 @@ export default function FeesPage() {
     newStatus: "paid" | "unpaid",
     method: "cash" | "bkash" | "nagad" | "other" = "cash"
   ) {
-    if (!user) return;
-
     try {
-      await updateFeeStatus(
-        {
-          feeId: fee.id,
-          status: newStatus,
-          amountPaid: newStatus === "paid" ? fee.amountDue : 0,
-          paymentMethod: newStatus === "paid" ? method : null,
-        },
-        user.id
-      );
+      await updateFeeStatus({
+        feeId: fee.id,
+        status: newStatus,
+        amountPaid: newStatus === "paid" ? fee.amountDue : 0,
+        paymentMethod: newStatus === "paid" ? method : null,
+      });
       loadFeeLedger();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to update fee status.";
@@ -281,7 +278,7 @@ export default function FeesPage() {
               onChange={(e) => setSelectedYear(Number(e.target.value))}
               className="px-3.5 py-2 text-xs font-bold rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#0b0f19] text-slate-900 dark:text-slate-100 outline-none"
             >
-              {[2024, 2025, 2026, 2027].map((y) => (
+              {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i).map((y) => (
                 <option key={y} value={y}>
                   {y}
                 </option>
@@ -330,15 +327,11 @@ export default function FeesPage() {
       {loading ? (
         <div className="h-64 rounded-2xl animate-shimmer border border-slate-200 dark:border-white/10 bg-white dark:bg-[#131b2e]" />
       ) : filteredFees.length === 0 ? (
-        <div className="py-16 text-center border border-dashed rounded-2xl border-slate-200 dark:border-white/10 bg-white dark:bg-[#131b2e] shadow-xs">
-          <CreditCard className="w-10 h-10 mx-auto text-slate-400 mb-3" />
-          <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
-            No fee entries for {months[selectedMonth - 1]} {selectedYear}
-          </h3>
-          <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-1 max-w-sm mx-auto">
-            Click &quot;Generate Month Invoices&quot; above to create fee records for enrolled students.
-          </p>
-        </div>
+        <EmptyState
+          variant="fees"
+          title={`No fee entries for ${months[selectedMonth - 1]} ${selectedYear}`}
+          description="Click 'Generate Month Invoices' above to create fee records for enrolled students."
+        />
       ) : (
         <div className="rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#131b2e] overflow-hidden shadow-xs">
           {/* Mobile Fee Cards List */}

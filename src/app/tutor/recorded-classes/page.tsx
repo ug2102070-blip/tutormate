@@ -19,7 +19,10 @@ import {
   ArrowRight,
   Clock,
   Film,
+  Lock,
+  Menu,
 } from "lucide-react";
+import { EmptyState } from "@/components/EmptyState";
 import type { BatchDoc, MaterialDoc } from "@/types";
 import Link from "next/link";
 
@@ -83,11 +86,8 @@ export default function TutorRecordedClassesPage() {
       }
 
       // 2. Fetch materials and filter for video fileType
-      const token = (await supabase.auth.getSession()).data.session?.access_token;
-      if (!token) throw new Error("No auth token");
-
       const batchFilter = selectedBatchId === "all" ? undefined : selectedBatchId;
-      const mats = await getTutorMaterials(token, batchFilter);
+      const mats = await getTutorMaterials(batchFilter);
       const videos = mats.filter((m) => m.fileType === "video");
       setVideoMaterials(videos);
     } catch (err) {
@@ -113,8 +113,7 @@ export default function TutorRecordedClassesPage() {
 
     try {
       setIsUploading(true);
-      const token = (await supabase.auth.getSession()).data.session?.access_token;
-      if (!token || !user) throw new Error("Authentication error");
+      if (!user) throw new Error("Authentication error");
 
       const fileExt = file.name.split(".").pop()?.toLowerCase();
       const uuid = crypto.randomUUID();
@@ -135,8 +134,7 @@ export default function TutorRecordedClassesPage() {
           fileType: "video",
           fileSize: file.size,
           isPublished: formData.isPublished,
-        },
-        token
+        }
       );
 
       setFormData({ title: "", description: "", batchId: "all", isPublished: true });
@@ -152,9 +150,7 @@ export default function TutorRecordedClassesPage() {
   const handleDelete = async (id: string) => {
     if (!window.confirm("Are you sure you want to delete this recorded class video?")) return;
     try {
-      const token = (await supabase.auth.getSession()).data.session?.access_token;
-      if (!token) return;
-      await deleteMaterial(id, token);
+      await deleteMaterial(id);
       setVideoMaterials(videoMaterials.filter((m) => m.id !== id));
     } catch (err) {
       console.error(err);
@@ -164,13 +160,10 @@ export default function TutorRecordedClassesPage() {
 
   const togglePublish = async (id: string, currentStatus: boolean) => {
     try {
-      const token = (await supabase.auth.getSession()).data.session?.access_token;
-      if (!token) return;
-
       setVideoMaterials((prev) =>
         prev.map((m) => (m.id === id ? { ...m, isPublished: !currentStatus } : m))
       );
-      await updateMaterial(id, { isPublished: !currentStatus }, token);
+      await updateMaterial(id, { isPublished: !currentStatus });
     } catch (err) {
       console.error(err);
       setVideoMaterials((prev) =>
@@ -357,19 +350,13 @@ export default function TutorRecordedClassesPage() {
               <p className="text-sm font-medium">Loading class recordings...</p>
             </div>
           ) : videoMaterials.length === 0 ? (
-            <div className="text-center p-12 bg-white dark:bg-[#131b2e] rounded-2xl border border-slate-200 dark:border-white/10 shadow-xs">
-              <div className="w-16 h-16 bg-slate-50 dark:bg-[#0b0f19] rounded-full flex items-center justify-center mx-auto mb-4">
-                <Video className="w-8 h-8 text-slate-400" />
-              </div>
-              <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200">
-                {t("recordedClasses.noVideos") || "No Recorded Classes Found"}
-              </h3>
-              <p className="text-slate-500 dark:text-slate-400 text-sm max-w-sm mx-auto mt-2">
-                {t("recordedClasses.noVideosDesc") || (selectedBatchId === "all"
-                  ? "You haven't uploaded any recorded class videos yet. Use the upload panel to post your first video lecture."
-                  : "No recorded class videos available for this specific batch.")}
-              </p>
-            </div>
+            <EmptyState
+              variant="videos"
+              title={t("recordedClasses.noVideos") || "No Recorded Classes Found"}
+              description={t("recordedClasses.noVideosDesc") || (selectedBatchId === "all"
+                ? "You haven't uploaded any recorded class videos yet."
+                : "No recorded class videos available for this specific batch.")}
+            />
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {videoMaterials.map((vid) => {

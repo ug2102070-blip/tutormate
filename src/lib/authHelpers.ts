@@ -42,21 +42,17 @@ export async function verifyUserAuth(idToken?: string): Promise<VerifiedAuth> {
       } catch {
         // Continue to user ID lookup
       }
-    }
-
-    // 3. Try admin.getUserById in case service role key IS available
-    try {
-      const { data: userById } = await adminSupabase.auth.admin.getUserById(idToken);
-      if (userById?.user) {
-        return await fetchProfileAuth(userById.user.id, userById.user.email);
+    } else {
+      // 3. If idToken is a raw user UID, fetch user via adminSupabase
+      try {
+        const userRes = await adminSupabase.auth.admin.getUserById(idToken);
+        const user = userRes?.data?.user;
+        if (user && !userRes.error) {
+          return await fetchProfileAuth(user.id, user.email);
+        }
+      } catch {
+        // Ignore
       }
-    } catch {
-      // Continue to direct table lookup
-    }
-
-    // 4. If idToken is a User UUID, verify directly against profiles / tutors / students table
-    if (idToken.length >= 30) {
-      return await fetchProfileAuth(idToken);
     }
   }
 

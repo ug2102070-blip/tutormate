@@ -3,11 +3,77 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/context/LanguageContext";
-import { createClient } from "@/lib/supabase/client";
 import { getExams, createExam, deleteExam } from "@/actions/examActions";
-import { Award, Trash2, Plus, Loader2, Eye, Calendar, ArrowRight } from "lucide-react";
+import {
+  Award, Trash2, Plus, Loader2, Calendar, ArrowRight, X, AlertCircle,
+} from "lucide-react";
 import type { BatchDoc, ExamDoc } from "@/types";
 import Link from "next/link";
+import { EmptyState } from "@/components/EmptyState";
+import { createClient } from "@/lib/supabase/client";
+
+// ─── Confirm Delete Modal ──────────────────────────────────────────────────────
+
+function ConfirmModal({
+  examTitle, onConfirm, onCancel, loading,
+}: {
+  examTitle: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+  loading: boolean;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+      <div
+        className="w-full max-w-sm p-6 rounded-2xl shadow-2xl space-y-4"
+        style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
+      >
+        <div className="flex items-start gap-3">
+          <div className="p-2 rounded-full bg-rose-500/10 shrink-0">
+            <Trash2 className="w-5 h-5 text-rose-500" />
+          </div>
+          <div>
+            <h3 className="text-sm font-bold" style={{ color: "var(--color-text)" }}>
+              Delete Exam?
+            </h3>
+            <p className="text-xs mt-1 leading-relaxed" style={{ color: "var(--color-text-muted)" }}>
+              <span className="font-semibold">&ldquo;{examTitle}&rdquo;</span> will be permanently
+              deleted along with all student results. This cannot be undone.
+            </p>
+          </div>
+          <button
+            onClick={onCancel}
+            disabled={loading}
+            className="p-1 rounded-lg ml-auto shrink-0"
+            style={{ color: "var(--color-text-muted)" }}
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+        <div className="flex items-center justify-end gap-2">
+          <button
+            onClick={onCancel}
+            disabled={loading}
+            className="px-4 py-2 text-xs font-bold rounded-xl border transition-colors"
+            style={{ borderColor: "var(--color-border)", color: "var(--color-text-muted)" }}
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            disabled={loading}
+            className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white rounded-xl bg-rose-500 hover:bg-rose-600 disabled:opacity-60 transition-colors"
+          >
+            {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+            Delete Exam
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Main Page ─────────────────────────────────────────────────────────────────
 
 export default function TutorExamsPage() {
   const { user, claims, loading: authLoading } = useAuth();
@@ -16,7 +82,10 @@ export default function TutorExamsPage() {
   const [exams, setExams] = useState<ExamDoc[]>([]);
   const [selectedBatchId, setSelectedBatchId] = useState<string>("all");
   const [loading, setLoading] = useState(true);
-  
+  const [deleteTarget, setDeleteTarget] = useState<ExamDoc | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
+
   const [isCreating, setIsCreating] = useState(false);
   const [createError, setCreateError] = useState("");
   const [formData, setFormData] = useState({
@@ -34,21 +103,22 @@ export default function TutorExamsPage() {
     if (authLoading) return;
     if (!user) return;
     loadData();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, claims, authLoading, selectedBatchId]);
 
   async function loadData() {
     setLoading(true);
     try {
-      const tutorId = (claims && "tutorId" in claims ? (claims as any).tutorId : null) || user!.id;
+      const tutorId = (claims && "tutorId" in claims ? (claims as unknown as Record<string, unknown>).tutorId : null) as string | null || user!.id;
       const { data: batchesData } = await supabase
         .from("batches")
         .select("*")
-        .eq("tutor_id", tutorId)
+        .eq("tutor_id", tutorId as string)
         .eq("is_archived", false)
         .order("created_at", { ascending: false });
 
       if (batchesData) {
-        setBatches(batchesData.map((b) => ({
+        const mapped: BatchDoc[] = batchesData.map((b) => ({
           id: b.id,
           tutorId: b.tutor_id,
           name: b.name,
@@ -59,17 +129,15 @@ export default function TutorExamsPage() {
           studentCount: b.student_count,
           isArchived: b.is_archived,
           createdAt: b.created_at,
-        })));
-        if (!formData.batchId && batchesData.length > 0) {
-          setFormData(prev => ({ ...prev, batchId: batchesData[0].id }));
+        }));
+        setBatches(mapped);
+        if (!formData.batchId && mapped.length > 0) {
+          setFormData((prev) => ({ ...prev, batchId: mapped[0].id }));
         }
       }
 
-      const token = (await supabase.auth.getSession()).data.session?.access_token;
-      if (!token) throw new Error("No auth token");
-
       const batchFilter = selectedBatchId === "all" ? null : selectedBatchId;
-      const data = await getExams(batchFilter, token);
+      const data = await getExams(batchFilter);
       setExams(data.exams);
     } catch (err) {
       console.error("Failed to load exams data:", err);
@@ -89,9 +157,6 @@ export default function TutorExamsPage() {
 
     try {
       setIsCreating(true);
-      const token = (await supabase.auth.getSession()).data.session?.access_token;
-      if (!token || !user) throw new Error("Authentication error");
-
       await createExam({
         title: formData.title,
         subject: formData.subject || null,
@@ -99,34 +164,40 @@ export default function TutorExamsPage() {
         examDate: formData.examDate,
         totalMarks: formData.totalMarks,
         passMarks: formData.passMarks || null,
-      }, token);
+      });
 
-      setFormData(prev => ({ ...prev, title: "", subject: "", examDate: "" }));
+      setFormData((prev) => ({ ...prev, title: "", subject: "", examDate: "" }));
       await loadData();
-    } catch (err: any) {
-      setCreateError(err.message || "Failed to create exam");
+    } catch (err: unknown) {
+      setCreateError(err instanceof Error ? err.message : "Failed to create exam");
     } finally {
       setIsCreating(false);
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!window.confirm("Are you sure you want to delete this exam? All results will be lost.")) return;
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    setDeleteError("");
     try {
-      const token = (await supabase.auth.getSession()).data.session?.access_token;
-      if (!token) return;
-      await deleteExam(id, token);
-      setExams(exams.filter(a => a.id !== id));
-    } catch (err) {
-      console.error(err);
-      alert("Failed to delete exam");
+      await deleteExam(deleteTarget.id);
+      setExams((prev) => prev.filter((e) => e.id !== deleteTarget.id));
+      setDeleteTarget(null);
+    } catch (err: unknown) {
+      setDeleteError(err instanceof Error ? err.message : "Failed to delete exam");
+    } finally {
+      setDeleting(false);
     }
   };
+
+  const inputCls =
+    "w-full px-3 py-2 text-sm rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#0b0f19] text-slate-900 dark:text-slate-100 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30 transition-all";
 
   if (authLoading) return null;
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
+      {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
@@ -137,8 +208,20 @@ export default function TutorExamsPage() {
         </div>
       </div>
 
+      {/* Delete Error Banner */}
+      {deleteError && (
+        <div className="p-3 rounded-xl flex items-center gap-2 text-sm"
+          style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", color: "#ef4444" }}>
+          <AlertCircle className="w-4 h-4 shrink-0" />
+          <span>{deleteError}</span>
+          <button onClick={() => setDeleteError("")} className="ml-auto">
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Create Form (Side) */}
+        {/* Create Form */}
         <div className="lg:col-span-1">
           <div className="bg-white dark:bg-[#131b2e] rounded-2xl border border-slate-200 dark:border-white/10 shadow-xs p-5 sticky top-6">
             <h2 className="text-lg font-bold text-slate-800 dark:text-slate-200 mb-4 flex items-center gap-2">
@@ -146,80 +229,104 @@ export default function TutorExamsPage() {
               Create New Exam
             </h2>
             <form onSubmit={handleCreateSubmit} className="space-y-4">
+              {/* Batch */}
               <div>
-                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1 uppercase tracking-wider">Batch</label>
+                <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1.5 uppercase tracking-wider">
+                  Batch *
+                </label>
                 <select
                   value={formData.batchId}
                   onChange={(e) => setFormData({ ...formData, batchId: e.target.value })}
-                  className="w-full rounded-xl border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#0b0f19] text-sm focus:border-indigo-500 focus:ring-indigo-500"
+                  className={inputCls}
                   required
                 >
-                  {batches.map(b => (
-                    <option key={b.id} value={b.id}>{b.name} ({b.subject})</option>
+                  {batches.map((b) => (
+                    <option key={b.id} value={b.id}>
+                      {b.name} ({b.subject})
+                    </option>
                   ))}
                 </select>
               </div>
-              
+
+              {/* Title */}
               <div>
-                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1 uppercase tracking-wider">Exam Title</label>
+                <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1.5 uppercase tracking-wider">
+                  Exam Title *
+                </label>
                 <input
                   type="text"
                   placeholder="e.g. Midterm Physics Exam"
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  className="w-full rounded-xl border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#0b0f19] text-sm focus:border-indigo-500 focus:ring-indigo-500"
+                  className={inputCls}
                   required
                 />
               </div>
 
+              {/* Subject */}
               <div>
-                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1 uppercase tracking-wider">Subject (Optional)</label>
+                <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1.5 uppercase tracking-wider">
+                  Subject (Optional)
+                </label>
                 <input
                   type="text"
                   placeholder="e.g. Vector Algebra"
                   value={formData.subject}
                   onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
-                  className="w-full rounded-xl border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#0b0f19] text-sm focus:border-indigo-500 focus:ring-indigo-500"
+                  className={inputCls}
                 />
               </div>
 
+              {/* Date */}
               <div>
-                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1 uppercase tracking-wider">Exam Date</label>
+                <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1.5 uppercase tracking-wider">
+                  Exam Date *
+                </label>
                 <input
                   type="date"
                   value={formData.examDate}
                   onChange={(e) => setFormData({ ...formData, examDate: e.target.value })}
-                  className="w-full rounded-xl border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#0b0f19] text-sm focus:border-indigo-500 focus:ring-indigo-500"
+                  className={inputCls}
                   required
                 />
               </div>
-              
+
+              {/* Marks */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1 uppercase tracking-wider">Total Marks</label>
+                  <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1.5 uppercase tracking-wider">
+                    Total Marks *
+                  </label>
                   <input
                     type="number"
                     min="1"
                     value={formData.totalMarks}
-                    onChange={(e) => setFormData({ ...formData, totalMarks: parseInt(e.target.value) })}
-                    className="w-full rounded-xl border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#0b0f19] text-sm focus:border-indigo-500 focus:ring-indigo-500"
+                    onChange={(e) =>
+                      setFormData({ ...formData, totalMarks: parseInt(e.target.value) })
+                    }
+                    className={inputCls}
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1 uppercase tracking-wider">Pass Marks</label>
+                  <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1.5 uppercase tracking-wider">
+                    Pass Marks
+                  </label>
                   <input
                     type="number"
                     min="0"
                     value={formData.passMarks}
-                    onChange={(e) => setFormData({ ...formData, passMarks: parseInt(e.target.value) })}
-                    className="w-full rounded-xl border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#0b0f19] text-sm focus:border-indigo-500 focus:ring-indigo-500"
+                    onChange={(e) =>
+                      setFormData({ ...formData, passMarks: parseInt(e.target.value) })
+                    }
+                    className={inputCls}
                   />
                 </div>
               </div>
 
               {createError && (
-                <div className="p-3 rounded-xl bg-red-50 dark:bg-red-500/10 border border-red-100 text-red-600 dark:text-red-400 text-sm font-medium">
+                <div className="p-3 rounded-xl bg-red-50 dark:bg-red-500/10 border border-red-100 dark:border-red-500/20 text-red-600 dark:text-red-400 text-xs font-medium flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
                   {createError}
                 </div>
               )}
@@ -227,37 +334,48 @@ export default function TutorExamsPage() {
               <button
                 type="submit"
                 disabled={isCreating}
-                className="w-full py-2.5 px-4 rounded-xl bg-indigo-600 text-white font-semibold text-sm hover:bg-indigo-700 active:bg-indigo-800 transition-colors flex items-center justify-center disabled:opacity-70 disabled:cursor-not-allowed"
+                className="w-full py-2.5 px-4 rounded-xl bg-indigo-600 text-white font-semibold text-sm hover:bg-indigo-700 active:bg-indigo-800 transition-colors flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
               >
                 {isCreating ? (
                   <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    <Loader2 className="w-4 h-4 animate-spin" />
                     Creating...
                   </>
                 ) : (
-                  "Create Exam"
+                  <>
+                    <Plus className="w-4 h-4" />
+                    Create Exam
+                  </>
                 )}
               </button>
             </form>
           </div>
         </div>
 
-        {/* List View */}
+        {/* Exam List */}
         <div className="lg:col-span-2 space-y-4">
+          {/* Filter Bar */}
           <div className="bg-white dark:bg-[#131b2e] rounded-2xl border border-slate-200 dark:border-white/10 p-4 shadow-xs flex flex-wrap gap-4 items-center justify-between">
             <div className="flex items-center gap-2">
-              <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Filter by Batch:</label>
+              <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                Filter by Batch:
+              </label>
               <select
                 value={selectedBatchId}
                 onChange={(e) => setSelectedBatchId(e.target.value)}
-                className="rounded-lg border-slate-200 dark:border-white/10 text-sm py-1.5 pl-3 pr-8 focus:ring-indigo-500 focus:border-indigo-500"
+                className="rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#0b0f19] text-sm px-3 py-1.5 text-slate-900 dark:text-slate-100 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30"
               >
                 <option value="all">All Batches</option>
-                {batches.map(b => (
-                  <option key={b.id} value={b.id}>{b.name}</option>
+                {batches.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.name}
+                  </option>
                 ))}
               </select>
             </div>
+            <span className="text-xs font-semibold text-slate-400">
+              {exams.length} exam{exams.length !== 1 ? "s" : ""}
+            </span>
           </div>
 
           {loading ? (
@@ -266,36 +384,40 @@ export default function TutorExamsPage() {
               <p className="text-slate-500 dark:text-slate-400 font-medium">Loading exams...</p>
             </div>
           ) : exams.length === 0 ? (
-            <div className="text-center p-12 bg-white dark:bg-[#131b2e] rounded-2xl border border-slate-200 dark:border-white/10 shadow-xs">
-              <div className="w-16 h-16 bg-slate-50 dark:bg-[#0b0f19] rounded-full flex items-center justify-center mx-auto mb-4">
-                <Award className="w-8 h-8 text-slate-400" />
-              </div>
-              <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200">No exams found</h3>
-              <p className="text-slate-500 dark:text-slate-400 mt-1 max-w-sm mx-auto text-sm">
-                You haven't scheduled any exams yet. Create one using the form.
-              </p>
-            </div>
+            <EmptyState
+              variant="exams"
+              title="No exams scheduled yet"
+              description="Create your first exam to record student marks and publish report cards."
+              action={{ label: "Create exam above", onClick: () => {} }}
+            />
           ) : (
             <div className="grid gap-4">
-              {exams.map(exam => {
-                const batch = batches.find(b => b.id === exam.batchId);
+              {exams.map((exam) => {
+                const batch = batches.find((b) => b.id === exam.batchId);
                 return (
-                  <div key={exam.id} className="bg-white dark:bg-[#131b2e] rounded-2xl border border-slate-200 dark:border-white/10 p-5 shadow-xs hover:border-indigo-200 hover:shadow-md transition-all group">
+                  <div
+                    key={exam.id}
+                    className="bg-white dark:bg-[#131b2e] rounded-2xl border border-slate-200 dark:border-white/10 p-5 shadow-xs hover:border-indigo-200 hover:shadow-md transition-all group"
+                  >
                     <div className="flex justify-between items-start mb-4">
                       <div>
                         <div className="flex items-center gap-2 mb-1">
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 border border-indigo-100">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-500/20">
                             {batch?.name || "Unknown Batch"}
                           </span>
                         </div>
-                        <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 group-hover:text-indigo-600 transition-colors">{exam.title}</h3>
+                        <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 group-hover:text-indigo-600 transition-colors">
+                          {exam.title}
+                        </h3>
                         {exam.subject && (
-                          <p className="text-sm text-slate-500 dark:text-slate-400">{exam.subject}</p>
+                          <p className="text-sm text-slate-500 dark:text-slate-400">
+                            {exam.subject}
+                          </p>
                         )}
                       </div>
                       <button
-                        onClick={() => handleDelete(exam.id)}
-                        className="text-slate-400 hover:text-red-600 hover:bg-red-50 p-2 rounded-xl transition-colors"
+                        onClick={() => { setDeleteTarget(exam); setDeleteError(""); }}
+                        className="text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 p-2 rounded-xl transition-colors"
                         title="Delete Exam"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -305,18 +427,31 @@ export default function TutorExamsPage() {
                     <div className="flex flex-wrap items-center gap-4 text-sm text-slate-600 dark:text-slate-400 mb-5 bg-slate-50 dark:bg-[#0b0f19] rounded-xl p-3 border border-slate-100 dark:border-white/5">
                       <div className="flex items-center gap-1.5">
                         <Calendar className="w-4 h-4 text-indigo-500" />
-                        <span className="font-medium">{new Date(exam.examDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                        <span className="font-medium">
+                          {new Date(exam.examDate).toLocaleDateString("en-US", {
+                            month: "short",
+                            day: "numeric",
+                            year: "numeric",
+                          })}
+                        </span>
                       </div>
                       <div className="flex items-center gap-1.5 border-l border-slate-200 dark:border-white/10 pl-4">
                         <Award className="w-4 h-4 text-emerald-500" />
                         <span className="font-medium">Total: {exam.totalMarks} Marks</span>
                       </div>
+                      {exam.passMarks && (
+                        <div className="flex items-center gap-1.5 border-l border-slate-200 dark:border-white/10 pl-4">
+                          <span className="font-medium text-amber-600 dark:text-amber-400">
+                            Pass: {exam.passMarks}
+                          </span>
+                        </div>
+                      )}
                     </div>
 
                     <div className="flex justify-end pt-3 border-t border-slate-100 dark:border-white/5">
                       <Link
                         href={`/tutor/exams/${exam.id}`}
-                        className="flex items-center gap-2 text-sm font-semibold text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 px-4 py-2 rounded-xl transition-colors"
+                        className="flex items-center gap-2 text-sm font-semibold text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 px-4 py-2 rounded-xl transition-colors"
                       >
                         Enter Marks / View Results
                         <ArrowRight className="w-4 h-4" />
@@ -329,6 +464,16 @@ export default function TutorExamsPage() {
           )}
         </div>
       </div>
+
+      {/* Delete Confirm Modal */}
+      {deleteTarget && (
+        <ConfirmModal
+          examTitle={deleteTarget.title}
+          onConfirm={handleConfirmDelete}
+          onCancel={() => { setDeleteTarget(null); setDeleteError(""); }}
+          loading={deleting}
+        />
+      )}
     </div>
   );
 }

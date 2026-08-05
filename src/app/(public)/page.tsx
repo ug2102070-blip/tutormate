@@ -37,10 +37,10 @@ export default function PublicHomePage() {
     <div className="space-y-0 overflow-x-hidden">
       {/* Hero Section */}
       <section className="relative py-14 sm:py-24 px-4 sm:px-6 lg:px-16 text-center max-w-5xl mx-auto space-y-6 sm:space-y-8">
-        {/* Subtle background glow */}
+        {/* Deep animated background glow */}
         <div
-          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] sm:w-[500px] h-[300px] sm:h-[500px] rounded-full opacity-20 pointer-events-none blur-3xl"
-          style={{ background: "radial-gradient(circle, var(--color-primary) 0%, #a855f7 100%)" }}
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] sm:w-[600px] h-[400px] sm:h-[600px] rounded-full opacity-[0.15] sm:opacity-20 pointer-events-none blur-[100px] sm:blur-[120px] transition-all duration-1000"
+          style={{ background: "radial-gradient(circle, var(--color-primary) 0%, #a855f7 40%, #06b6d4 100%)" }}
         />
 
         <div className="relative z-10 space-y-6">
@@ -82,12 +82,13 @@ export default function PublicHomePage() {
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 max-w-md mx-auto pt-2">
             <Link
               href="/register"
-              className="w-full sm:w-auto px-7 py-3.5 text-sm sm:text-base font-bold text-white rounded-xl shadow-lg shadow-indigo-500/25 transition-all hover:opacity-95 hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-2"
+              className="group relative w-full sm:w-auto px-8 py-3.5 text-sm sm:text-base font-bold text-white rounded-xl shadow-[0_0_40px_-10px_rgba(99,102,241,0.5)] transition-all hover:shadow-[0_0_60px_-15px_rgba(99,102,241,0.7)] hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-2 overflow-hidden"
               style={{
-                background: "linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%)",
+                background: "linear-gradient(135deg, var(--color-primary) 0%, #4f46e5 100%)",
               }}
             >
-              Start Free 30-Day Trial <ArrowRight className="w-4 h-4" />
+              <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out rounded-xl" />
+              <span className="relative z-10 flex items-center gap-2">Start Free 30-Day Trial <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" /></span>
             </Link>
 
             <Link
@@ -133,12 +134,13 @@ export default function PublicHomePage() {
               return (
                 <div
                   key={f.title}
-                  className="p-5 rounded-2xl transition-all hover:shadow-md hover:-translate-y-0.5 duration-200 border"
+                  className="group relative p-6 rounded-2xl transition-all duration-300 hover:shadow-xl hover:-translate-y-1 overflow-hidden"
                   style={{
                     background: "var(--color-surface)",
-                    borderColor: "var(--color-border)",
+                    border: "1px solid var(--color-border)",
                   }}
                 >
+                  <div className="absolute inset-0 opacity-0 group-hover:opacity-5 transition-opacity duration-300" style={{ background: f.color }} />
                   <div
                     className="w-10 h-10 rounded-xl flex items-center justify-center mb-3.5 shadow-sm"
                     style={{ background: `${f.color}15` }}

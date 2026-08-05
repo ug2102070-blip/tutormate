@@ -1,5 +1,16 @@
 "use client";
 
+import {
+  BarChart as RechartsBarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Cell,
+} from "recharts";
+
 interface BarChartProps {
   data: { label: string; value: number }[];
   height?: number;
@@ -9,56 +20,59 @@ interface BarChartProps {
 
 export function BarChart({
   data,
-  height = 180,
-  barColor = "var(--color-primary, #6366f1)",
+  height = 200,
+  barColor = "#6366f1",
   unit = "৳",
 }: BarChartProps) {
-  const maxValue = Math.max(...data.map((d) => d.value), 1);
+  if (!data || data.length === 0) return null;
 
   return (
-    <div className="w-full flex flex-col justify-between" style={{ height }}>
-      <div className="flex-1 flex items-end gap-2 sm:gap-4 pt-4 px-2 pb-2">
-        {data.map((item, idx) => {
-          const heightPercent = Math.max(8, Math.round((item.value / maxValue) * 100));
-
-          return (
-            <div
-              key={idx}
-              className="flex-1 flex flex-col items-center gap-1.5 h-full justify-end group relative"
-            >
-              {/* Tooltip on hover */}
-              <div className="opacity-0 group-hover:opacity-100 transition-opacity absolute -top-8 px-2 py-1 bg-slate-900 text-white text-[10px] rounded font-semibold whitespace-nowrap z-10 pointer-events-none shadow-md">
-                {unit}{item.value.toLocaleString()}
-              </div>
-
-              {/* Bar container */}
-              <div className="w-full max-w-[36px] bg-slate-100 dark:bg-slate-800/60 rounded-t-lg overflow-hidden flex flex-col justify-end h-full">
-                <div
-                  className="w-full rounded-t-lg transition-all duration-500 ease-out"
-                  style={{
-                    height: `${heightPercent}%`,
-                    background: barColor,
-                    boxShadow: "0 -2px 10px rgba(99, 102, 241, 0.2)",
-                  }}
-                />
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* X Axis Labels */}
-      <div className="flex items-center gap-2 sm:gap-4 px-2 pt-2 border-t border-slate-200 dark:border-slate-800">
-        {data.map((item, idx) => (
-          <div
-            key={idx}
-            className="flex-1 text-center text-[10px] sm:text-xs font-semibold truncate"
-            style={{ color: "var(--color-text-muted)" }}
+    <div style={{ width: "100%", height }}>
+      <ResponsiveContainer width="100%" height="100%">
+        <RechartsBarChart
+          data={data}
+          margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+        >
+          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--color-border, #e2e8f0)" opacity={0.5} />
+          <XAxis 
+            dataKey="label" 
+            axisLine={false}
+            tickLine={false}
+            tick={{ fontSize: 11, fill: 'var(--color-text-muted, #64748b)', fontWeight: 600 }}
+            dy={10}
+          />
+          <YAxis 
+            axisLine={false}
+            tickLine={false}
+            tick={{ fontSize: 11, fill: 'var(--color-text-muted, #64748b)', fontWeight: 600 }}
+            tickFormatter={(value) => value >= 1000 ? `${value / 1000}k` : value}
+          />
+          <Tooltip 
+            cursor={{ fill: 'var(--color-bg-secondary, #f1f5f9)', opacity: 0.4 }}
+            contentStyle={{ 
+              backgroundColor: 'var(--color-surface, #ffffff)', 
+              borderRadius: '12px',
+              border: '1px solid var(--color-border, #e2e8f0)',
+              boxShadow: 'var(--shadow-card, 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06))',
+              fontSize: '12px',
+              fontWeight: 600,
+              color: 'var(--color-text, #0f172a)'
+            }}
+            itemStyle={{ color: barColor, fontWeight: 700 }}
+            formatter={(value: any) => [`${unit}${value.toLocaleString()}`, "Revenue"]}
+            labelStyle={{ color: 'var(--color-text-muted, #64748b)', marginBottom: '4px' }}
+          />
+          <Bar 
+            dataKey="value" 
+            radius={[4, 4, 0, 0]}
+            maxBarSize={40}
           >
-            {item.label}
-          </div>
-        ))}
-      </div>
+            {data.map((entry, index) => (
+              <Cell key={`cell-${index}`} fill={barColor} />
+            ))}
+          </Bar>
+        </RechartsBarChart>
+      </ResponsiveContainer>
     </div>
   );
 }

@@ -28,10 +28,9 @@ interface SaveAttendancePayload {
  * Saves or updates attendance record for a batch on a given date in Supabase.
  */
 export async function saveAttendance(
-  payload: SaveAttendancePayload,
-  idToken: string
+  payload: SaveAttendancePayload
 ) {
-  const authState = await verifyUserAuth(idToken);
+  const authState = await verifyUserAuth();
   if (!hasRoleAtLeast(authState.role, "tutor")) {
     throw new Error("Unauthorized: Only tutors can log attendance.");
   }
@@ -65,8 +64,8 @@ export async function saveAttendance(
 /**
  * Safely fetches attendance history for the authenticated student.
  */
-export async function getStudentAttendanceHistory(idToken: string): Promise<AttendanceDoc[]> {
-  const authState = await verifyUserAuth(idToken);
+export async function getStudentAttendanceHistory(): Promise<AttendanceDoc[]> {
+  const authState = await verifyUserAuth();
   if (authState.role !== "student") {
     throw new Error("Unauthorized: Only students can view their attendance history.");
   }
@@ -132,10 +131,9 @@ export async function getStudentAttendanceHistory(idToken: string): Promise<Atte
  * Tutor generates a live QR session for a batch.
  */
 export async function generateQRSession(
-  payload: { batchId: string; durationMinutes?: number },
-  idToken: string
+  payload: { batchId: string; durationMinutes?: number }
 ) {
-  const authState = await verifyUserAuth(idToken);
+  const authState = await verifyUserAuth();
   if (authState.role !== "tutor") {
     throw new Error("Unauthorized: Only tutors can create QR attendance sessions.");
   }
@@ -204,8 +202,8 @@ export async function generateQRSession(
 /**
  * Get active QR session for a batch (tutor view)
  */
-export async function getActiveQRSession(batchId: string, idToken: string) {
-  const authState = await verifyUserAuth(idToken);
+export async function getActiveQRSession(batchId: string) {
+  const authState = await verifyUserAuth();
   if (authState.role !== "tutor") {
     throw new Error("Unauthorized.");
   }
@@ -254,8 +252,8 @@ export async function getActiveQRSession(batchId: string, idToken: string) {
 /**
  * Student scans QR code or enters 6-digit PIN to mark attendance.
  */
-export async function scanQRAttendance(tokenOrPin: string, idToken: string) {
-  const authState = await verifyUserAuth(idToken);
+export async function scanQRAttendance(tokenOrPin: string) {
+  const authState = await verifyUserAuth();
   if (authState.role !== "student") {
     throw new Error("Unauthorized: Only students can scan QR attendance.");
   }

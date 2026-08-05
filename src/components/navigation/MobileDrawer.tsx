@@ -4,19 +4,32 @@ import { useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { X } from "lucide-react";
-import { tutorNavCategories, studentNavCategories, NavItem } from "./nav-data";
+import {
+  tutorNavCategories,
+  studentNavCategories,
+  ownerNavCategories,
+  parentNavCategories,
+  NavItem,
+} from "./nav-data";
 import { useLanguage } from "@/context/LanguageContext";
 
 interface MobileDrawerProps {
-  role: "tutor" | "student";
+  role: "tutor" | "student" | "owner" | "parent";
   isOpen: boolean;
   onClose: () => void;
 }
 
+const categoriesByRole = {
+  tutor: tutorNavCategories,
+  student: studentNavCategories,
+  owner: ownerNavCategories,
+  parent: parentNavCategories,
+};
+
 export function MobileDrawer({ role, isOpen, onClose }: MobileDrawerProps) {
   const pathname = usePathname();
   const { t } = useLanguage();
-  const categories = role === "tutor" ? tutorNavCategories : studentNavCategories;
+  const categories = categoriesByRole[role] ?? tutorNavCategories;
 
   // Prevent background scrolling when mobile menu drawer is open
   useEffect(() => {
@@ -92,13 +105,17 @@ export function MobileDrawer({ role, isOpen, onClose }: MobileDrawerProps) {
                   className="px-3 text-[10px] font-bold uppercase tracking-wider mb-1"
                   style={{ color: "var(--color-text-muted)" }}
                 >
-                  {catGroup.key ? t(`navCategory.${catGroup.key}`) : catGroup.category}
+                  {(() => {
+                    const rawCategoryName = catGroup.key ? t(`navCategory.${catGroup.key}`) : catGroup.category;
+                    return rawCategoryName && rawCategoryName !== `navCategory.${catGroup.key}` ? rawCategoryName : catGroup.category;
+                  })()}
                 </div>
                 {catGroup.items.map((item: NavItem) => {
                   const Icon = item.icon;
                   const isActive =
                     pathname === item.href || pathname.startsWith(item.href + "/");
-                  const translatedLabel = item.key ? t(`nav.${item.key}`) : item.label;
+                  const rawLabel = item.key ? t(`nav.${item.key}`) : item.label;
+                  const translatedLabel = rawLabel && rawLabel !== `nav.${item.key}` ? rawLabel : item.label;
 
                   return (
                     <Link

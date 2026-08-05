@@ -20,7 +20,7 @@ export default function ParentAttendancePage() {
     async function load() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-      const res = await getParentAttendance(user.id);
+      const res = await getParentAttendance();
       setData(res);
       setLoading(false);
     }

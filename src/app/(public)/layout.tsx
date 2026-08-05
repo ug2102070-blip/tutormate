@@ -51,6 +51,7 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
             <p className="text-xs font-bold uppercase tracking-wider mb-3" style={{ color: "var(--color-text-muted)" }}>Account</p>
             <Link href="/login" className="block text-xs py-1 transition-colors hover:opacity-70" style={{ color: "var(--color-text-secondary)" }}>Sign In</Link>
             <Link href="/register" className="block text-xs py-1 transition-colors hover:opacity-70" style={{ color: "var(--color-text-secondary)" }}>Register</Link>
+
           </div>
         </div>
         <div className="max-w-5xl mx-auto mt-8 pt-8 flex items-center justify-between" style={{ borderTop: "1px solid var(--color-border)" }}>

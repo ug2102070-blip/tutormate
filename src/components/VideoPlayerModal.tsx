@@ -38,9 +38,7 @@ export function VideoPlayerModal({
       setLoading(true);
       setError(null);
       try {
-        const token = (await supabase.auth.getSession()).data.session?.access_token;
-        if (!token) throw new Error("No active session");
-        const url = await getMediaSignedUrl(filePath, token);
+        const url = await getMediaSignedUrl(filePath);
         if (!url) throw new Error("Failed to generate secure video link.");
         setVideoUrl(url);
       } catch (err: any) {

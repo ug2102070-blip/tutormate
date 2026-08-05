@@ -10,6 +10,7 @@ import {
   markAllAsRead,
 } from "@/actions/notificationActions";
 import type { NotificationDoc } from "@/types";
+import { EmptyState } from "@/components/EmptyState";
 
 const TYPE_ICONS: Record<string, string> = {
   assignment: "📝",
@@ -191,25 +192,11 @@ export default function TutorNotificationsPage() {
           />
         </div>
       ) : notifications.length === 0 ? (
-        <div
-          className="rounded-2xl p-12 flex flex-col items-center gap-4"
-          style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
-        >
-          <div
-            className="w-16 h-16 rounded-2xl flex items-center justify-center text-3xl"
-            style={{ background: "var(--color-bg-secondary)" }}
-          >
-            🔔
-          </div>
-          <div className="text-center">
-            <p className="font-bold" style={{ color: "var(--color-text)" }}>
-              No notifications yet
-            </p>
-            <p className="text-sm mt-1" style={{ color: "var(--color-text-muted)" }}>
-              You'll see alerts about assignments, exams, and materials here.
-            </p>
-          </div>
-        </div>
+        <EmptyState
+          variant="notifications"
+          title="No notifications yet"
+          description="You'll see alerts about assignments, exams, and materials here."
+        />
       ) : (
         <div className="space-y-4">
           {dateGroups.map((dateLabel) => (

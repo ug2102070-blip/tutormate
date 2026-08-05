@@ -28,9 +28,6 @@ export default function StudentMaterialsPage() {
   async function loadData() {
     setLoading(true);
     try {
-      const token = (await supabase.auth.getSession()).data.session?.access_token;
-      if (!token) throw new Error("No auth token");
-
       // 1. Get student's enrolled batches
       const { data: studentDoc } = await supabase
         .from("students")
@@ -62,7 +59,7 @@ export default function StudentMaterialsPage() {
 
       // 2. Load materials
       const batchFilter = selectedBatchId === "all" ? undefined : selectedBatchId;
-      const mats = await getStudentMaterials(token, batchFilter);
+      const mats = await getStudentMaterials(batchFilter);
       setMaterials(mats);
     } catch (err) {
       console.error("Failed to load materials data:", err);
@@ -73,9 +70,7 @@ export default function StudentMaterialsPage() {
 
   const handleDownload = async (path: string) => {
     try {
-      const token = (await supabase.auth.getSession()).data.session?.access_token;
-      if (!token) return;
-      const url = await getMediaSignedUrl(path, token);
+      const url = await getMediaSignedUrl(path);
       if (url) window.open(url, '_blank');
     } catch (err) {
       console.error("Failed to get URL", err);

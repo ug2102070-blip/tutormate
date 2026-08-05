@@ -27,9 +27,6 @@ export default function StudentAssignmentsPage() {
   async function loadData() {
     setLoading(true);
     try {
-      const token = (await supabase.auth.getSession()).data.session?.access_token;
-      if (!token) throw new Error("No auth token");
-
       // 1. Get student's enrolled batches
       const { data: studentDoc } = await supabase
         .from("students")
@@ -59,8 +56,8 @@ export default function StudentAssignmentsPage() {
         }
       }
 
-      // 2. Load assignments (which comes as submissions for this student)
-      const subs = await getStudentSubmissions(token);
+      // 2. Load assignments (submissions for this student)
+      const subs = await getStudentSubmissions();
       setSubmissions(subs);
     } catch (err) {
       console.error("Failed to load assignments data:", err);

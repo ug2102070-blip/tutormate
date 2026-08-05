@@ -7,8 +7,8 @@ import { doubtSchema, messageSchema, type DoubtFormValues, type MessageFormValue
 /**
  * Creates a new doubt conversation in Supabase `doubts` table.
  */
-export async function createDoubt(formData: DoubtFormValues, studentName: string, idToken: string) {
-  const authState = await verifyUserAuth(idToken);
+export async function createDoubt(formData: DoubtFormValues, studentName: string) {
+  const authState = await verifyUserAuth();
   if (authState.role !== "student") {
     throw new Error("Unauthorized: Only students can ask doubts.");
   }
@@ -57,10 +57,9 @@ export async function createDoubt(formData: DoubtFormValues, studentName: string
  */
 export async function postMessage(
   doubtId: string,
-  formData: MessageFormValues,
-  idToken: string
+  formData: MessageFormValues
 ) {
-  const authState = await verifyUserAuth(idToken);
+  const authState = await verifyUserAuth();
   const callerUid = authState.uid;
   const callerRole = authState.role || "";
   const callerTutorId = authState.tutorId || "";
@@ -128,8 +127,8 @@ export async function postMessage(
 /**
  * Marks unread flags as read when opening a thread.
  */
-export async function markDoubtAsRead(doubtId: string, idToken: string) {
-  const authState = await verifyUserAuth(idToken);
+export async function markDoubtAsRead(doubtId: string) {
+  const authState = await verifyUserAuth();
   const callerUid = authState.uid;
   const callerRole = authState.role || "";
   const callerTutorId = authState.tutorId || "";
@@ -161,10 +160,9 @@ export async function markDoubtAsRead(doubtId: string, idToken: string) {
  */
 export async function updateDoubtStatus(
   doubtId: string,
-  newStatus: "pending" | "answered" | "resolved",
-  idToken: string
+  newStatus: "pending" | "answered" | "resolved"
 ) {
-  const authState = await verifyUserAuth(idToken);
+  const authState = await verifyUserAuth();
   const callerUid = authState.uid;
   const callerRole = authState.role || "";
   const callerTutorId = authState.tutorId || "";

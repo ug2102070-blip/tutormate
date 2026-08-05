@@ -114,11 +114,10 @@ export default function AiAssistantPage() {
     if (!user) return;
     async function loadInitialData() {
       try {
-        const token = (await supabase.auth.getSession()).data.session?.access_token;
-        const studentList = await getTutorStudents(token || user?.id);
+        const studentList = await getTutorStudents();
         setStudents(studentList);
 
-        const batchList = await getTutorBatches(token || user?.id);
+        const batchList = await getTutorBatches();
         const activeBatches = batchList.filter((b) => !b.isArchived);
         setBatches(activeBatches);
         if (activeBatches.length > 0) {
@@ -308,8 +307,7 @@ export default function AiAssistantPage() {
 
   const openPublishModal = async () => {
     try {
-      const token = (await supabase.auth.getSession()).data.session?.access_token;
-      const batchList = await getTutorBatches(token || user?.id);
+      const batchList = await getTutorBatches();
       const activeBatches = batchList.filter((b) => !b.isArchived);
       setBatches(activeBatches);
       if (activeBatches.length > 0 && (!publishBatchId || !activeBatches.some(b => b.id === publishBatchId))) {
@@ -347,7 +345,6 @@ export default function AiAssistantPage() {
 
     setPublishing(true);
     try {
-      const token = (await supabase.auth.getSession()).data.session?.access_token;
       await publishGeneratedContentAsAssignment(
         {
           batchId: publishBatchId,
@@ -355,8 +352,7 @@ export default function AiAssistantPage() {
           content: output,
           deadline: publishDeadline,
           maxMarks: publishMaxMarks,
-        },
-        token || user?.id
+        }
       );
 
       setPublishSuccess(true);

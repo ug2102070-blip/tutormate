@@ -24,11 +24,9 @@ export interface SubscriptionUsageData {
 /**
  * Fetches current tutor subscription information, live student count, and batch usage metrics.
  */
-export async function getSubscriptionUsage(
-  idToken?: string
-): Promise<{ success: boolean; data?: SubscriptionUsageData; error?: string }> {
+export async function getSubscriptionUsage(): Promise<{ success: boolean; data?: SubscriptionUsageData; error?: string }> {
   try {
-    const auth = await verifyUserAuth(idToken);
+    const auth = await verifyUserAuth();
     const tutorId = auth.tutorId || auth.uid;
 
     const supabase = createAdminClient();
@@ -95,11 +93,10 @@ export async function getSubscriptionUsage(
  */
 export async function upgradeSubscription(
   newPlan: PlanType,
-  billingCycle: "monthly" | "yearly" = "monthly",
-  idToken?: string
+  billingCycle: "monthly" | "yearly" = "monthly"
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const auth = await verifyUserAuth(idToken);
+    const auth = await verifyUserAuth();
     const tutorId = auth.tutorId || auth.uid;
 
     if (!(newPlan in SUBSCRIPTION_PLANS)) {
@@ -169,11 +166,9 @@ export async function upgradeSubscription(
 /**
  * Cancels or resets subscription to Free Trial tier.
  */
-export async function cancelSubscription(
-  idToken?: string
-): Promise<{ success: boolean; error?: string }> {
+export async function cancelSubscription(): Promise<{ success: boolean; error?: string }> {
   try {
-    const auth = await verifyUserAuth(idToken);
+    const auth = await verifyUserAuth();
     const tutorId = auth.tutorId || auth.uid;
 
     const freeSpecs = SUBSCRIPTION_PLANS.free_trial;

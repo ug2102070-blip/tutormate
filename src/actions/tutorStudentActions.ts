@@ -9,8 +9,8 @@ import { checkStudentLimit } from "@/lib/serverSubscriptions";
 /**
  * Creates a student record under the authenticated tutor and generates a unique invite code in Supabase.
  */
-export async function createStudent(formData: StudentFormValues, idToken: string) {
-  const authState = await verifyUserAuth(idToken);
+export async function createStudent(formData: StudentFormValues) {
+  const authState = await verifyUserAuth();
   if (authState.role !== "tutor" && authState.role !== "owner" && authState.role !== "admin") {
     throw new Error("Unauthorized: Only tutors can add students.");
   }
@@ -55,10 +55,59 @@ export async function createStudent(formData: StudentFormValues, idToken: string
 }
 
 /**
+ * Fetches both batches and students for the authenticated tutor in a single
+ * server-side round-trip. Avoids parallel Server Action calls (Promise.all)
+ * from the client, and ensures cookies() is called in a valid request context.
+ */
+export async function getStudentsPageData(): Promise<{
+  batches: { id: string; name: string }[];
+  students: any[];
+}> {
+  const authState = await verifyUserAuth();
+  const tutorId = authState.tutorId || authState.uid;
+  const adminSupabase = createAdminClient();
+
+  const [batchRes, studentRes] = await Promise.all([
+    adminSupabase
+      .from("batches")
+      .select("id, name")
+      .eq("tutor_id", tutorId)
+      .eq("is_archived", false)
+      .order("created_at", { ascending: false }),
+    adminSupabase
+      .from("students")
+      .select("*")
+      .eq("tutor_id", tutorId)
+      .order("created_at", { ascending: false }),
+  ]);
+
+  const batches = (batchRes.data || []).map((b: any) => ({
+    id: b.id,
+    name: b.name,
+  }));
+
+  const students = (studentRes.data || []).map((s: any) => ({
+    id: s.id,
+    tutorId: s.tutor_id,
+    authUid: s.auth_uid,
+    inviteCode: s.invite_code,
+    fullName: s.full_name,
+    phone: s.phone,
+    guardianPhone: s.guardian_phone,
+    institution: s.institution,
+    enrolledBatchIds: s.enrolled_batch_ids || [],
+    status: s.status,
+    createdAt: s.created_at,
+  }));
+
+  return { batches, students };
+}
+
+/**
  * Fetches all students for the authenticated tutor reliably server-side.
  */
-export async function getTutorStudents(idToken?: string): Promise<any[]> {
-  const authState = await verifyUserAuth(idToken);
+export async function getTutorStudents(): Promise<any[]> {
+  const authState = await verifyUserAuth();
   const tutorId = authState.tutorId || authState.uid;
   const adminSupabase = createAdminClient();
 

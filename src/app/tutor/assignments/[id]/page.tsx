@@ -33,16 +33,13 @@ export default function AssignmentDetailsPage() {
   async function loadData() {
     setLoading(true);
     try {
-      const token = (await supabase.auth.getSession()).data.session?.access_token;
-      if (!token) throw new Error("No auth token");
-
       // Load assignment
-      const assignments = await getAssignments(token);
+      const assignments = await getAssignments();
       const assign = assignments.find((a: any) => a.id === id);
       if (assign) setAssignment(assign);
 
       // Load submissions
-      const subs = await getSubmissions(id, token);
+      const subs = await getSubmissions(id);
       setSubmissions(subs);
     } catch (err) {
       console.error("Failed to load assignment details:", err);
@@ -53,9 +50,7 @@ export default function AssignmentDetailsPage() {
 
   const handleDownload = async (path: string) => {
     try {
-      const token = (await supabase.auth.getSession()).data.session?.access_token;
-      if (!token) return;
-      const url = await getMediaSignedUrl(path, token);
+      const url = await getMediaSignedUrl(path);
       if (url) window.open(url, '_blank');
     } catch (err) {
       console.error("Failed to get URL", err);
@@ -65,10 +60,7 @@ export default function AssignmentDetailsPage() {
   const submitGrade = async (submissionId: string) => {
     try {
       setIsSubmitting(true);
-      const token = (await supabase.auth.getSession()).data.session?.access_token;
-      if (!token) return;
-      
-      await gradeSubmission(submissionId, { marksObtained: marks, feedback }, token);
+      await gradeSubmission(submissionId, { marksObtained: marks, feedback });
       
       setGradingId(null);
       await loadData();

@@ -44,19 +44,40 @@ export function formatDate(dateStr: string): string {
 }
 
 /**
- * Parses raw Supabase Auth error codes into clean, user-friendly error messages.
+ * Parses raw Supabase Auth and Server Action error codes/messages into clean, user-friendly error messages.
  */
 export function formatAuthError(err: unknown): string {
-  if (!(err instanceof Error)) return "An unexpected error occurred. Please try again.";
-  const msg = err.message || "";
+  let msg = "";
 
-  // Server-side rendering / React errors
+  if (err instanceof Error) {
+    msg = err.message || "";
+  } else if (typeof err === "string") {
+    msg = err;
+  } else if (err && typeof err === "object") {
+    const maybeObj = err as Record<string, any>;
+    msg =
+      maybeObj.message ||
+      maybeObj.error_description ||
+      maybeObj.error ||
+      maybeObj.details ||
+      "";
+  }
+
+  if (!msg) {
+    return "An unexpected error occurred. Please try again.";
+  }
+
+  // Server-side rendering / Next.js Server Action / React errors
   if (
+    msg.includes("unexpected response") ||
+    msg.includes("Unexpected response") ||
+    msg.includes("unexpected response was received") ||
     msg.includes("Server Components render") ||
+    msg.includes("Server action not found") ||
     msg.includes("digest") ||
     msg.includes("minified React error")
   ) {
-    return "A server communication error occurred. Please check your connection and try again.";
+    return "Server communication error. Please refresh the page or check your connection and try again.";
   }
 
   // Supabase specific errors
@@ -86,9 +107,6 @@ export function formatAuthError(err: unknown): string {
   }
   if (msg.includes("over_email_send_rate_limit") || msg.includes("too many requests") || msg.includes("rate limit")) {
     return "Too many attempts. Please wait a moment and try again.";
-  }
-  if (msg.includes("unexpected response") || msg.includes("Unexpected response")) {
-    return "Server error. Please try again in a moment.";
   }
   if (msg.includes("network") || msg.includes("fetch") || msg.includes("Failed to fetch")) {
     return "Network error. Please check your internet connection and try again.";
@@ -123,6 +141,10 @@ export function formatAuthError(err: unknown): string {
   }
 
   // Fallback clean message
-  return msg.replace(/^Firebase:\s*Error\s*\(auth\//i, "").replace(/\)\.?$/, "") || "An unexpected error occurred. Please try again.";
+  return (
+    msg
+      .replace(/^Firebase:\s*Error\s*\(auth\//i, "")
+      .replace(/\)\.?$/, "") || "An unexpected error occurred. Please try again."
+  );
 }
 

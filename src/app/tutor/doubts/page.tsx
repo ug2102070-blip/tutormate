@@ -24,7 +24,10 @@ import {
   HelpCircle,
   MessageSquare,
   ChevronLeft,
+  Lock,
+  Menu,
 } from "lucide-react";
+import { EmptyState } from "@/components/EmptyState";
 
 export default function TutorDoubtsPage({
   searchParams,
@@ -480,10 +483,13 @@ export default function TutorDoubtsPage({
                 ))}
               </div>
             ) : filteredDoubts.length === 0 ? (
-              <div className="py-12 text-center px-4">
-                <HelpCircle className="w-8 h-8 mx-auto text-slate-300 mb-2" />
-                <p className="text-xs font-semibold text-slate-600 dark:text-slate-400">No student doubts found</p>
-              </div>
+              <EmptyState
+                variant="doubts"
+                title="No student doubts"
+                description="No questions match your current filters."
+                size="sm"
+                className="my-8 mx-4"
+              />
             ) : (
               filteredDoubts.map((d) => {
                 const isSelected = d.id === selectedDoubtId;

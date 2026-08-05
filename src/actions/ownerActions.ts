@@ -8,23 +8,84 @@ import type { CoachingCenterDoc, CenterTutorDoc, CenterAnalyticsDoc } from "@/ty
 
 /**
  * Verifies the requesting user is an owner of a coaching center.
+ * If no coaching center exists yet for this owner, automatically creates one.
  * Returns { uid, centerId, center }.
  */
 async function requireOwner() {
   const auth = await verifyUserAuth();
   const adminSupabase = createAdminClient();
 
-  const { data: center } = await adminSupabase
+  // 1. Check if coaching center already exists for this owner
+  const { data: existingCenter } = await adminSupabase
     .from("coaching_centers")
     .select("*")
     .eq("owner_uid", auth.uid)
     .maybeSingle();
 
-  if (!center) {
-    throw new Error("Access denied. You are not the owner of any coaching center.");
+  if (existingCenter) {
+    return { uid: auth.uid, centerId: existingCenter.id as string, center: existingCenter };
   }
 
-  return { uid: auth.uid, centerId: center.id as string, center };
+  // 2. If no center exists, auto-initialize one so owner portal works seamlessly
+  const { data: profile } = await adminSupabase
+    .from("profiles")
+    .select("display_name, email")
+    .eq("id", auth.uid)
+    .maybeSingle();
+
+  const { data: tutor } = await adminSupabase
+    .from("tutors")
+    .select("full_name, institution")
+    .eq("id", auth.uid)
+    .maybeSingle();
+
+  const displayName =
+    tutor?.full_name ||
+    profile?.display_name ||
+    profile?.email?.split("@")[0] ||
+    "Owner";
+
+  const centerName =
+    tutor?.institution &&
+    tutor.institution.trim() &&
+    tutor.institution.trim() !== "Independent"
+      ? tutor.institution.trim()
+      : `${displayName}'s Coaching Center`;
+
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let joinCode = "CC-";
+  for (let i = 0; i < 6; i++) {
+    joinCode += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+
+  const { data: newCenter, error: createErr } = await adminSupabase
+    .from("coaching_centers")
+    .insert({
+      owner_uid: auth.uid,
+      name: centerName,
+      code: joinCode,
+    })
+    .select("*")
+    .single();
+
+  if (createErr || !newCenter) {
+    console.error("[requireOwner] Auto center creation failed:", createErr);
+    throw new Error("Access denied. Could not initialize coaching center.");
+  }
+
+  // Link tutor record to the newly created center if tutor record exists
+  await adminSupabase
+    .from("tutors")
+    .update({ coaching_center_id: newCenter.id })
+    .eq("id", auth.uid);
+
+  // Ensure profile role is owner
+  await adminSupabase
+    .from("profiles")
+    .update({ role: "owner" })
+    .eq("id", auth.uid);
+
+  return { uid: auth.uid, centerId: newCenter.id as string, center: newCenter };
 }
 
 // ─── Dashboard ────────────────────────────────────────────────────────────────
@@ -524,4 +585,44 @@ export async function updateOwnerCenterInfo(data: {
 
   if (error) throw new Error("Failed to update center info.");
   return { success: true };
+}
+
+// ─── Invite Page Stats ─────────────────────────────────────────────────────────
+
+export interface CenterInviteStats {
+  tutorCount: number;
+  recentTutors: Array<{ id: string; name: string; joinedAt: string }>;
+}
+
+/**
+ * Returns tutor count and recent joiners for the Invite & QR Code page.
+ */
+export async function getCenterInviteStats(): Promise<CenterInviteStats> {
+  const auth = await verifyUserAuth();
+  const adminSupabase = createAdminClient();
+
+  const { data: center } = await adminSupabase
+    .from("coaching_centers")
+    .select("id")
+    .eq("owner_uid", auth.uid)
+    .maybeSingle();
+
+  if (!center) return { tutorCount: 0, recentTutors: [] };
+
+  const { data: tutors } = await adminSupabase
+    .from("tutors")
+    .select("id, full_name, joined_at, created_at")
+    .eq("coaching_center_id", center.id)
+    .neq("user_id", auth.uid) // exclude the owner themselves
+    .order("created_at", { ascending: false })
+    .limit(5);
+
+  return {
+    tutorCount: tutors?.length ?? 0,
+    recentTutors: (tutors ?? []).map((t) => ({
+      id: t.id as string,
+      name: (t.full_name as string) || "Tutor",
+      joinedAt: (t.joined_at as string) || (t.created_at as string) || new Date().toISOString(),
+    })),
+  };
 }

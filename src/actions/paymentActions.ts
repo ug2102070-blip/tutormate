@@ -19,11 +19,10 @@ export interface PaymentInitiateResult {
  */
 export async function initiateFeePayment(
   feeId: string,
-  gateway: "bkash" | "nagad",
-  idToken?: string
+  gateway: "bkash" | "nagad"
 ): Promise<PaymentInitiateResult> {
   try {
-    const auth = await verifyUserAuth(idToken);
+    const auth = await verifyUserAuth();
     const supabase = createAdminClient();
 
     // Fetch fee record
@@ -64,11 +63,10 @@ export async function initiateFeePayment(
 export async function verifyPaymentTransaction(
   feeId: string,
   trxID: string,
-  gateway: "bkash" | "nagad",
-  idToken?: string
+  gateway: "bkash" | "nagad"
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const auth = await verifyUserAuth(idToken);
+    const auth = await verifyUserAuth();
     const cleanTrxId = trxID ? trxID.trim().toUpperCase() : "";
 
     if (!cleanTrxId || cleanTrxId.length < 5) {

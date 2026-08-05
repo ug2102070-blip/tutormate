@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useLanguage } from "@/context/LanguageContext";
 import Link from "next/link";
 import {
@@ -42,6 +43,7 @@ import type {
 
 export default function CoachingCenterPage() {
   const { t } = useLanguage();
+  const searchParams = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [centerData, setCenterData] = useState<{
     center: CoachingCenterDoc;
@@ -53,9 +55,10 @@ export default function CoachingCenterPage() {
 
   const [activeTab, setActiveTab] = useState<"overview" | "tutors" | "batches" | "analytics" | "settings">("overview");
 
-  // Form states
+  // Form states — pre-fill joinCode from URL param (?joinCode=CC-XXXXXX)
+  const urlJoinCode = searchParams?.get("joinCode") ?? "";
   const [createForm, setCreateForm] = useState({ name: "", address: "", contactPhone: "" });
-  const [joinCodeInput, setJoinCodeInput] = useState("");
+  const [joinCodeInput, setJoinCodeInput] = useState(urlJoinCode.toUpperCase());
   const [editForm, setEditForm] = useState({ name: "", address: "", contactPhone: "" });
 
   const [actionLoading, setActionLoading] = useState(false);

@@ -45,19 +45,16 @@ export async function claimStudentInvite(
   uidOrToken: string
 ) {
   const supabase = createAdminClient();
-  let studentUid = uidOrToken;
+  let studentUid = "";
   let user: any = null;
 
-  if (uidOrToken && typeof uidOrToken === "string" && uidOrToken.includes(".")) {
-    try {
-      const authRes = await supabase.auth.getUser(uidOrToken);
-      user = authRes?.data?.user || null;
-      if (user) {
-        studentUid = user.id;
-      }
-    } catch {
-      // Ignore
-    }
+  try {
+    const { verifyUserAuth } = await import("@/lib/authHelpers");
+    const auth = await verifyUserAuth(uidOrToken);
+    studentUid = auth.uid;
+    user = { id: auth.uid, email: auth.email };
+  } catch (err) {
+    return { success: false, error: "Unauthorized" };
   }
 
   const cleanCode = inviteCode ? inviteCode.toUpperCase().trim() : "";
@@ -142,9 +139,17 @@ export async function claimStudentInvite(
       .update({ auth_uid: studentUid })
       .eq("id", student.id);
 
-    if (updateErr) {
-      return { success: false, error: `Failed to claim invite: ${updateErr.message}` };
-    }
+    // 5. Sync user_metadata in Supabase Auth so client-side fetchUserClaims uses fast-path
+    await supabase.auth.admin.updateUserById(studentUid, {
+      user_metadata: {
+        role: "student",
+        tutorId: student.tutor_id,
+        studentDocId: student.id,
+        full_name: displayName,
+      },
+    }).catch((metaErr) => {
+      console.warn("User metadata update error in claimStudentInvite:", metaErr);
+    });
 
     return { success: true, tutorId: student.tutor_id };
   } catch (err) {

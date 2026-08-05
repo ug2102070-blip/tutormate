@@ -18,6 +18,7 @@ import {
   Crown,
 } from "lucide-react";
 import { getOwnerDashboardStats, type OwnerDashboardStats } from "@/actions/ownerActions";
+import { createCoachingCenter } from "@/actions/coachingActions";
 
 function StatCard({
   icon: Icon,
@@ -110,18 +111,50 @@ export default function OwnerDashboardPage() {
   const [error, setError] = useState<string | null>(null);
   const [codeCopied, setCodeCopied] = useState(false);
 
+  // Form state for creating coaching center directly
+  const [centerNameInput, setCenterNameInput] = useState("");
+  const [centerAddressInput, setCenterAddressInput] = useState("");
+  const [centerPhoneInput, setCenterPhoneInput] = useState("");
+  const [creatingCenter, setCreatingCenter] = useState(false);
+  const [createErr, setCreateErr] = useState<string | null>(null);
+
+  const fetchStats = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await getOwnerDashboardStats();
+      setStats(data);
+    } catch (err: any) {
+      setError(err.message ?? "Failed to load dashboard.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    (async () => {
-      try {
-        const data = await getOwnerDashboardStats();
-        setStats(data);
-      } catch (err: any) {
-        setError(err.message ?? "Failed to load dashboard.");
-      } finally {
-        setLoading(false);
-      }
-    })();
+    fetchStats();
   }, []);
+
+  const handleCreateCenterSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!centerNameInput.trim()) return;
+    setCreatingCenter(true);
+    setCreateErr(null);
+
+    try {
+      const formData = new FormData();
+      formData.set("name", centerNameInput.trim());
+      if (centerAddressInput.trim()) formData.set("address", centerAddressInput.trim());
+      if (centerPhoneInput.trim()) formData.set("contactPhone", centerPhoneInput.trim());
+
+      await createCoachingCenter(formData);
+      await fetchStats();
+    } catch (err: any) {
+      setCreateErr(err.message || "Failed to create coaching center.");
+    } finally {
+      setCreatingCenter(false);
+    }
+  };
 
   const copyCode = () => {
     if (!stats) return;
@@ -145,24 +178,106 @@ export default function OwnerDashboardPage() {
 
   if (error || !stats) {
     return (
-      <div
-        className="rounded-2xl p-6 flex items-center gap-3"
-        style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)" }}
-      >
-        <AlertCircle className="w-5 h-5 text-red-500 shrink-0" />
-        <div>
-          <p className="text-sm font-semibold text-red-500">No Coaching Center Found</p>
-          <p className="text-xs mt-1" style={{ color: "var(--color-text-muted)" }}>
-            {error ?? "Please create a coaching center first from the Tutor portal."}
-          </p>
-          <Link
-            href="/tutor/coaching"
-            className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg"
-            style={{ background: "rgba(239,68,68,0.12)", color: "rgb(239,68,68)" }}
-          >
-            <Building2 className="w-3.5 h-3.5" />
-            Create Center
-          </Link>
+      <div className="max-w-xl mx-auto py-8">
+        <div
+          className="rounded-3xl p-6 sm:p-8 space-y-6"
+          style={{
+            background: "var(--color-bg)",
+            border: "1px solid var(--color-border)",
+            boxShadow: "0 4px 20px rgba(0,0,0,0.06)",
+          }}
+        >
+          <div className="flex items-center gap-3">
+            <div
+              className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0"
+              style={{ background: "rgba(245,158,11,0.15)" }}
+            >
+              <Building2 className="w-6 h-6 text-amber-500" />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold" style={{ color: "var(--color-text)" }}>
+                Create Your Coaching Center
+              </h2>
+              <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
+                Initialize your center to manage tutors, batches, attendance, and financial reports.
+              </p>
+            </div>
+          </div>
+
+          {createErr && (
+            <div className="p-3 text-xs rounded-xl bg-red-500/10 text-red-500 border border-red-500/20">
+              {createErr}
+            </div>
+          )}
+
+          <form onSubmit={handleCreateCenterSubmit} className="space-y-4">
+            <div>
+              <label className="block text-xs font-semibold mb-1.5" style={{ color: "var(--color-text)" }}>
+                Coaching Center Name *
+              </label>
+              <input
+                type="text"
+                required
+                value={centerNameInput}
+                onChange={(e) => setCenterNameInput(e.target.value)}
+                placeholder="e.g. Excellence Academy Dhaka"
+                className="w-full px-3.5 py-2.5 text-xs rounded-xl border outline-none focus:ring-2 focus:ring-amber-500/30"
+                style={{
+                  background: "var(--color-bg-secondary)",
+                  borderColor: "var(--color-border)",
+                  color: "var(--color-text)",
+                }}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold mb-1.5" style={{ color: "var(--color-text)" }}>
+                  Contact Phone (Optional)
+                </label>
+                <input
+                  type="tel"
+                  value={centerPhoneInput}
+                  onChange={(e) => setCenterPhoneInput(e.target.value)}
+                  placeholder="01712345678"
+                  className="w-full px-3.5 py-2.5 text-xs rounded-xl border outline-none focus:ring-2 focus:ring-amber-500/30"
+                  style={{
+                    background: "var(--color-bg-secondary)",
+                    borderColor: "var(--color-border)",
+                    color: "var(--color-text)",
+                  }}
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold mb-1.5" style={{ color: "var(--color-text)" }}>
+                  Address (Optional)
+                </label>
+                <input
+                  type="text"
+                  value={centerAddressInput}
+                  onChange={(e) => setCenterAddressInput(e.target.value)}
+                  placeholder="e.g. Farmgate, Dhaka"
+                  className="w-full px-3.5 py-2.5 text-xs rounded-xl border outline-none focus:ring-2 focus:ring-amber-500/30"
+                  style={{
+                    background: "var(--color-bg-secondary)",
+                    borderColor: "var(--color-border)",
+                    color: "var(--color-text)",
+                  }}
+                />
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={creatingCenter || !centerNameInput.trim()}
+              className="w-full py-3 text-xs font-extrabold text-white rounded-xl transition-all shadow-md hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
+              style={{ background: "linear-gradient(135deg, rgb(245,158,11) 0%, rgb(217,119,6) 100%)" }}
+            >
+              <Building2 className="w-4 h-4" />
+              {creatingCenter ? "Initializing Center..." : "Create Coaching Center"}
+            </button>
+          </form>
         </div>
       </div>
     );

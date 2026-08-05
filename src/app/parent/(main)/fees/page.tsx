@@ -25,7 +25,7 @@ export default function ParentFeesPage() {
     async function load() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-      const data = await getParentFees(user.id);
+      const data = await getParentFees();
       setFees(data);
       setLoading(false);
     }

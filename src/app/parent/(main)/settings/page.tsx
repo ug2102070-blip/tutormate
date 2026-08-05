@@ -94,7 +94,7 @@ export default function ParentSettingsPage() {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    window.location.href = "/parent/login";
+    window.location.href = "/login";
   };
 
   if (loading) {

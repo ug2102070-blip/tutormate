@@ -62,8 +62,8 @@ async function ensureTutorRecord(tutorId: string, email?: string) {
 /**
  * Creates a new batch under the authenticated tutor.
  */
-export async function createBatch(formData: BatchFormValues, idToken: string) {
-  const authState = await verifyUserAuth(idToken);
+export async function createBatch(formData: BatchFormValues) {
+  const authState = await verifyUserAuth();
   if (authState.role !== "tutor" && authState.role !== "owner" && authState.role !== "admin") {
     throw new Error("Unauthorized: Only tutors can create batches.");
   }
@@ -133,10 +133,9 @@ export async function createBatch(formData: BatchFormValues, idToken: string) {
  */
 export async function updateBatch(
   batchId: string,
-  formData: BatchFormValues,
-  idToken: string
+  formData: BatchFormValues
 ) {
-  const authState = await verifyUserAuth(idToken);
+  const authState = await verifyUserAuth();
   if (authState.role !== "tutor") {
     throw new Error("Unauthorized");
   }
@@ -183,8 +182,8 @@ export async function updateBatch(
 /**
  * Toggles batch archive status.
  */
-export async function toggleArchiveBatch(batchId: string, idToken: string) {
-  const authState = await verifyUserAuth(idToken);
+export async function toggleArchiveBatch(batchId: string) {
+  const authState = await verifyUserAuth();
   if (authState.role !== "tutor") {
     throw new Error("Unauthorized");
   }
@@ -242,8 +241,8 @@ export async function toggleArchiveBatch(batchId: string, idToken: string) {
 /**
  * Fetches all batches for the authenticated tutor reliably server-side.
  */
-export async function getTutorBatches(idToken?: string): Promise<any[]> {
-  const authState = await verifyUserAuth(idToken);
+export async function getTutorBatches(): Promise<any[]> {
+  const authState = await verifyUserAuth();
   const tutorId = authState.tutorId || authState.uid;
   const adminSupabase = createAdminClient();
 

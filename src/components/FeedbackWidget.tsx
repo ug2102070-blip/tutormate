@@ -6,7 +6,7 @@ import { submitFeedbackAction } from "@/actions/feedbackActions";
 
 interface FeedbackWidgetProps {
   userId: string;
-  userRole: "tutor" | "student";
+  userRole: "tutor" | "student" | "parent" | "owner";
 }
 
 export function FeedbackWidget({ userId, userRole }: FeedbackWidgetProps) {
@@ -28,9 +28,12 @@ export function FeedbackWidget({ userId, userRole }: FeedbackWidgetProps) {
     setIsSubmitting(true);
     setErrorMessage("");
 
+    const safeRole: "tutor" | "student" | "unknown" =
+      userRole === "tutor" || userRole === "student" ? userRole : "unknown";
+
     const res = await submitFeedbackAction({
       userId,
-      userRole,
+      userRole: safeRole,
       rating,
       category,
       message,

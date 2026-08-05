@@ -2,17 +2,19 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { onboardTutorUser } from "@/actions/authActions";
 import { claimStudentInvite } from "@/actions/studentActions";
+import { linkParentToStudent } from "@/actions/parentActions";
 import { formatAuthError } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
-import { Phone, Mail, Sparkles, ArrowRight } from "lucide-react";
+import { Phone, Mail, Sparkles, ArrowRight, Eye, EyeOff, Loader2 } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user, loading: authLoading, refreshClaims } = useAuth();
   const supabase = createClient();
 
@@ -20,6 +22,7 @@ export default function LoginPage() {
   const [authMethod, setAuthMethod] = useState<"email" | "phone">("email");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   // Phone Auth State
   const [phoneNumber, setPhoneNumber] = useState("");
@@ -29,10 +32,11 @@ export default function LoginPage() {
   // Common UX States
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
 
   // Onboarding modal for new users
   const [pendingUser, setPendingUser] = useState<User | null>(null);
-  const [onboardRole, setOnboardRole] = useState<"tutor" | "student">("tutor");
+  const [onboardRole, setOnboardRole] = useState<"tutor" | "student" | "owner" | "parent">("tutor");
   const [onboardName, setOnboardName] = useState("");
   const [onboardInstitution, setOnboardInstitution] = useState("");
   const [onboardInviteCode, setOnboardInviteCode] = useState("");
@@ -44,52 +48,76 @@ export default function LoginPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id, authLoading, pendingUser]);
 
+  // Read URL error param (e.g. from OAuth callback failure)
+  useEffect(() => {
+    const urlError = searchParams.get("error");
+    if (urlError === "auth_callback_error") {
+      setError("Authentication failed. Please try again.");
+    } else if (urlError) {
+      setError(decodeURIComponent(urlError));
+    }
+  }, [searchParams]);
+
   async function handlePostSignIn(user: User) {
-    document.cookie = "__session=1; path=/; max-age=2592000; SameSite=Lax";
-
     try {
-      const { data: profile } = await supabase
+      const { data: profile, error: profileError } = await supabase
         .from("profiles")
-        .select("*")
+        .select("id, role")
         .eq("id", user.id)
-        .single();
+        .maybeSingle();
 
+      // If a DB/network error occurs (not a 'not found'), show a user-friendly error
+      // and do NOT show the onboarding modal — the user may already have an account.
+      if (profileError && profileError.code !== "PGRST116") {
+        setError("Unable to fetch your account. Please try again.");
+        setLoading(false);
+        return;
+      }
+
+      // Existing user — redirect straight to their dashboard
       if (profile) {
         await refreshClaims().catch(() => {});
         if (profile.role === "student") {
           router.push("/student/dashboard");
+        } else if (profile.role === "parent") {
+          router.push("/parent/dashboard");
+        } else if (profile.role === "owner" || profile.role === "admin") {
+          router.push("/owner/dashboard");
         } else {
           router.push("/tutor/dashboard");
         }
         return;
       }
-    } catch {
-      // Fallback
-    }
 
-    let savedRole: "tutor" | "student" = "tutor";
-    let savedInstitution = "";
-    let savedInviteCode = "";
-    try {
-      const savedData = localStorage.getItem("tm_onboard_data");
-      if (savedData) {
-        const parsed = JSON.parse(savedData);
-        if (parsed.role === "tutor" || parsed.role === "student") savedRole = parsed.role;
-        if (parsed.institution) savedInstitution = parsed.institution;
-        if (parsed.inviteCode) savedInviteCode = parsed.inviteCode;
+      // Genuinely new user — no profile exists, show onboarding
+      let savedRole: "tutor" | "student" | "owner" | "parent" = "tutor";
+      let savedInstitution = "";
+      let savedInviteCode = "";
+      try {
+        const savedData = localStorage.getItem("tm_onboard_data");
+        if (savedData) {
+          const parsed = JSON.parse(savedData);
+          if (["tutor", "student", "owner", "parent"].includes(parsed.role)) savedRole = parsed.role;
+          if (parsed.institution) savedInstitution = parsed.institution;
+          if (parsed.inviteCode) savedInviteCode = parsed.inviteCode;
+        }
+      } catch {
+        // ignore localStorage errors
       }
-    } catch (e) {
-      // ignore
-    }
 
-    setPendingUser(user);
-    setOnboardName(user.user_metadata?.full_name || user.user_metadata?.displayName || "");
-    setOnboardRole(savedRole);
-    setOnboardInstitution(savedInstitution);
-    setOnboardInviteCode(savedInviteCode);
-    
-    // Clear the data after pre-filling
-    localStorage.removeItem("tm_onboard_data");
+      setPendingUser(user);
+      setOnboardName(user.user_metadata?.full_name || user.user_metadata?.displayName || "");
+      setOnboardRole(savedRole);
+      setOnboardInstitution(savedInstitution);
+      setOnboardInviteCode(savedInviteCode);
+
+      // Clear the data after pre-filling
+      localStorage.removeItem("tm_onboard_data");
+    } catch {
+      // Unexpected error — do not silently fall into onboarding
+      setError("Something went wrong. Please refresh and try again.");
+      setLoading(false);
+    }
   }
 
   async function handleEmailLogin(e: React.FormEvent) {
@@ -116,7 +144,7 @@ export default function LoginPage() {
 
   async function handleGoogleLogin() {
     setError("");
-    setLoading(true);
+    setGoogleLoading(true);
 
     try {
       const { error: oauthErr } = await supabase.auth.signInWithOAuth({
@@ -128,7 +156,7 @@ export default function LoginPage() {
       if (oauthErr) throw oauthErr;
     } catch (err: unknown) {
       setError(formatAuthError(err));
-      setLoading(false);
+      setGoogleLoading(false);
     }
   }
 
@@ -201,18 +229,31 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      if (onboardRole === "tutor") {
-        const tutorRes = await onboardTutorUser(
+      if (onboardRole === "tutor" || onboardRole === "owner") {
+        const res = await onboardTutorUser(
           {
             email: pendingUser.email || null,
-            displayName: onboardName || "Tutor",
+            displayName: onboardName || "User",
             phoneNumber: pendingUser.phone || undefined,
             institution: onboardInstitution || "Independent",
+            role: onboardRole,
           },
           pendingUser.id
         );
-        if (tutorRes && !tutorRes.success && (tutorRes as any).error) {
-          setError((tutorRes as any).error);
+        if (res && !res.success && (res as any).error) {
+          setError((res as any).error);
+          setLoading(false);
+          return;
+        }
+      } else if (onboardRole === "parent") {
+        if (!onboardInviteCode) {
+          setError("Invite code is required for parent registration.");
+          setLoading(false);
+          return;
+        }
+        const linkRes = await linkParentToStudent(onboardInviteCode);
+        if (!linkRes.success && linkRes.message) {
+          setError(linkRes.message);
           setLoading(false);
           return;
         }
@@ -231,8 +272,7 @@ export default function LoginPage() {
       }
 
       await refreshClaims().catch(() => {});
-      document.cookie = "__session=1; path=/; max-age=2592000; SameSite=Lax";
-      router.push(onboardRole === "tutor" ? "/tutor/dashboard" : "/student/dashboard");
+      router.push(onboardRole === "student" ? "/student/dashboard" : onboardRole === "parent" ? "/parent/dashboard" : onboardRole === "owner" ? "/owner/dashboard" : "/tutor/dashboard");
     } catch (err: unknown) {
       setError(formatAuthError(err));
     } finally {
@@ -374,20 +414,32 @@ export default function LoginPage() {
                     Forgot password?
                   </Link>
                 </div>
-                <input
-                  id="login-password"
-                  type="password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="w-full px-3.5 py-2.5 text-sm rounded-lg outline-none transition-all duration-200"
-                  style={{
-                    backgroundColor: "var(--color-bg-secondary)",
-                    border: "1px solid var(--color-border)",
-                    color: "var(--color-text)",
-                  }}
-                />
+                <div className="relative">
+                  <input
+                    id="login-password"
+                    type={showPassword ? "text" : "password"}
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="w-full px-3.5 py-2.5 pr-10 text-sm rounded-lg outline-none transition-all duration-200"
+                    style={{
+                      backgroundColor: "var(--color-bg-secondary)",
+                      border: "1px solid var(--color-border)",
+                      color: "var(--color-text)",
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 opacity-50 hover:opacity-100 transition-opacity"
+                    style={{ color: "var(--color-text-muted)" }}
+                    tabIndex={-1}
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
               </div>
 
               <button
@@ -532,7 +584,7 @@ export default function LoginPage() {
 
             <button
               onClick={handleGoogleLogin}
-              disabled={loading}
+              disabled={loading || googleLoading}
               className="mt-4 w-full py-2.5 px-4 text-sm font-medium rounded-lg transition-all duration-200 hover:opacity-80 disabled:opacity-50 flex items-center justify-center gap-2"
               style={{
                 backgroundColor: "var(--color-bg-secondary)",
@@ -540,25 +592,29 @@ export default function LoginPage() {
                 color: "var(--color-text)",
               }}
             >
-              <svg className="w-4 h-4" viewBox="0 0 24 24">
-                <path
-                  fill="#4285F4"
-                  d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"
-                />
-                <path
-                  fill="#34A853"
-                  d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                />
-                <path
-                  fill="#FBBC05"
-                  d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-                />
-                <path
-                  fill="#EA4335"
-                  d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                />
-              </svg>
-              Google
+              {googleLoading ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <svg className="w-4 h-4" viewBox="0 0 24 24">
+                  <path
+                    fill="#4285F4"
+                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"
+                  />
+                  <path
+                    fill="#34A853"
+                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                  />
+                  <path
+                    fill="#FBBC05"
+                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+                  />
+                  <path
+                    fill="#EA4335"
+                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                  />
+                </svg>
+              )}
+              {googleLoading ? "Redirecting to Google..." : "Google"}
             </button>
           </div>
 
@@ -594,31 +650,57 @@ export default function LoginPage() {
           )}
 
           {/* Role Selection */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
             <button
               type="button"
               onClick={() => setOnboardRole("tutor")}
-              className={`p-3 rounded-xl border text-left transition-all ${
+              className={`p-3 rounded-xl border flex flex-col items-center justify-center transition-all gap-1.5 ${
                 onboardRole === "tutor"
-                  ? "border-indigo-600 bg-indigo-50/50 text-indigo-900 shadow-xs"
-                  : "border-slate-200 dark:border-white/10 hover:border-slate-300 text-slate-700 dark:text-slate-300"
+                  ? "border-indigo-500 bg-indigo-50/50 text-indigo-900 shadow-sm ring-1 ring-indigo-500"
+                  : "border-slate-200 dark:border-white/10 hover:border-slate-300 hover:bg-slate-50 text-slate-700 dark:text-slate-300"
               }`}
             >
-              <div className="font-bold text-sm">👨‍🏫 I am a Tutor</div>
-              <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">Manage students, batches & fee collection</div>
+              <span className="text-xl">👨‍🏫</span>
+              <span className={`font-bold text-xs sm:text-sm ${onboardRole === "tutor" ? "text-indigo-900" : ""}`}>Tutor</span>
             </button>
 
             <button
               type="button"
               onClick={() => setOnboardRole("student")}
-              className={`p-3 rounded-xl border text-left transition-all ${
+              className={`p-3 rounded-xl border flex flex-col items-center justify-center transition-all gap-1.5 ${
                 onboardRole === "student"
-                  ? "border-indigo-600 bg-indigo-50/50 text-indigo-900 shadow-xs"
-                  : "border-slate-200 dark:border-white/10 hover:border-slate-300 text-slate-700 dark:text-slate-300"
+                  ? "border-emerald-500 bg-emerald-50/50 text-emerald-900 shadow-sm ring-1 ring-emerald-500"
+                  : "border-slate-200 dark:border-white/10 hover:border-slate-300 hover:bg-slate-50 text-slate-700 dark:text-slate-300"
               }`}
             >
-              <div className="font-bold text-sm">🎓 I am a Student</div>
-              <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">View attendance, fees & ask doubts</div>
+              <span className="text-xl">🎓</span>
+              <span className={`font-bold text-xs sm:text-sm ${onboardRole === "student" ? "text-emerald-900" : ""}`}>Student</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setOnboardRole("parent")}
+              className={`p-3 rounded-xl border flex flex-col items-center justify-center transition-all gap-1.5 ${
+                onboardRole === "parent"
+                  ? "border-amber-500 bg-amber-50/50 text-amber-900 shadow-sm ring-1 ring-amber-500"
+                  : "border-slate-200 dark:border-white/10 hover:border-slate-300 hover:bg-slate-50 text-slate-700 dark:text-slate-300"
+              }`}
+            >
+              <span className="text-xl">👨‍👩‍👧</span>
+              <span className={`font-bold text-xs sm:text-sm ${onboardRole === "parent" ? "text-amber-900" : ""}`}>Parent</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setOnboardRole("owner")}
+              className={`p-3 rounded-xl border flex flex-col items-center justify-center transition-all gap-1.5 ${
+                onboardRole === "owner"
+                  ? "border-purple-500 bg-purple-50/50 text-purple-900 shadow-sm ring-1 ring-purple-500"
+                  : "border-slate-200 dark:border-white/10 hover:border-slate-300 hover:bg-slate-50 text-slate-700 dark:text-slate-300"
+              }`}
+            >
+              <span className="text-xl">🏛️</span>
+              <span className={`font-bold text-xs sm:text-sm ${onboardRole === "owner" ? "text-purple-900" : ""}`}>Owner</span>
             </button>
           </div>
 
@@ -637,7 +719,7 @@ export default function LoginPage() {
               />
             </div>
 
-            {onboardRole === "tutor" ? (
+            {onboardRole === "tutor" || onboardRole === "owner" ? (
               <div>
                 <label className="block text-sm font-medium mb-1.5 text-slate-700 dark:text-slate-300">
                   Institution / Coaching Name
@@ -653,7 +735,7 @@ export default function LoginPage() {
             ) : (
               <div>
                 <label className="block text-sm font-medium mb-1.5 text-slate-700 dark:text-slate-300">
-                  Invite Code (from your tutor)
+                  Invite Code {onboardRole === "parent" ? "(from your child)" : "(from your tutor)"}
                 </label>
                 <input
                   type="text"

@@ -2,11 +2,11 @@
 
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/context/LanguageContext";
 import { createClient } from "@/lib/supabase/client";
-import { LogOut, Settings, ChevronDown, User, Menu, Gem } from "lucide-react";
+import { LogOut, Settings, ChevronDown, User, Menu, Gem, Building2, GraduationCap } from "lucide-react";
 import { HeaderCalendar } from "@/components/HeaderCalendar";
 import { NotificationBell } from "@/components/NotificationBell";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -15,10 +15,12 @@ import { MobileDrawer } from "@/components/navigation/MobileDrawer";
 
 export function Header() {
   const router = useRouter();
+  const pathname = usePathname();
   const { user, role } = useAuth();
   const { t } = useLanguage();
   const [showMenu, setShowMenu] = useState(false);
   const [showMobileDrawer, setShowMobileDrawer] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const supabase = createClient();
 
@@ -38,14 +40,15 @@ export function Header() {
   }, [showMenu]);
 
   async function handleLogout() {
+    setLoggingOut(true);
     try {
       await supabase.auth.signOut();
     } catch (err) {
       console.error("Signout error:", err);
+    } finally {
+      setLoggingOut(false);
+      router.push("/login");
     }
-    document.cookie =
-      "__session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
-    window.location.href = "/login";
   }
 
   const displayName =
@@ -60,6 +63,9 @@ export function Header() {
     .map((w: string) => w[0])
     .join("")
     .toUpperCase();
+
+  const isOwnerInTutorMode = role === "owner" && pathname.startsWith("/tutor");
+  const isOwnerInCenterMode = role === "owner" && pathname.startsWith("/owner");
 
   return (
     <>
@@ -95,7 +101,7 @@ export function Header() {
               TutorMate
             </Link>
             <span
-              className="text-[9px] uppercase font-bold px-1.5 py-0.5 rounded-full border"
+              className="hidden sm:inline-block text-[9px] uppercase font-bold px-1.5 py-0.5 rounded-full border"
               style={{
                 background: "var(--color-primary-50)",
                 color: "var(--color-primary)",
@@ -112,6 +118,39 @@ export function Header() {
           >
             {t(`roles.${role}`)} {t("header.portal")}
           </h2>
+
+          {/* Quick Mode Switcher for Center Owners (desktop/tablet) */}
+          {isOwnerInTutorMode && (
+            <Link
+              href="/owner/dashboard"
+              className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-bold transition-all active:scale-95 shadow-xs border"
+              style={{
+                background: "rgba(245, 158, 11, 0.12)",
+                color: "rgb(217, 119, 6)",
+                borderColor: "rgba(245, 158, 11, 0.3)",
+              }}
+              title="Return to Owner Portal"
+            >
+              <Building2 className="w-3.5 h-3.5" />
+              <span>Center Portal</span>
+            </Link>
+          )}
+
+          {isOwnerInCenterMode && (
+            <Link
+              href="/tutor/dashboard"
+              className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-bold transition-all active:scale-95 shadow-xs border"
+              style={{
+                background: "var(--color-primary-50)",
+                color: "var(--color-primary)",
+                borderColor: "var(--color-primary-100)",
+              }}
+              title="Switch to Tutor Mode"
+            >
+              <GraduationCap className="w-3.5 h-3.5" />
+              <span>Teach Mode</span>
+            </Link>
+          )}
         </div>
 
       {/* Right: Calendar + Notifications + User */}
@@ -263,12 +302,13 @@ export function Header() {
                   setShowMenu(false);
                   handleLogout();
                 }}
-                className="w-full flex items-center gap-2.5 px-3.5 py-2 text-xs font-semibold text-left transition-colors hover:bg-rose-50 dark:hover:bg-rose-500/10"
+                disabled={loggingOut}
+                className="w-full flex items-center gap-2.5 px-3.5 py-2 text-xs font-semibold text-left transition-colors hover:bg-rose-50 dark:hover:bg-rose-500/10 disabled:opacity-60"
                 style={{ color: "var(--color-error)" }}
                 id="header-logout-btn"
               >
-                <LogOut className="w-4 h-4" />
-                {t("header.signOut")}
+                <LogOut className={`w-4 h-4 ${loggingOut ? "animate-spin" : ""}`} />
+                {loggingOut ? "Signing out..." : t("header.signOut")}
               </button>
             </div>
           </>
@@ -278,7 +318,7 @@ export function Header() {
     </header>
 
     <MobileDrawer
-      role={(role as "tutor" | "student") || "tutor"}
+      role={(role as "tutor" | "student" | "owner" | "parent") || "tutor"}
       isOpen={showMobileDrawer}
       onClose={() => setShowMobileDrawer(false)}
     />

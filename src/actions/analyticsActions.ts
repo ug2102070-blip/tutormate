@@ -34,8 +34,8 @@ export interface GradeDistributionData {
   count: number;
 }
 
-export async function getDashboardMetrics(idToken?: string): Promise<DashboardMetrics> {
-  const authState = await verifyUserAuth(idToken);
+export async function getDashboardMetrics(): Promise<DashboardMetrics> {
+  const authState = await verifyUserAuth();
   if (authState.role !== "tutor") {
     return {
       activeStudents: 0,
@@ -148,8 +148,8 @@ export async function getDashboardMetrics(idToken?: string): Promise<DashboardMe
   };
 }
 
-export async function getMonthlyIncomeChart(months = 6, idToken?: string): Promise<MonthlyIncomeData[]> {
-  const authState = await verifyUserAuth(idToken);
+export async function getMonthlyIncomeChart(months = 6): Promise<MonthlyIncomeData[]> {
+  const authState = await verifyUserAuth();
   if (authState.role !== "tutor") return [];
 
   const tutorId = authState.tutorId || authState.uid;
@@ -185,8 +185,8 @@ export async function getMonthlyIncomeChart(months = 6, idToken?: string): Promi
   return result;
 }
 
-export async function getFeeDistribution(month?: string, year?: number, idToken?: string): Promise<FeeDistributionData[]> {
-  const authState = await verifyUserAuth(idToken);
+export async function getFeeDistribution(month?: string, year?: number): Promise<FeeDistributionData[]> {
+  const authState = await verifyUserAuth();
   if (authState.role !== "tutor") return [];
 
   const tutorId = authState.tutorId || authState.uid;
@@ -221,8 +221,8 @@ export async function getFeeDistribution(month?: string, year?: number, idToken?
   return [paidItem, partialItem, unpaidItem];
 }
 
-export async function getAttendanceTrend(batchId?: string, idToken?: string): Promise<AttendanceTrendData[]> {
-  const authState = await verifyUserAuth(idToken);
+export async function getAttendanceTrend(batchId?: string): Promise<AttendanceTrendData[]> {
+  const authState = await verifyUserAuth();
   if (authState.role !== "tutor") return [];
 
   const tutorId = authState.tutorId || authState.uid;
@@ -273,8 +273,8 @@ export async function getAttendanceTrend(batchId?: string, idToken?: string): Pr
   }));
 }
 
-export async function getGradeDistribution(idToken?: string): Promise<GradeDistributionData[]> {
-  const authState = await verifyUserAuth(idToken);
+export async function getGradeDistribution(): Promise<GradeDistributionData[]> {
+  const authState = await verifyUserAuth();
   if (authState.role !== "tutor") return [];
 
   const tutorId = authState.tutorId || authState.uid;

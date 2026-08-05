@@ -84,8 +84,8 @@ async function callGemini(prompt: string, systemInstruction?: string): Promise<s
   return "";
 }
 
-export async function generateQuestions(params: QuestionGenParams, idToken?: string) {
-  const authState = await verifyUserAuth(idToken);
+export async function generateQuestions(params: QuestionGenParams) {
+  const authState = await verifyUserAuth();
   if (authState.role !== "tutor" && authState.role !== "owner" && authState.role !== "admin") throw new Error("Unauthorized");
   await checkAiFeatureAccess(authState.tutorId || authState.uid);
 
@@ -168,8 +168,8 @@ Ensure formatting is beautifully presented in Markdown with clear headers, bold 
   return { success: true, result: fallbackText };
 }
 
-export async function generateAssignment(params: AssignmentGenParams, idToken?: string) {
-  const authState = await verifyUserAuth(idToken);
+export async function generateAssignment(params: AssignmentGenParams) {
+  const authState = await verifyUserAuth();
   if (authState.role !== "tutor" && authState.role !== "owner" && authState.role !== "admin") throw new Error("Unauthorized");
   await checkAiFeatureAccess(authState.tutorId || authState.uid);
 
@@ -230,8 +230,8 @@ Include:
   return { success: true, result: fallbackText };
 }
 
-export async function generateLessonPlan(params: LessonPlanParams, idToken?: string) {
-  const authState = await verifyUserAuth(idToken);
+export async function generateLessonPlan(params: LessonPlanParams) {
+  const authState = await verifyUserAuth();
   if (authState.role !== "tutor") throw new Error("Unauthorized");
 
   const cleanDirective = (params.cleanOutputOnly ?? true)
@@ -289,10 +289,9 @@ export async function publishGeneratedContentAsAssignment(
     content: string;
     deadline: string;
     maxMarks: number;
-  },
-  idToken?: string
+  }
 ) {
-  const authState = await verifyUserAuth(idToken);
+  const authState = await verifyUserAuth();
   if (authState.role !== "tutor" && authState.role !== "owner" && authState.role !== "admin") {
     throw new Error("Unauthorized");
   }
@@ -307,8 +306,7 @@ export async function publishGeneratedContentAsAssignment(
       batchId: params.batchId,
       deadline: params.deadline,
       maxMarks: params.maxMarks,
-    },
-    idToken || ""
+    }
   );
 
   if (!createRes?.assignmentId) {
@@ -316,13 +314,13 @@ export async function publishGeneratedContentAsAssignment(
   }
 
   // 2. Immediately publish assignment to notify enrolled students
-  await publishAssignment(createRes.assignmentId, idToken || "");
+  await publishAssignment(createRes.assignmentId);
 
   return { success: true, assignmentId: createRes.assignmentId };
 }
 
-export async function suggestDoubtAnswer(doubtText: string, subject?: string, idToken?: string) {
-  const authState = await verifyUserAuth(idToken);
+export async function suggestDoubtAnswer(doubtText: string, subject?: string) {
+  const authState = await verifyUserAuth();
   if (authState.role !== "tutor") throw new Error("Unauthorized");
 
   const systemPrompt = `You are an encouraging, expert academic tutor helping a student understand a challenging concept.
@@ -354,8 +352,8 @@ Draft a clear, friendly, and complete solution:
   return { success: true, result: fallbackText };
 }
 
-export async function generateParentMessage(params: ParentMessageParams, idToken?: string) {
-  const authState = await verifyUserAuth(idToken);
+export async function generateParentMessage(params: ParentMessageParams) {
+  const authState = await verifyUserAuth();
   if (authState.role !== "tutor") throw new Error("Unauthorized");
 
   const langInstruction = params.language === "bn"
@@ -404,8 +402,8 @@ export async function sendParentPortalNotification(params: {
   studentId: string;
   title: string;
   message: string;
-}, idToken?: string) {
-  const authState = await verifyUserAuth(idToken);
+}) {
+  const authState = await verifyUserAuth();
   if (authState.role !== "tutor" && authState.role !== "owner" && authState.role !== "admin") {
     throw new Error("Unauthorized");
   }
@@ -462,8 +460,8 @@ export async function sendParentPortalNotification(params: {
   return { success: true, sentCount };
 }
 
-export async function generateWeeklySummary(idToken?: string) {
-  const authState = await verifyUserAuth(idToken);
+export async function generateWeeklySummary() {
+  const authState = await verifyUserAuth();
   if (authState.role !== "tutor") throw new Error("Unauthorized");
 
   const tutorId = authState.tutorId || authState.uid;

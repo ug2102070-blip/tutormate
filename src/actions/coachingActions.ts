@@ -85,8 +85,8 @@ function generateJoinCode(): string {
 /**
  * Create a new Coaching Center organization (Owner mode).
  */
-export async function createCoachingCenter(formData: FormData, idToken?: string) {
-  const auth = await verifyUserAuth(idToken);
+export async function createCoachingCenter(formData: FormData) {
+  const auth = await verifyUserAuth();
   const tutorId = auth.tutorId || auth.uid;
   await ensureTutorRecord(tutorId, auth.email);
 
@@ -168,8 +168,8 @@ export async function createCoachingCenter(formData: FormData, idToken?: string)
 /**
  * Get details of current user's Coaching Center.
  */
-export async function getCoachingCenter(idToken?: string) {
-  const auth = await verifyUserAuth(idToken);
+export async function getCoachingCenter() {
+  const auth = await verifyUserAuth();
   const tutorId = auth.tutorId || auth.uid;
 
   const adminSupabase = createAdminClient();
@@ -214,8 +214,8 @@ export async function getCoachingCenter(idToken?: string) {
 /**
  * Join an existing Coaching Center via Join Code.
  */
-export async function joinCoachingCenter(formData: FormData, idToken?: string) {
-  const auth = await verifyUserAuth(idToken);
+export async function joinCoachingCenter(formData: FormData) {
+  const auth = await verifyUserAuth();
   const tutorId = auth.tutorId || auth.uid;
   await ensureTutorRecord(tutorId, auth.email);
 
@@ -254,8 +254,8 @@ export async function joinCoachingCenter(formData: FormData, idToken?: string) {
 /**
  * Leave current Coaching Center (Staff Tutors only).
  */
-export async function leaveCoachingCenter(idToken?: string) {
-  const auth = await verifyUserAuth(idToken);
+export async function leaveCoachingCenter() {
+  const auth = await verifyUserAuth();
   const tutorId = auth.tutorId || auth.uid;
 
   const adminSupabase = createAdminClient();
@@ -293,8 +293,8 @@ export async function leaveCoachingCenter(idToken?: string) {
 /**
  * Remove a staff tutor from the Coaching Center (Owner action).
  */
-export async function removeTutorFromCenter(targetTutorId: string, idToken?: string) {
-  const auth = await verifyUserAuth(idToken);
+export async function removeTutorFromCenter(targetTutorId: string) {
+  const auth = await verifyUserAuth();
   const adminSupabase = createAdminClient();
 
   const { data: center } = await adminSupabase
@@ -321,8 +321,8 @@ export async function removeTutorFromCenter(targetTutorId: string, idToken?: str
 /**
  * Update Coaching Center info (Owner action).
  */
-export async function updateCoachingCenter(formData: FormData, idToken?: string) {
-  const auth = await verifyUserAuth(idToken);
+export async function updateCoachingCenter(formData: FormData) {
+  const auth = await verifyUserAuth();
   const adminSupabase = createAdminClient();
 
   const rawData = {
@@ -364,8 +364,8 @@ export async function updateCoachingCenter(formData: FormData, idToken?: string)
 /**
  * Fetch all tutors in the user's Coaching Center.
  */
-export async function getCenterTutors(idToken?: string): Promise<CenterTutorDoc[]> {
-  const auth = await verifyUserAuth(idToken);
+export async function getCenterTutors(): Promise<CenterTutorDoc[]> {
+  const auth = await verifyUserAuth();
   const tutorId = auth.tutorId || auth.uid;
 
   const adminSupabase = createAdminClient();
@@ -429,8 +429,8 @@ export async function getCenterTutors(idToken?: string): Promise<CenterTutorDoc[
 /**
  * Fetch all batches across all tutors in the Coaching Center.
  */
-export async function getCenterBatches(idToken?: string) {
-  const auth = await verifyUserAuth(idToken);
+export async function getCenterBatches() {
+  const auth = await verifyUserAuth();
   const tutorId = auth.tutorId || auth.uid;
 
   const adminSupabase = createAdminClient();
@@ -485,8 +485,8 @@ export async function getCenterBatches(idToken?: string) {
 /**
  * Fetch aggregated analytics metrics for the Coaching Center.
  */
-export async function getCenterAnalytics(idToken?: string): Promise<CenterAnalyticsDoc> {
-  const auth = await verifyUserAuth(idToken);
+export async function getCenterAnalytics(): Promise<CenterAnalyticsDoc> {
+  const auth = await verifyUserAuth();
   const tutorId = auth.tutorId || auth.uid;
 
   const adminSupabase = createAdminClient();

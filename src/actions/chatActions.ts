@@ -13,11 +13,9 @@ export interface ConversationSummary extends ConversationDoc {
 /**
  * Fetches all conversations accessible to the authenticated user.
  */
-export async function getConversations(
-  idToken?: string
-): Promise<{ success: boolean; conversations?: ConversationSummary[]; error?: string }> {
+export async function getConversations(): Promise<{ success: boolean; conversations?: ConversationSummary[]; error?: string }> {
   try {
-    const auth = await verifyUserAuth(idToken);
+    const auth = await verifyUserAuth();
     const supabase = createAdminClient();
 
     // Query conversations where participant_uids contains user's UID or tutor_id matches
@@ -74,11 +72,10 @@ export async function createConversation(
   participantUids: string[],
   type: "direct" | "announcement",
   batchId?: string,
-  title?: string,
-  idToken?: string
+  title?: string
 ): Promise<{ success: boolean; conversationId?: string; error?: string }> {
   try {
-    const auth = await verifyUserAuth(idToken);
+    const auth = await verifyUserAuth();
     const tutorId = auth.tutorId || auth.uid;
 
     const allParticipants = Array.from(new Set([auth.uid, ...participantUids]));
@@ -114,11 +111,10 @@ export async function createConversation(
  * Fetches all chat messages within a conversation thread.
  */
 export async function getChatMessages(
-  conversationId: string,
-  idToken?: string
+  conversationId: string
 ): Promise<{ success: boolean; messages?: ChatMessageDoc[]; error?: string }> {
   try {
-    const auth = await verifyUserAuth(idToken);
+    const auth = await verifyUserAuth();
     const supabase = createAdminClient();
 
     const { data: rawMsgs, error: fetchErr } = await supabase
@@ -154,11 +150,10 @@ export async function getChatMessages(
 export async function sendChatMessage(
   conversationId: string,
   text: string,
-  attachmentPath?: string,
-  idToken?: string
+  attachmentPath?: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const auth = await verifyUserAuth(idToken);
+    const auth = await verifyUserAuth();
     const cleanText = text ? text.trim() : "";
 
     if (!cleanText && !attachmentPath) {

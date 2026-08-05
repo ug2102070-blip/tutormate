@@ -4,31 +4,21 @@ import { createAdminClient } from "@/lib/supabase/server";
 import { verifyUserAuth } from "@/lib/authHelpers";
 
 /**
- * Generates a public or signed URL for a Supabase Storage object.
+ * Generates a signed/public URL for a Supabase Storage object.
+ * Uses cookie-based auth — no token needed from the client.
  */
-export async function getMediaSignedUrl(
-  storagePath: string,
-  idToken: string
-): Promise<string | null> {
-  if (!storagePath || !idToken) return null;
+export async function getMediaSignedUrl(storagePath: string): Promise<string | null> {
+  if (!storagePath) return null;
 
-  let authState;
-  try {
-    authState = await verifyUserAuth(idToken);
-  } catch {
-    throw new Error("Invalid or expired authentication token");
-  }
+  await verifyUserAuth(); // Ensures caller is authenticated
 
-  const supabase = createAdminClient();
-
-  // If path is full URL already
+  // If path is already a full URL
   if (storagePath.startsWith("http://") || storagePath.startsWith("https://")) {
     return storagePath;
   }
 
-  const { data } = supabase.storage
-    .from("attachments")
-    .getPublicUrl(storagePath);
+  const supabase = createAdminClient();
+  const { data } = supabase.storage.from("attachments").getPublicUrl(storagePath);
 
   return data.publicUrl || null;
 }

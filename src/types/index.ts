@@ -397,4 +397,11 @@ export interface BatchEnrollmentDoc {
   enrolledAt: string;
 }
 
+// ============================================
+// FEATURE 29: CENTER INVITE STATS
+// ============================================
 
+export interface CenterInviteStats {
+  tutorCount: number;
+  recentTutors: Array<{ id: string; name: string; joinedAt: string }>;
+}

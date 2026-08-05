@@ -2,14 +2,15 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
+
+
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/context/LanguageContext";
 import type { StudentDoc } from "@/types";
 import { Plus, UserPlus, Search, Copy, Check, Phone } from "lucide-react";
 
-import { getTutorBatches } from "@/actions/batchActions";
-import { getTutorStudents } from "@/actions/tutorStudentActions";
+import { getStudentsPageData } from "@/actions/tutorStudentActions";
+import { EmptyState } from "@/components/EmptyState";
 
 export default function StudentsPage() {
   const { user } = useAuth();
@@ -29,13 +30,11 @@ export default function StudentsPage() {
 
     async function loadData() {
       try {
-        const [batchList, studentList] = await Promise.all([
-          getTutorBatches(user?.id),
-          getTutorStudents(user?.id),
-        ]);
+        const { batches: batchList, students: studentList } =
+          await getStudentsPageData();
 
         const map: Record<string, string> = {};
-        batchList.forEach((b: any) => {
+        batchList.forEach((b) => {
           map[b.id] = b.name;
         });
         setBatches(map);
@@ -121,23 +120,20 @@ export default function StudentsPage() {
       {loading ? (
         <div className="h-64 rounded-2xl animate-shimmer border border-slate-200 dark:border-white/10 bg-white dark:bg-[#131b2e]" />
       ) : filteredStudents.length === 0 ? (
-        <div className="py-16 text-center border border-dashed rounded-2xl border-slate-200 dark:border-white/10 bg-white dark:bg-[#131b2e] shadow-xs">
-          <UserPlus className="w-10 h-10 mx-auto text-slate-400 mb-3" />
-          <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
-            No students found
-          </h3>
-          <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-1 max-w-sm mx-auto">
-            {search || selectedBatchId !== "all"
-              ? "No students match your search criteria."
-              : "Add your first student to generate an invite code for self-registration."}
-          </p>
-          <Link
-            href="/tutor/students/new"
-            className="inline-flex items-center gap-1.5 mt-4 text-xs font-bold text-indigo-600 hover:underline"
-          >
-            <Plus className="w-3.5 h-3.5" /> Add a student now
-          </Link>
-        </div>
+        <EmptyState
+          variant="students"
+          title="No students found"
+          description={
+            search || selectedBatchId !== "all"
+              ? "No students match your search criteria. Try a different filter."
+              : "Add your first student to generate an invite code for self-registration."
+          }
+          action={
+            !search && selectedBatchId === "all"
+              ? { label: "Add a student", href: "/tutor/students/new" }
+              : undefined
+          }
+        />
       ) : (
         <div className="rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#131b2e] overflow-hidden shadow-xs">
           {/* Mobile Card View */}

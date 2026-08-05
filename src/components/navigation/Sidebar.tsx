@@ -98,13 +98,17 @@ export function Sidebar({ role }: SidebarProps) {
                 className="px-3 text-[10px] font-bold uppercase tracking-wider mb-1"
                 style={{ color: "var(--color-text-muted)" }}
               >
-                {catGroup.key ? (t(`navCategory.${catGroup.key}`) || catGroup.category) : catGroup.category}
+                {(() => {
+                  const rawCategoryName = catGroup.key ? t(`navCategory.${catGroup.key}`) : catGroup.category;
+                  return rawCategoryName && rawCategoryName !== `navCategory.${catGroup.key}` ? rawCategoryName : catGroup.category;
+                })()}
               </div>
               {catGroup.items.map((item: NavItem) => {
                 const Icon = item.icon;
                 const isActive =
                   pathname === item.href || pathname.startsWith(item.href + "/");
-                const translatedLabel = item.key ? (t(`nav.${item.key}`) || item.label) : item.label;
+                const rawLabel = item.key ? t(`nav.${item.key}`) : item.label;
+                const translatedLabel = rawLabel && rawLabel !== `nav.${item.key}` ? rawLabel : item.label;
 
                 return (
                   <Link

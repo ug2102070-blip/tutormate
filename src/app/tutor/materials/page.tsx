@@ -9,6 +9,7 @@ import { getTutorMaterials, createMaterial, deleteMaterial, updateMaterial } fro
 import { getMediaSignedUrl } from "@/actions/mediaActions";
 import { BookOpen, Upload, Trash2, FileText, Image as ImageIcon, Video, File, FileArchive, Loader2, Plus, Eye, EyeOff, FileDown, ArrowRight } from "lucide-react";
 import type { BatchDoc, MaterialDoc } from "@/types";
+import { EmptyState } from "@/components/EmptyState";
 
 export default function MaterialsPage() {
   const { user, claims, loading: authLoading } = useAuth();
@@ -66,11 +67,8 @@ export default function MaterialsPage() {
       }
 
       // 2. Load materials
-      const token = (await supabase.auth.getSession()).data.session?.access_token;
-      if (!token) throw new Error("No auth token");
-
       const batchFilter = selectedBatchId === "all" ? undefined : selectedBatchId;
-      const mats = await getTutorMaterials(token, batchFilter);
+      const mats = await getTutorMaterials(batchFilter);
       setMaterials(mats);
     } catch (err) {
       console.error("Failed to load materials data:", err);
@@ -95,8 +93,7 @@ export default function MaterialsPage() {
 
     try {
       setIsUploading(true);
-      const token = (await supabase.auth.getSession()).data.session?.access_token;
-      if (!token || !user) throw new Error("Authentication error");
+      if (!user) throw new Error("Authentication error");
 
       // 1. Upload to Supabase Storage
       const fileExt = file.name.split('.').pop()?.toLowerCase();
@@ -126,7 +123,7 @@ export default function MaterialsPage() {
         fileType,
         fileSize: file.size,
         isPublished: formData.isPublished,
-      }, token);
+      });
 
       // Reset form and reload
       setFormData({ title: "", description: "", batchId: "all", isPublished: true });
@@ -143,9 +140,7 @@ export default function MaterialsPage() {
   const handleDelete = async (id: string) => {
     if (!window.confirm("Are you sure you want to delete this material?")) return;
     try {
-      const token = (await supabase.auth.getSession()).data.session?.access_token;
-      if (!token) return;
-      await deleteMaterial(id, token);
+      await deleteMaterial(id);
       setMaterials(materials.filter(m => m.id !== id));
     } catch (err) {
       console.error(err);
@@ -155,12 +150,9 @@ export default function MaterialsPage() {
 
   const togglePublish = async (id: string, currentStatus: boolean) => {
     try {
-      const token = (await supabase.auth.getSession()).data.session?.access_token;
-      if (!token) return;
-      
       // Optimistic update
       setMaterials(materials.map(m => m.id === id ? { ...m, isPublished: !currentStatus } : m));
-      await updateMaterial(id, { isPublished: !currentStatus }, token);
+      await updateMaterial(id, { isPublished: !currentStatus });
     } catch (err) {
       console.error(err);
       // Revert on error
@@ -171,9 +163,7 @@ export default function MaterialsPage() {
 
   const handleDownload = async (path: string) => {
     try {
-      const token = (await supabase.auth.getSession()).data.session?.access_token;
-      if (!token) return;
-      const url = await getMediaSignedUrl(path, token);
+      const url = await getMediaSignedUrl(path);
       if (url) window.open(url, '_blank');
     } catch (err) {
       console.error("Failed to get URL", err);
@@ -338,17 +328,15 @@ export default function MaterialsPage() {
                   <p className="text-sm">Loading materials...</p>
                 </div>
               ) : materials.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-64 text-center px-4">
-                  <div className="w-16 h-16 bg-slate-50 dark:bg-[#0b0f19] rounded-full flex items-center justify-center mb-3">
-                    <BookOpen className="w-8 h-8 text-slate-300" />
-                  </div>
-                  <h3 className="text-slate-800 dark:text-slate-200 font-bold mb-1">No Materials Found</h3>
-                  <p className="text-slate-500 dark:text-slate-400 text-sm max-w-sm">
-                    {selectedBatchId === "all" 
+                <EmptyState
+                  variant="materials"
+                  title="No Materials Found"
+                  description={
+                    selectedBatchId === "all" 
                       ? "You haven't uploaded any study materials yet." 
-                      : "No materials uploaded for this specific batch."}
-                  </p>
-                </div>
+                      : "No materials uploaded for this specific batch."
+                  }
+                />
               ) : (
                 <div className="divide-y divide-slate-100">
                   {materials.map((mat) => {

@@ -31,11 +31,10 @@ export interface UserPermissionSummary {
  */
 export async function listUsersWithPermissions(
   searchQuery?: string,
-  roleFilter?: string,
-  idToken?: string
+  roleFilter?: string
 ): Promise<{ success: boolean; users?: UserPermissionSummary[]; error?: string }> {
   try {
-    const auth = await verifyUserAuth(idToken);
+    const auth = await verifyUserAuth();
 
     // Require manage_roles permission or admin/owner role
     if (!hasRoleAtLeast(auth.role, "admin") && !hasPermission(auth.role, "manage_roles", auth.permissions)) {
@@ -127,11 +126,10 @@ export async function listUsersWithPermissions(
  */
 export async function updateUserRole(
   targetUserId: string,
-  newRole: UserRole,
-  idToken?: string
+  newRole: UserRole
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const auth = await verifyUserAuth(idToken);
+    const auth = await verifyUserAuth();
 
     // Require manage_roles permission or admin/owner role
     assertPermission(auth, "manage_roles");
@@ -196,11 +194,10 @@ export async function updateUserRole(
  */
 export async function grantCustomPermission(
   targetUserId: string,
-  permission: Permission,
-  idToken?: string
+  permission: Permission
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const auth = await verifyUserAuth(idToken);
+    const auth = await verifyUserAuth();
     assertPermission(auth, "manage_roles");
 
     const supabase = createAdminClient();
@@ -232,11 +229,10 @@ export async function grantCustomPermission(
  */
 export async function revokeCustomPermission(
   targetUserId: string,
-  permission: Permission,
-  idToken?: string
+  permission: Permission
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const auth = await verifyUserAuth(idToken);
+    const auth = await verifyUserAuth();
     assertPermission(auth, "manage_roles");
 
     const supabase = createAdminClient();

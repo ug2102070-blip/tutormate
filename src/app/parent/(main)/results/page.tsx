@@ -23,7 +23,7 @@ export default function ParentResultsPage() {
     async function load() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-      const data = await getParentExamResults(user.id);
+      const data = await getParentExamResults();
       setResults(data);
       setLoading(false);
     }

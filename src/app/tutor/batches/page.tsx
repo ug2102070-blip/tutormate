@@ -9,6 +9,7 @@ import { formatBDT } from "@/lib/utils";
 import type { BatchDoc } from "@/types";
 import { Plus, Users, Calendar, Archive, CheckCircle } from "lucide-react";
 import { getTutorBatches, toggleArchiveBatch } from "@/actions/batchActions";
+import { EmptyState } from "@/components/EmptyState";
 
 export default function BatchesPage() {
   const { user } = useAuth();
@@ -105,25 +106,20 @@ export default function BatchesPage() {
           ))}
         </div>
       ) : filteredBatches.length === 0 ? (
-        <div className="py-16 text-center border border-dashed rounded-2xl border-slate-200 dark:border-white/10 bg-white dark:bg-[#131b2e] shadow-xs">
-          <Users className="w-10 h-10 mx-auto text-slate-400 mb-3" />
-          <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
-            No {tab} batches found
-          </h3>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-sm mx-auto font-medium">
-            {tab === "active"
+        <EmptyState
+          variant="batches"
+          title={tab === "active" ? "No active batches yet" : "No archived batches"}
+          description={
+            tab === "active"
               ? "Create your first batch to start adding students and taking daily attendance."
-              : "No archived batches available."}
-          </p>
-          {tab === "active" && (
-            <Link
-              href="/tutor/batches/new"
-              className="inline-flex items-center gap-1.5 mt-4 text-xs font-bold text-indigo-600 hover:underline"
-            >
-              <Plus className="w-3.5 h-3.5" /> Create a batch now
-            </Link>
-          )}
-        </div>
+              : "Archived batches will appear here."
+          }
+          action={
+            tab === "active"
+              ? { label: "Create a batch", href: "/tutor/batches/new" }
+              : undefined
+          }
+        />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {filteredBatches.map((batch) => (

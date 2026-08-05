@@ -10,8 +10,8 @@ import { getDaysInMonth, startOfMonth, endOfMonth, format, getDay } from "date-f
  * Get all calendar events for a given month and year.
  * Aggregates data from events, exams, assignments, and batches.
  */
-export async function getCalendarEvents(year: number, month: number, idToken?: string) {
-  const auth = await verifyUserAuth(idToken);
+export async function getCalendarEvents(year: number, month: number) {
+  const auth = await verifyUserAuth();
   const supabase = createAdminClient();
 
   // Resolve tutorId: explicit field first, then fall back to uid for tutor+ roles
@@ -199,8 +199,8 @@ export async function getCalendarEvents(year: number, month: number, idToken?: s
   return calendarEvents;
 }
 
-export async function createEvent(formData: FormData, idToken?: string) {
-  const auth = await verifyUserAuth(idToken);
+export async function createEvent(formData: FormData) {
+  const auth = await verifyUserAuth();
   if (!hasRoleAtLeast(auth.role, "tutor")) throw new Error("Only tutors can create events");
 
   const title = formData.get("title") as string;
@@ -234,8 +234,8 @@ export async function createEvent(formData: FormData, idToken?: string) {
   return data;
 }
 
-export async function deleteEvent(eventId: string, idToken?: string) {
-  const auth = await verifyUserAuth(idToken);
+export async function deleteEvent(eventId: string) {
+  const auth = await verifyUserAuth();
   if (!hasRoleAtLeast(auth.role, "tutor")) throw new Error("Only tutors can delete events");
 
   const tutorId = auth.tutorId || auth.uid;

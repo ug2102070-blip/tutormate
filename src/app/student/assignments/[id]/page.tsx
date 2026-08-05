@@ -34,16 +34,13 @@ export default function StudentAssignmentDetailsPage() {
   async function loadData() {
     setLoading(true);
     try {
-      const token = (await supabase.auth.getSession()).data.session?.access_token;
-      if (!token) throw new Error("No auth token");
-
       // Load assignment details
-      const assignments = await getAssignments(token);
+      const assignments = await getAssignments();
       const assign = assignments.find(a => a.id === id);
       if (assign) setAssignment(assign);
 
       // Load student's submission
-      const subs = await getStudentSubmissions(token);
+      const subs = await getStudentSubmissions();
       const sub = subs.find((s: any) => s.assignmentId === id);
       if (sub) setSubmission(sub);
 
@@ -56,9 +53,7 @@ export default function StudentAssignmentDetailsPage() {
 
   const handleDownload = async (path: string) => {
     try {
-      const token = (await supabase.auth.getSession()).data.session?.access_token;
-      if (!token) return;
-      const url = await getMediaSignedUrl(path, token);
+      const url = await getMediaSignedUrl(path);
       if (url) window.open(url, '_blank');
     } catch (err) {
       console.error("Failed to get URL", err);
@@ -82,8 +77,7 @@ export default function StudentAssignmentDetailsPage() {
     try {
       setIsUploading(true);
       setUploadError("");
-      const token = (await supabase.auth.getSession()).data.session?.access_token;
-      if (!token || !user) throw new Error("Authentication error");
+      if (!user) throw new Error("Authentication error");
 
       // Upload file to Supabase Storage
       const fileExt = file.name.split('.').pop()?.toLowerCase();
@@ -96,7 +90,7 @@ export default function StudentAssignmentDetailsPage() {
       if (uploadErr) throw new Error("Failed to upload file to storage.");
 
       // Save submission record
-      await submitAssignment(submission.id, storagePath, token);
+      await submitAssignment(submission.id, storagePath);
 
       setFile(null);
       await loadData();

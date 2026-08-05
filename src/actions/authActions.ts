@@ -18,19 +18,16 @@ export async function setTutorClaims(uidOrToken: string) {
     // Continue silently if rate limiter instance fails
   }
 
-  let uid = uidOrToken;
+  let uid = "";
   let user: any = null;
 
-  if (uidOrToken && typeof uidOrToken === "string" && uidOrToken.includes(".")) {
-    try {
-      const authRes = await supabase.auth.getUser(uidOrToken);
-      user = authRes?.data?.user || null;
-      if (user) {
-        uid = user.id;
-      }
-    } catch {
-      // Ignore
-    }
+  try {
+    const { verifyUserAuth } = await import("@/lib/authHelpers");
+    const auth = await verifyUserAuth(uidOrToken);
+    uid = auth.uid;
+    user = { id: auth.uid, email: auth.email };
+  } catch (err) {
+    return { success: false, error: "Unauthorized" };
   }
 
   try {
@@ -99,23 +96,21 @@ export async function onboardTutorUser(
     displayName: string;
     phoneNumber?: string | null;
     institution?: string;
+    role?: "tutor" | "owner";
   },
   uidOrToken: string
 ) {
   const supabase = createAdminClient();
-  let uid = uidOrToken;
+  let uid = "";
   let user: any = null;
 
-  if (uidOrToken && typeof uidOrToken === "string" && uidOrToken.includes(".")) {
-    try {
-      const authRes = await supabase.auth.getUser(uidOrToken);
-      user = authRes?.data?.user || null;
-      if (user) {
-        uid = user.id;
-      }
-    } catch {
-      // Ignore
-    }
+  try {
+    const { verifyUserAuth } = await import("@/lib/authHelpers");
+    const auth = await verifyUserAuth(uidOrToken);
+    uid = auth.uid;
+    user = { id: auth.uid, email: auth.email };
+  } catch (err) {
+    return { success: false, error: "Unauthorized" };
   }
 
   try {
@@ -135,14 +130,14 @@ export async function onboardTutorUser(
       email: email || "",
       display_name: displayName || "Tutor",
       phone_number: phoneNumber || null,
-      role: "tutor",
+      role: data.role || "tutor",
       tutor_id: uid,
       updated_at: new Date().toISOString(),
     });
 
     if (profileErr) {
       console.warn("profiles upsert error:", profileErr);
-      return { success: false, error: profileErr.message, role: "tutor" };
+      return { success: false, error: profileErr.message, role: data.role || "tutor" };
     }
 
     // 2. Create or update tutor record
@@ -156,12 +151,66 @@ export async function onboardTutorUser(
 
     if (tutorErr) {
       console.warn("tutors upsert error:", tutorErr);
-      return { success: false, error: tutorErr.message, role: "tutor" };
+      return { success: false, error: tutorErr.message, role: data.role || "tutor" };
     }
+
+    // 3. If role is owner, automatically create coaching center if not already created
+    if (data.role === "owner") {
+      try {
+        const { data: existingCenter } = await supabase
+          .from("coaching_centers")
+          .select("id")
+          .eq("owner_uid", uid)
+          .maybeSingle();
+
+        if (!existingCenter) {
+          const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+          let joinCode = "CC-";
+          for (let i = 0; i < 6; i++) {
+            joinCode += chars.charAt(Math.floor(Math.random() * chars.length));
+          }
+
+          const centerName =
+            institution && institution.trim() && institution.trim() !== "Independent"
+              ? institution.trim()
+              : `${displayName || "My"}'s Coaching Center`;
+
+          const { data: newCenter } = await supabase
+            .from("coaching_centers")
+            .insert({
+              owner_uid: uid,
+              name: centerName,
+              code: joinCode,
+              contact_phone: phoneNumber || null,
+            })
+            .select("id")
+            .single();
+
+          if (newCenter) {
+            await supabase
+              .from("tutors")
+              .update({ coaching_center_id: newCenter.id })
+              .eq("id", uid);
+          }
+        }
+      } catch (centerErr) {
+        console.warn("Auto create coaching center error:", centerErr);
+      }
+    }
+    // Sync user_metadata in Supabase Auth so client-side fetchUserClaims uses fast-path
+    await supabase.auth.admin.updateUserById(uid, {
+      user_metadata: {
+        role: data.role || "tutor",
+        tutorId: uid,
+        full_name: displayName,
+      },
+    }).catch((metaErr) => {
+      console.warn("User metadata update error in onboardTutorUser:", metaErr);
+    });
   } catch (err) {
     console.warn("Could not complete onboardTutorUser via Supabase:", err);
-    return { success: false, error: String(err), role: "tutor" };
+    return { success: false, error: String(err), role: data.role || "tutor" };
   }
 
-  return { success: true, role: "tutor" };
+  return { success: true, role: data.role || "tutor" };
 }

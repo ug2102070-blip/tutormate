@@ -9,10 +9,9 @@ import { verifyUserAuth } from "@/lib/authHelpers";
 // ---------------------------------------------------------------
 
 export async function linkParentToStudent(
-  inviteCode: string,
-  idToken: string
+  inviteCode: string
 ): Promise<{ success: boolean; studentName?: string; message?: string }> {
-  const authState = await verifyUserAuth(idToken);
+  const authState = await verifyUserAuth();
   const supabase = createAdminClient();
 
   // 1. Find student by invite_code
@@ -27,23 +26,68 @@ export async function linkParentToStudent(
     return { success: false, message: "Invalid invite code. Please check and try again." };
   }
 
-  // 2. Upsert parent_links row
+  // 2. Extract auth user details to construct/upsert parent profile FIRST
+  let userEmail = authState.email || "";
+  let displayName = "Parent";
+  let phoneNumber: string | null = null;
+
+  try {
+    const { data: adminUser } = await supabase.auth.admin.getUserById(authState.uid);
+    if (adminUser?.user) {
+      displayName =
+        adminUser.user.user_metadata?.full_name ||
+        adminUser.user.user_metadata?.displayName ||
+        displayName;
+      userEmail = adminUser.user.email || userEmail;
+      phoneNumber =
+        adminUser.user.phone ||
+        adminUser.user.user_metadata?.phone_number ||
+        null;
+    }
+  } catch {
+    // Ignore fetch error
+  }
+
+  // Upsert parent profile record FIRST (so foreign key constraint parent_links_parent_uid_fkey is satisfied)
+  const { error: profileErr } = await supabase.from("profiles").upsert({
+    id: authState.uid,
+    email: userEmail,
+    display_name: displayName,
+    phone_number: phoneNumber,
+    role: "parent",
+    tutor_id: student.tutor_id,
+    student_doc_id: student.id,
+    updated_at: new Date().toISOString(),
+  });
+
+  if (profileErr) {
+    return { success: false, message: `Failed to create parent profile: ${profileErr.message}` };
+  }
+
+  // 3. Upsert parent_links row SECOND
   const { error: linkErr } = await supabase.from("parent_links").upsert(
     { parent_uid: authState.uid, student_id: student.id },
     { onConflict: "parent_uid, student_id" }
   );
 
-  if (linkErr) {
-    return { success: false, message: `Failed to link account: ${linkErr.message}` };
-  }
+    if (linkErr) {
+      return { success: false, message: `Failed to link account: ${linkErr.message}` };
+    }
 
-  // 3. Update profile role to 'parent' if not already set
-  await supabase
-    .from("profiles")
-    .update({ role: "parent" })
-    .eq("id", authState.uid);
+    // 4. Sync user_metadata in Supabase Auth so client-side fetchUserClaims uses fast-path
+    await supabase.auth.admin.updateUserById(authState.uid, {
+      user_metadata: {
+        role: "parent",
+        tutorId: student.tutor_id,
+        studentId: student.id,
+        studentDocId: student.id,
+        full_name: displayName,
+      },
+    }).catch((metaErr) => {
+      console.warn("User metadata update error in linkParentToStudent:", metaErr);
+    });
 
-  return { success: true, studentName: student.full_name };
+    return { success: true, studentName: student.full_name };
 }
 
 // ---------------------------------------------------------------
@@ -72,8 +116,8 @@ async function getLinkedStudentId(parentUid: string): Promise<{
   };
 }
 
-export async function getLinkedStudent(idToken: string) {
-  const authState = await verifyUserAuth(idToken);
+export async function getLinkedStudent() {
+  const authState = await verifyUserAuth();
   const supabase = createAdminClient();
 
   const link = await getLinkedStudentId(authState.uid);
@@ -102,8 +146,8 @@ export async function getLinkedStudent(idToken: string) {
 // PARENT DASHBOARD — summary stats for the child
 // ---------------------------------------------------------------
 
-export async function getParentDashboard(idToken: string) {
-  const authState = await verifyUserAuth(idToken);
+export async function getParentDashboard() {
+  const authState = await verifyUserAuth();
   const supabase = createAdminClient();
 
   const link = await getLinkedStudentId(authState.uid);
@@ -162,6 +206,28 @@ export async function getParentDashboard(idToken: string) {
     .in("status", ["pending", "submitted"])
     .limit(3);
 
+  // Recent attendance records (last 4 for dashboard timeline)
+  const { data: recentAttendanceDocs } = await supabase
+    .from("attendance")
+    .select("id, date, records, batch_id, batches(name)")
+    .eq("tutor_id", tutorId)
+    .order("date", { ascending: false })
+    .limit(10);
+
+  const recentAttendance: Array<{ id: string; date: string; status: string; batchName: string | null }> = [];
+  for (const doc of recentAttendanceDocs || []) {
+    const records = doc.records as Record<string, { status: string }>;
+    if (records?.[studentId]) {
+      recentAttendance.push({
+        id: `${doc.id ?? doc.date}-${doc.batch_id}`,
+        date: doc.date,
+        status: records[studentId].status,
+        batchName: (doc.batches as any)?.name ?? null,
+      });
+      if (recentAttendance.length >= 4) break;
+    }
+  }
+
   return {
     studentId,
     attendancePct,
@@ -189,6 +255,7 @@ export async function getParentDashboard(idToken: string) {
       title: s.assignments?.title,
       deadline: s.assignments?.deadline,
     })),
+    recentAttendance,
   };
 }
 
@@ -196,8 +263,8 @@ export async function getParentDashboard(idToken: string) {
 // PARENT ATTENDANCE — full log for child
 // ---------------------------------------------------------------
 
-export async function getParentAttendance(idToken: string) {
-  const authState = await verifyUserAuth(idToken);
+export async function getParentAttendance() {
+  const authState = await verifyUserAuth();
   const supabase = createAdminClient();
 
   const link = await getLinkedStudentId(authState.uid);
@@ -241,8 +308,8 @@ export async function getParentAttendance(idToken: string) {
 // PARENT FEES — fee history for child
 // ---------------------------------------------------------------
 
-export async function getParentFees(idToken: string) {
-  const authState = await verifyUserAuth(idToken);
+export async function getParentFees() {
+  const authState = await verifyUserAuth();
   const supabase = createAdminClient();
 
   const link = await getLinkedStudentId(authState.uid);
@@ -274,8 +341,8 @@ export async function getParentFees(idToken: string) {
 // PARENT EXAM RESULTS
 // ---------------------------------------------------------------
 
-export async function getParentExamResults(idToken: string) {
-  const authState = await verifyUserAuth(idToken);
+export async function getParentExamResults() {
+  const authState = await verifyUserAuth();
   const supabase = createAdminClient();
 
   const link = await getLinkedStudentId(authState.uid);
@@ -312,8 +379,8 @@ export async function getParentExamResults(idToken: string) {
 // PARENT ASSIGNMENTS — child's submission status
 // ---------------------------------------------------------------
 
-export async function getParentAssignments(idToken: string) {
-  const authState = await verifyUserAuth(idToken);
+export async function getParentAssignments() {
+  const authState = await verifyUserAuth();
   const supabase = createAdminClient();
 
   const link = await getLinkedStudentId(authState.uid);
@@ -326,7 +393,7 @@ export async function getParentAssignments(idToken: string) {
       assignments(title, description, deadline, max_marks)
     `)
     .eq("student_id", link.studentId)
-    .order("created_at", { ascending: false });
+    .order("updated_at", { ascending: false });
 
   if (error) throw new Error(`Failed to fetch assignments: ${error.message}`);
 

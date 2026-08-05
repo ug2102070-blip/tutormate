@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useAuth } from "@/hooks/useAuth";
 import {
   LayoutDashboard,
   Users,
@@ -12,6 +13,8 @@ import {
   Building2,
   Bell,
   BookOpen,
+  Award,
+  FileText,
 } from "lucide-react";
 
 interface MobileNavProps {
@@ -43,13 +46,27 @@ const navItemsByRole: Record<string, { href: string; label: string; icon: React.
     { href: "/parent/dashboard", label: "Home", icon: LayoutDashboard },
     { href: "/parent/attendance", label: "Attendance", icon: CalendarCheck },
     { href: "/parent/fees", label: "Fees", icon: CreditCard },
-    { href: "/parent/notifications", label: "Alerts", icon: Bell },
+    { href: "/parent/results", label: "Results", icon: Award },
+    { href: "/parent/assignments", label: "Assignments", icon: FileText },
   ],
 };
 
 export function MobileNav({ role }: MobileNavProps) {
   const pathname = usePathname();
-  const items = navItemsByRole[role] ?? navItemsByRole.tutor;
+  const { role: userRole } = useAuth();
+
+  let items = navItemsByRole[role] ?? navItemsByRole.tutor;
+
+  // If user is an Owner browsing tutor pages (Teach mode), include a direct link back to Center
+  if (userRole === "owner" && role === "tutor") {
+    items = [
+      { href: "/tutor/dashboard", label: "Home", icon: LayoutDashboard },
+      { href: "/tutor/batches", label: "Batches", icon: Users },
+      { href: "/tutor/fees", label: "Fees", icon: CreditCard },
+      { href: "/tutor/doubts", label: "Doubts", icon: HelpCircle },
+      { href: "/owner/dashboard", label: "Center", icon: Building2 },
+    ];
+  }
 
   return (
     <nav

@@ -15,6 +15,7 @@ import {
   Clock,
   Sparkles,
 } from "lucide-react";
+import { EmptyState } from "@/components/EmptyState";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import {
@@ -235,7 +236,13 @@ export default function TutorChatPage() {
                 <RefreshCw className="w-4 h-4 animate-spin" /> Loading chats...
               </div>
             ) : filteredConvs.length === 0 ? (
-              <div className="p-8 text-center text-xs text-gray-500">No conversations found.</div>
+              <EmptyState
+                variant="chat"
+                title="No conversations"
+                description="No chats found."
+                size="sm"
+                className="mx-4 my-8"
+              />
             ) : (
               filteredConvs.map((conv) => {
                 const isActive = activeConv?.id === conv.id;
@@ -315,9 +322,12 @@ export default function TutorChatPage() {
                     <RefreshCw className="w-4 h-4 animate-spin" /> Loading messages...
                   </div>
                 ) : messages.length === 0 ? (
-                  <div className="py-12 text-center text-xs text-gray-400 font-medium">
-                    No messages yet in this channel. Send a message to start chatting!
-                  </div>
+                  <EmptyState
+                    variant="chat"
+                    title="No messages yet"
+                    description="Send a message to start chatting!"
+                    size="sm"
+                  />
                 ) : (
                   messages.map((msg) => {
                     const isMe = msg.senderUid === user?.id;

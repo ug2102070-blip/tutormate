@@ -21,7 +21,7 @@ export default function StudentAttendancePage() {
       return;
     }
     try {
-      const logs = await getStudentAttendanceHistory(user.id);
+      const logs = await getStudentAttendanceHistory();
       setAttendanceLogs(logs);
     } catch (err) {
       console.error("Error loading attendance:", err);
@@ -117,8 +117,7 @@ export default function StudentAttendancePage() {
               </thead>
               <tbody className="divide-y divide-[var(--color-border)] text-[var(--color-text)]">
                 {attendanceLogs.map((log) => {
-                  const recordKey = Object.keys(log.records || {})[0];
-                  const record = log.records?.[recordKey] || log.records?.[studentDocId];
+                  const record = log.records?.[studentDocId];
                   const status = record?.status || "absent";
 
 

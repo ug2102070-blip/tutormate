@@ -33,10 +33,7 @@ export default function ExamDetailsPage({ params }: { params: Promise<{ id: stri
   async function loadData() {
     setLoading(true);
     try {
-      const token = (await supabase.auth.getSession()).data.session?.access_token;
-      if (!token) throw new Error("No auth token");
-
-      const { exam: examData, results: resultsData } = await getExamDetails(examId, token);
+      const { exam: examData, results: resultsData } = await getExamDetails(examId);
       setExam(examData);
 
       // Fetch students for this batch
@@ -102,10 +99,6 @@ export default function ExamDetailsPage({ params }: { params: Promise<{ id: stri
     setSuccessMsg("");
     
     try {
-      const token = (await supabase.auth.getSession()).data.session?.access_token;
-      if (!token) throw new Error("No auth token");
-      
-      // Format data for saving
       const formattedResults = Object.values(results).map(r => ({
         studentId: r.studentId,
         marksObtained: r.marksObtained === "" ? null : Number(r.marksObtained),
@@ -116,11 +109,9 @@ export default function ExamDetailsPage({ params }: { params: Promise<{ id: stri
       await saveExamResults({
         examId,
         results: formattedResults
-      }, token);
+      });
       
       setSuccessMsg("Exam results saved successfully! Grades and ranks have been calculated.");
-      
-      // Reload to show calculated grades and ranks
       await loadData();
     } catch (err: any) {
       console.error(err);

@@ -1,7 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-const PROTECTED_ROUTES = ["/tutor", "/student", "/parent"];
+const PROTECTED_ROUTES = ["/tutor", "/student", "/parent", "/owner"];
 const AUTH_ROUTES = ["/login", "/register", "/reset-password"];
 
 export async function proxy(request: NextRequest) {
@@ -53,21 +53,20 @@ export async function proxy(request: NextRequest) {
   const isProtectedRoute = PROTECTED_ROUTES.some((route) =>
     pathname.startsWith(route)
   );
-  // Allow /parent/login even if not authenticated (parents need to link account)
-  const isParentLogin = pathname.startsWith("/parent/login");
-  if (isProtectedRoute && !hasSession && !isParentLogin) {
+  if (isProtectedRoute && !hasSession) {
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("redirect", pathname);
     return NextResponse.redirect(loginUrl);
   }
 
   // Only redirect logged-in users away from login/register (NOT reset-password)
+  // Let client-side handle it to ensure correct role-based dashboard redirection
   const isAuthOnlyRoute = ["/login", "/register"].some((route) =>
     pathname.startsWith(route)
   );
-  if (isAuthOnlyRoute && hasSession) {
-    return NextResponse.redirect(new URL("/tutor/dashboard", request.url));
-  }
+  // Optional: We removed the strict server-side redirect to /tutor/dashboard
+  // so the client-side useAuth hook can correctly redirect to /owner/dashboard
+  // or /student/dashboard based on the user profile role.
 
   return supabaseResponse;
 }

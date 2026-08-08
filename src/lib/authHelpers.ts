@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { createAdminClient, createClient } from "@/lib/supabase/server";
 import type { UserRole, Permission } from "@/types";
 import { getRoleDefaultPermissions, assertPermission } from "@/lib/permissions";
@@ -16,7 +17,10 @@ export interface VerifiedAuth {
  * Verifies user authentication using Supabase cookies or cryptographically signed JWT token.
  * Security Note: Raw unauthenticated user UIDs are rejected to prevent identity spoofing.
  */
-export async function verifyUserAuth(idToken?: string): Promise<VerifiedAuth> {
+// React.cache() ensures this function only runs ONCE per request,
+// even if called by multiple Server Actions in parallel (e.g., dashboard).
+// This eliminates ~20 redundant DB queries per dashboard load.
+export const verifyUserAuth = cache(async (idToken?: string): Promise<VerifiedAuth> => {
   const adminSupabase = createAdminClient();
 
   // 1. Try verifying via server cookies first (most reliable in Next.js Server Actions)
@@ -45,19 +49,20 @@ export async function verifyUserAuth(idToken?: string): Promise<VerifiedAuth> {
   }
 
   throw new Error("Invalid or expired authentication token");
-}
+});
 
 /**
  * Verifies user authentication and asserts required permission.
  */
-export async function verifyUserAuthWithPermission(
+// Also cached — shares the same auth result when called in parallel
+export const verifyUserAuthWithPermission = cache(async (
   permission: Permission,
   idToken?: string
-): Promise<VerifiedAuth> {
+): Promise<VerifiedAuth> => {
   const auth = await verifyUserAuth(idToken);
   assertPermission(auth, permission);
   return auth;
-}
+});
 
 async function fetchProfileAuth(uid: string, email?: string): Promise<VerifiedAuth> {
   const supabase = createAdminClient();

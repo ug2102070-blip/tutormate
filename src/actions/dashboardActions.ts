@@ -13,25 +13,20 @@ export async function getOnboardingStatus() {
     const tutorId = authState.tutorId || authState.uid;
     const adminSupabase = createAdminClient();
 
-    const {
-      count: batchCount
-    } = await adminSupabase.from("batches").select("id", { count: "exact", head: true }).eq("tutor_id", tutorId);
-
-    const {
-      count: studentCount
-    } = await adminSupabase.from("students").select("id", { count: "exact", head: true }).eq("tutor_id", tutorId);
-
-    const {
-      count: attendanceCount
-    } = await adminSupabase.from("attendance").select("id", { count: "exact", head: true }).eq("tutor_id", tutorId);
-
-    const {
-      count: feeCount
-    } = await adminSupabase.from("fees").select("id", { count: "exact", head: true }).eq("tutor_id", tutorId);
-
-    const {
-      count: doubtCount
-    } = await adminSupabase.from("doubts").select("id", { count: "exact", head: true }).eq("tutor_id", tutorId);
+    // Run all 5 COUNT queries in parallel — ~5x faster than sequential
+    const [
+      { count: batchCount },
+      { count: studentCount },
+      { count: attendanceCount },
+      { count: feeCount },
+      { count: doubtCount },
+    ] = await Promise.all([
+      adminSupabase.from("batches").select("id", { count: "exact", head: true }).eq("tutor_id", tutorId),
+      adminSupabase.from("students").select("id", { count: "exact", head: true }).eq("tutor_id", tutorId),
+      adminSupabase.from("attendance").select("id", { count: "exact", head: true }).eq("tutor_id", tutorId),
+      adminSupabase.from("fees").select("id", { count: "exact", head: true }).eq("tutor_id", tutorId),
+      adminSupabase.from("doubts").select("id", { count: "exact", head: true }).eq("tutor_id", tutorId),
+    ]);
 
     return {
       profile: true,

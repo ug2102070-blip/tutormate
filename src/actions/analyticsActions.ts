@@ -228,7 +228,16 @@ export async function getAttendanceTrend(batchId?: string): Promise<AttendanceTr
   const tutorId = authState.tutorId || authState.uid;
   const adminSupabase = createAdminClient();
 
-  let query = adminSupabase.from("attendance").select("date, status").eq("tutor_id", tutorId);
+  // Only fetch last 28 days — avoids pulling all historical records
+  const twentyEightDaysAgo = new Date();
+  twentyEightDaysAgo.setDate(twentyEightDaysAgo.getDate() - 28);
+  const dateFilter = twentyEightDaysAgo.toISOString().split("T")[0];
+
+  let query = adminSupabase
+    .from("attendance")
+    .select("date, status")
+    .eq("tutor_id", tutorId)
+    .gte("date", dateFilter);
   if (batchId) query = query.eq("batch_id", batchId);
 
   const { data: records } = await query;

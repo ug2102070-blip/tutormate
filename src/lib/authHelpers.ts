@@ -13,7 +13,8 @@ export interface VerifiedAuth {
 }
 
 /**
- * Verifies user authentication using Supabase cookies, JWT token, or user ID.
+ * Verifies user authentication using Supabase cookies or cryptographically signed JWT token.
+ * Security Note: Raw unauthenticated user UIDs are rejected to prevent identity spoofing.
  */
 export async function verifyUserAuth(idToken?: string): Promise<VerifiedAuth> {
   const adminSupabase = createAdminClient();
@@ -30,29 +31,16 @@ export async function verifyUserAuth(idToken?: string): Promise<VerifiedAuth> {
     // Ignore error if cookie context isn't available or fails
   }
 
-  if (idToken && typeof idToken === "string") {
-    // 2. If idToken is a JWT token (contains dots), try verifying with auth.getUser(idToken)
-    if (idToken.includes(".")) {
-      try {
-        const tokenRes = await adminSupabase.auth.getUser(idToken);
-        const user = tokenRes?.data?.user;
-        if (user && !tokenRes.error) {
-          return await fetchProfileAuth(user.id, user.email);
-        }
-      } catch {
-        // Continue to user ID lookup
+  // 2. If idToken is a cryptographically signed JWT token (contains dots), verify with Supabase Auth
+  if (idToken && typeof idToken === "string" && idToken.includes(".")) {
+    try {
+      const tokenRes = await adminSupabase.auth.getUser(idToken);
+      const user = tokenRes?.data?.user;
+      if (user && !tokenRes.error) {
+        return await fetchProfileAuth(user.id, user.email);
       }
-    } else {
-      // 3. If idToken is a raw user UID, fetch user via adminSupabase
-      try {
-        const userRes = await adminSupabase.auth.admin.getUserById(idToken);
-        const user = userRes?.data?.user;
-        if (user && !userRes.error) {
-          return await fetchProfileAuth(user.id, user.email);
-        }
-      } catch {
-        // Ignore
-      }
+    } catch {
+      // Token verification failed
     }
   }
 

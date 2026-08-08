@@ -25,7 +25,7 @@ The product should feel polished, premium, and production-ready.
 - **API Protocol**: Next.js Server Actions & API Routes
 
 ### AI & Integrations
-- **AI Engine**: Gemini API / Firebase AI Logic
+- **AI Engine**: Gemini API
 - **PWA**: PWA Install Prompt & Offline Support capabilities
 
 ---

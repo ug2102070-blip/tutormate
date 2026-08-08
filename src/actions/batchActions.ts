@@ -8,37 +8,7 @@ import { checkBatchLimit } from "@/lib/serverSubscriptions";
 async function ensureTutorRecord(tutorId: string, email?: string) {
   const adminSupabase = createAdminClient();
 
-  // 1. Ensure profile record exists (tutors.user_id references profiles.id)
-  const { data: existingProfile } = await adminSupabase
-    .from("profiles")
-    .select("id, display_name, phone_number")
-    .eq("id", tutorId)
-    .maybeSingle();
-
-  if (!existingProfile) {
-    let userEmail = email || "";
-    if (!userEmail) {
-      try {
-        const { data: userById } = await adminSupabase.auth.admin.getUserById(tutorId);
-        if (userById?.user?.email) {
-          userEmail = userById.user.email;
-        }
-      } catch {
-        // ignore
-      }
-    }
-
-    await adminSupabase.from("profiles").upsert({
-      id: tutorId,
-      email: userEmail,
-      display_name: userEmail ? userEmail.split("@")[0] : "Tutor",
-      role: "tutor",
-      tutor_id: tutorId,
-      updated_at: new Date().toISOString(),
-    });
-  }
-
-  // 2. Ensure tutor record exists (batches.tutor_id references tutors.id)
+  // Fast check: verify tutor record exists (provisioned automatically via Postgres on_auth_user_created trigger)
   const { data: existingTutor } = await adminSupabase
     .from("tutors")
     .select("id")
@@ -46,15 +16,21 @@ async function ensureTutorRecord(tutorId: string, email?: string) {
     .maybeSingle();
 
   if (!existingTutor) {
-    const displayName = existingProfile?.display_name || email?.split("@")[0] || "Tutor";
-    const phone = existingProfile?.phone_number || "";
-
+    const displayName = email ? email.split("@")[0] : "Tutor";
+    await adminSupabase.from("profiles").upsert({
+      id: tutorId,
+      email: email || "",
+      display_name: displayName,
+      role: "tutor",
+      tutor_id: tutorId,
+      updated_at: new Date().toISOString(),
+    });
     await adminSupabase.from("tutors").upsert({
       id: tutorId,
       user_id: tutorId,
       full_name: displayName,
       institution: "Independent",
-      contact_phone: phone,
+      contact_phone: "",
     });
   }
 }
@@ -74,7 +50,7 @@ export async function createBatch(formData: BatchFormValues) {
 
   const validated = batchSchema.parse(formData);
 
-  // Guarantee tutor row exists in public.tutors to satisfy foreign key constraints
+  // Ensure tutor record exists for legacy users created before trigger installation
   await ensureTutorRecord(tutorId, authState.email);
 
   const supabase = await getSupabaseServerClient();
@@ -95,7 +71,7 @@ export async function createBatch(formData: BatchFormValues) {
     .single();
 
   if (error) {
-    // Fallback to admin client if client insert had any permission or RLS issue
+    // Fallback to admin client if client insert had any permission issue
     const adminSupabase = createAdminClient();
     const adminRes = await adminSupabase
       .from("batches")
@@ -119,7 +95,7 @@ export async function createBatch(formData: BatchFormValues) {
   if (error || !batch) {
     if (error?.message?.includes("permission denied")) {
       throw new Error(
-        "Supabase RLS Permission Denied: Please run the SQL Editor script in Supabase (or set your real SUPABASE_SERVICE_ROLE_KEY in .env.local)."
+        "Supabase RLS Permission Denied: Please run the SQL Editor script in Supabase (supabase/add_on_auth_user_created_trigger.sql)."
       );
     }
     throw new Error(`Failed to create batch: ${error?.message || "Unknown error"}`);

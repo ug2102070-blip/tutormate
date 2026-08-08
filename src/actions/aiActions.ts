@@ -42,10 +42,10 @@ interface ParentMessageParams {
 
 // Call Gemini REST API with enhanced prompt engineering
 async function callGemini(prompt: string, systemInstruction?: string): Promise<string> {
-  const apiKey = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY;
+  const apiKey = process.env.GEMINI_API_KEY;
 
   if (apiKey) {
-    const models = ["gemini-3-flash-preview", "gemini-3.6-flash", "gemini-flash-latest", "gemini-2.0-flash"];
+    const models = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"];
     for (const model of models) {
       try {
         const response = await fetch(

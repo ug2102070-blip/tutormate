@@ -5,6 +5,7 @@ import { verifyUserAuth } from "@/lib/authHelpers";
 import { studentSchema, type StudentFormValues } from "@/lib/validations/student";
 import { generateInviteCode } from "@/lib/utils";
 import { checkStudentLimit } from "@/lib/serverSubscriptions";
+import { revalidatePath } from "next/cache";
 
 /**
  * Creates a student record under the authenticated tutor and generates a unique invite code in Supabase.
@@ -51,13 +52,15 @@ export async function createStudent(formData: StudentFormValues) {
     await supabase.from("batches").update({ student_count: currentCount + 1 }).eq("id", batchId);
   }
 
+  revalidatePath("/tutor/students");
+  revalidatePath("/tutor/dashboard");
+  revalidatePath("/tutor/fees");
   return { success: true, studentId: student.id, inviteCode };
 }
 
 /**
- * Fetches both batches and students for the authenticated tutor in a single
- * server-side round-trip. Avoids parallel Server Action calls (Promise.all)
- * from the client, and ensures cookies() is called in a valid request context.
+ * Fetches both batches and students for the authenticated tutor.
+ * revalidatePath() after mutations keeps Next.js full-route cache fresh.
  */
 export async function getStudentsPageData(): Promise<{
   batches: { id: string; name: string }[];
@@ -81,11 +84,7 @@ export async function getStudentsPageData(): Promise<{
       .order("created_at", { ascending: false }),
   ]);
 
-  const batches = (batchRes.data || []).map((b: any) => ({
-    id: b.id,
-    name: b.name,
-  }));
-
+  const batches = (batchRes.data || []).map((b: any) => ({ id: b.id, name: b.name }));
   const students = (studentRes.data || []).map((s: any) => ({
     id: s.id,
     tutorId: s.tutor_id,

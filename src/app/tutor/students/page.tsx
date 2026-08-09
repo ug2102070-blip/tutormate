@@ -1,54 +1,33 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import useSWR from "swr";
+import { useState } from "react";
 import Link from "next/link";
-
-
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/context/LanguageContext";
 import type { StudentDoc } from "@/types";
 import { Plus, UserPlus, Search, Copy, Check, Phone } from "lucide-react";
-
 import { getStudentsPageData } from "@/actions/tutorStudentActions";
 import { EmptyState } from "@/components/EmptyState";
 
 export default function StudentsPage() {
   const { user } = useAuth();
   const { t } = useLanguage();
-  const [students, setStudents] = useState<StudentDoc[]>([]);
-  const [batches, setBatches] = useState<Record<string, string>>({});
   const [search, setSearch] = useState("");
   const [selectedBatchId, setSelectedBatchId] = useState<string>("all");
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (!user) {
-      setLoading(false);
-      return;
-    }
+  // SWR: cache students + batches for 30s — instant on navigation back
+  const { data, isLoading } = useSWR(
+    user ? "tutor-students-page" : null,
+    () => getStudentsPageData(),
+    { revalidateOnFocus: false, dedupingInterval: 30_000 }
+  );
 
-    async function loadData() {
-      try {
-        const { batches: batchList, students: studentList } =
-          await getStudentsPageData();
-
-        const map: Record<string, string> = {};
-        batchList.forEach((b) => {
-          map[b.id] = b.name;
-        });
-        setBatches(map);
-
-        setStudents(studentList);
-      } catch (err) {
-        console.error("loadData error:", err);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    loadData();
-  }, [user]);
+  const students: StudentDoc[] = data?.students || [];
+  const batches: Record<string, string> = Object.fromEntries(
+    (data?.batches || []).map((b: { id: string; name: string }) => [b.id, b.name])
+  );
 
   const filteredStudents = students.filter((s) => {
     const matchesSearch =
@@ -117,7 +96,7 @@ export default function StudentsPage() {
       </div>
 
       {/* Students Table */}
-      {loading ? (
+      {isLoading ? (
         <div className="h-64 rounded-2xl animate-shimmer border border-slate-200 dark:border-white/10 bg-white dark:bg-[#131b2e]" />
       ) : filteredStudents.length === 0 ? (
         <EmptyState

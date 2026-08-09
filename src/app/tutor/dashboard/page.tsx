@@ -1,7 +1,8 @@
 // Server Component — no "use client" needed
 // Data is fetched on the server before the page is sent to the browser.
-// This eliminates skeleton loading and client-side waterfall.
+// Metrics render instantly (via RPC), charts stream in via Suspense.
 
+import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
@@ -20,14 +21,9 @@ import {
 } from "lucide-react";
 import { OnboardingChecklist } from "@/components/tutor/OnboardingChecklist";
 import { FeedbackWidget } from "@/components/FeedbackWidget";
-import {
-  getDashboardMetrics,
-  getMonthlyIncomeChart,
-  getFeeDistribution,
-  getAttendanceTrend,
-  getGradeDistribution,
-} from "@/actions/analyticsActions";
-import { DashboardCharts } from "@/components/tutor/dashboard/DashboardCharts";
+import { getDashboardMetrics } from "@/actions/analyticsActions";
+import { DashboardChartsLoader } from "@/components/tutor/dashboard/DashboardChartsLoader";
+import { SkeletonBlock } from "@/components/ui/PageSkeleton";
 
 export const dynamic = "force-dynamic";
 
@@ -42,15 +38,9 @@ export default async function TutorDashboardPage() {
     redirect("/login");
   }
 
-  // Fetch all analytics data in parallel on the server
-  // React.cache() on verifyUserAuth means auth only runs ONCE across all these calls
-  const [metrics, incomeData, feeDist, attendTrend, gradeDist] = await Promise.all([
-    getDashboardMetrics(),
-    getMonthlyIncomeChart(6),
-    getFeeDistribution(undefined, undefined),
-    getAttendanceTrend(undefined),
-    getGradeDistribution(),
-  ]);
+  // Fast: RPC fetches all metrics in 1 DB round-trip
+  // Charts are deferred to Suspense — page shell renders before they resolve
+  const metrics = await getDashboardMetrics();
 
   const tutorName =
     user.user_metadata?.full_name ||
@@ -272,14 +262,19 @@ export default async function TutorDashboardPage() {
         </Link>
       </div>
 
-      {/* Analytics Charts — client component, receives data as props */}
-      <DashboardCharts
-        incomeData={incomeData}
-        feeDist={feeDist}
-        attendTrend={attendTrend}
-        gradeDist={gradeDist}
-        metrics={metrics}
-      />
+      {/* Analytics Charts — stream in after page shell via Suspense */}
+      <Suspense
+        fallback={
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <SkeletonBlock className="lg:col-span-7 h-64 rounded-2xl" />
+            <SkeletonBlock className="lg:col-span-5 h-64 rounded-2xl" />
+            <SkeletonBlock className="lg:col-span-7 h-64 rounded-2xl" />
+            <SkeletonBlock className="lg:col-span-5 h-64 rounded-2xl" />
+          </div>
+        }
+      >
+        <DashboardChartsLoader />
+      </Suspense>
 
       {/* Floating Pilot Feedback Widget */}
       <FeedbackWidget userId={user.id} userRole="tutor" />

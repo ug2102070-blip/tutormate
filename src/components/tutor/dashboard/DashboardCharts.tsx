@@ -1,8 +1,6 @@
 "use client";
 
-import { BarChart } from "@/components/charts/BarChart";
-import { LineChart } from "@/components/charts/LineChart";
-import { DonutChart } from "@/components/charts/DonutChart";
+import { LazyBarChart, LazyLineChart, LazyDonutChart } from "@/components/charts/LazyCharts";
 import { TrendingUp, CalendarCheck, ArrowRight } from "lucide-react";
 import Link from "next/link";
 import type {
@@ -85,7 +83,7 @@ export function DashboardCharts({
         </div>
 
         {incomeData.length > 0 ? (
-          <BarChart
+          <LazyBarChart
             data={incomeData.map((d) => ({ label: d.monthLabel, value: d.amount }))}
             height={200}
           />
@@ -117,7 +115,7 @@ export function DashboardCharts({
           </Link>
         </div>
 
-        <DonutChart
+        <LazyDonutChart
           data={feeDonutData}
           size={140}
           centerText={`${feeDist.reduce((acc, curr) => acc + curr.count, 0)}`}
@@ -146,7 +144,7 @@ export function DashboardCharts({
           </span>
         </div>
 
-        <LineChart
+        <LazyLineChart
           data={attendTrend.map((a) => ({ label: a.weekLabel, value: a.percentage }))}
           height={200}
           strokeColor="#10b981"
@@ -175,7 +173,7 @@ export function DashboardCharts({
           </Link>
         </div>
 
-        <DonutChart
+        <LazyDonutChart
           data={gradeDonutData}
           size={140}
           centerText={`${gradeDist.reduce((acc, curr) => acc + curr.count, 0)}`}

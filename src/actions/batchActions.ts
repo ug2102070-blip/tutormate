@@ -4,6 +4,7 @@ import { createAdminClient, getSupabaseServerClient } from "@/lib/supabase/serve
 import { verifyUserAuth } from "@/lib/authHelpers";
 import { batchSchema, type BatchFormValues } from "@/lib/validations/batch";
 import { checkBatchLimit } from "@/lib/serverSubscriptions";
+import { revalidatePath } from "next/cache";
 
 async function ensureTutorRecord(tutorId: string, email?: string) {
   const adminSupabase = createAdminClient();
@@ -101,8 +102,20 @@ export async function createBatch(formData: BatchFormValues) {
     throw new Error(`Failed to create batch: ${error?.message || "Unknown error"}`);
   }
 
+  invalidateBatchCache();
   return { success: true, batchId: batch.id };
 }
+
+
+// Bust the cache for all batch-dependent routes
+function invalidateBatchCache() {
+  revalidatePath("/tutor/batches");
+  revalidatePath("/tutor/dashboard");
+  revalidatePath("/tutor/students");
+  revalidatePath("/tutor/fees");
+  revalidatePath("/tutor/attendance");
+}
+
 
 /**
  * Updates an existing batch.
@@ -152,8 +165,10 @@ export async function updateBatch(
     throw new Error(`Failed to update batch: ${error.message}`);
   }
 
+  invalidateBatchCache();
   return { success: true };
 }
+
 
 /**
  * Toggles batch archive status.
@@ -211,11 +226,14 @@ export async function toggleArchiveBatch(batchId: string) {
     throw new Error(`Failed to update batch status: ${error.message}`);
   }
 
+  invalidateBatchCache();
   return { success: true, isArchived: nextArchived };
 }
 
+
 /**
- * Fetches all batches for the authenticated tutor reliably server-side.
+ * Fetches all batches for the authenticated tutor.
+ * revalidatePath() after mutations keeps Next.js full-route cache fresh.
  */
 export async function getTutorBatches(): Promise<any[]> {
   const authState = await verifyUserAuth();

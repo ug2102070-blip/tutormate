@@ -51,6 +51,28 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics> {
   const tutorId = authState.tutorId || authState.uid;
   const adminSupabase = createAdminClient();
 
+  // Try the RPC function first (single round-trip instead of 6+ queries).
+  // Falls back to parallel queries if the SQL migration hasn't been run yet.
+  try {
+    const { data: rpcData, error: rpcError } = await adminSupabase
+      .rpc("get_tutor_dashboard_metrics", { p_tutor_id: tutorId });
+
+    if (!rpcError && rpcData) {
+      return {
+        activeStudents:       Number(rpcData.activeStudents)       || 0,
+        activeBatches:        Number(rpcData.activeBatches)        || 0,
+        monthlyRevenue:       Number(rpcData.monthlyRevenue)       || 0,
+        pendingFeeAmount:     Number(rpcData.pendingFeeAmount)     || 0,
+        attendancePercentage: Number(rpcData.attendancePercentage) ?? 100,
+        pendingDoubts:        Number(rpcData.pendingDoubts)        || 0,
+        ungradedSubmissions:  Number(rpcData.ungradedSubmissions)  || 0,
+      };
+    }
+  } catch {
+    // RPC not available yet — fall through to manual queries below
+  }
+
+  // ── Fallback: original parallel queries ─────────────────────────────────────
   const [
     studentsRes,
     batchesRes,
@@ -92,9 +114,8 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics> {
   const activeBatches = batchesRes.count || 0;
   const pendingDoubts = doubtsRes.count || 0;
 
-  // Monthly revenue & pending fee calculations
   const now = new Date();
-  const currentMonthName = now.toLocaleString("default", { month: "long" });
+  const currentMonth = now.getMonth() + 1;
   const currentYear = now.getFullYear();
 
   let monthlyRevenue = 0;
@@ -104,28 +125,21 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics> {
     feesRes.data.forEach((fee) => {
       const paid = Number(fee.amount_paid) || 0;
       const due = Number(fee.amount_due) || 0;
-
-      // Current month collected income
-      if (fee.month === currentMonthName && fee.year === currentYear) {
+      if (fee.month === currentMonth && fee.year === currentYear) {
         monthlyRevenue += paid;
       }
-
-      // Total pending/unpaid fee balance across all months
       if (fee.status !== "paid") {
-        const remaining = Math.max(0, due - paid);
-        pendingFeeAmount += remaining;
+        pendingFeeAmount += Math.max(0, due - paid);
       }
     });
   }
 
-  // Attendance rate calculation
   let attendancePercentage = 100;
   if (attendanceRes.data && attendanceRes.data.length > 0) {
     const presentCount = attendanceRes.data.filter((a) => a.status === "present").length;
     attendancePercentage = Math.round((presentCount / attendanceRes.data.length) * 100);
   }
 
-  // Ungraded submissions count
   let ungradedSubmissions = 0;
   if (assignmentsRes.data && assignmentsRes.data.length > 0) {
     const assignmentIds = assignmentsRes.data.map((a) => a.id);
@@ -147,6 +161,7 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics> {
     ungradedSubmissions,
   };
 }
+
 
 export async function getMonthlyIncomeChart(months = 6): Promise<MonthlyIncomeData[]> {
   const authState = await verifyUserAuth();

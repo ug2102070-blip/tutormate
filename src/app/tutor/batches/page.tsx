@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import useSWR from "swr";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
+import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/context/LanguageContext";
 import { formatBDT } from "@/lib/utils";
@@ -14,29 +14,14 @@ import { EmptyState } from "@/components/EmptyState";
 export default function BatchesPage() {
   const { user } = useAuth();
   const { t } = useLanguage();
-  const [batches, setBatches] = useState<BatchDoc[]>([]);
   const [tab, setTab] = useState<"active" | "archived">("active");
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (!user) {
-      setLoading(false);
-      return;
-    }
-
-    async function loadBatches() {
-      try {
-        const data = await getTutorBatches();
-        setBatches(data);
-      } catch (err) {
-        console.error("loadBatches error:", err);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    loadBatches();
-  }, [user]);
+  // SWR: caches batches for 30s — instant on tab switch / back navigation
+  const { data: batches = [], isLoading, mutate } = useSWR<BatchDoc[]>(
+    user ? "tutor-batches" : null,
+    () => getTutorBatches(),
+    { revalidateOnFocus: false, dedupingInterval: 30_000 }
+  );
 
   const filteredBatches = batches.filter((b) =>
     tab === "active" ? !b.isArchived : b.isArchived
@@ -44,10 +29,13 @@ export default function BatchesPage() {
 
   async function handleToggleArchive(batchId: string) {
     if (!user) return;
-    await toggleArchiveBatch(batchId);
-    setBatches((prev) =>
-      prev.map((b) => (b.id === batchId ? { ...b, isArchived: !b.isArchived } : b))
+    // Optimistic update — UI changes instantly, no spinner needed
+    mutate(
+      batches.map((b) => (b.id === batchId ? { ...b, isArchived: !b.isArchived } : b)),
+      false
     );
+    await toggleArchiveBatch(batchId);
+    mutate(); // revalidate from server
   }
 
   return (
@@ -96,7 +84,7 @@ export default function BatchesPage() {
       </div>
 
       {/* Batches Grid */}
-      {loading ? (
+      {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {[1, 2, 3].map((i) => (
             <div

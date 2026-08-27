@@ -1,37 +1,35 @@
 "use server";
 
+import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/server";
 import { authRateLimiter } from "@/lib/ratelimit";
 import { headers } from "next/headers";
+import { createSafeAction } from "@/lib/actionHandler";
+
+const SetTutorClaimsSchema = z.object({
+  uidOrToken: z.string().min(1, "UID or token is required"),
+});
 
 /**
  * Sets tutor role and profile for a registered user.
  */
-export async function setTutorClaims(uidOrToken: string) {
-  const supabase = createAdminClient();
+export const setTutorClaims = createSafeAction(
+  SetTutorClaimsSchema,
+  async ({ uidOrToken }) => {
+    const supabase = createAdminClient();
 
-  try {
-    const headersList = await headers();
-    const ip = headersList.get("x-forwarded-for") ?? "127.0.0.1";
-    await authRateLimiter.limit(ip);
-  } catch {
-    // Continue silently if rate limiter instance fails
-  }
+    try {
+      const headersList = await headers();
+      const ip = headersList.get("x-forwarded-for") ?? "127.0.0.1";
+      await authRateLimiter.limit(ip);
+    } catch {
+      // Continue silently if rate limiter fails
+    }
 
-  let uid = "";
-  let user: any = null;
-
-  try {
     const { verifyUserAuth } = await import("@/lib/authHelpers");
     const auth = await verifyUserAuth(uidOrToken);
-    uid = auth.uid;
-    user = { id: auth.uid, email: auth.email };
-  } catch (err) {
-    return { success: false, error: "Unauthorized" };
-  }
+    const uid = auth.uid;
 
-  try {
-    // Upsert into profiles table
     const { error: profileErr } = await supabase.from("profiles").upsert({
       id: uid,
       role: "tutor",
@@ -40,36 +38,36 @@ export async function setTutorClaims(uidOrToken: string) {
     });
 
     if (profileErr) {
-      console.warn("profiles upsert error:", profileErr);
-      return { success: false, error: profileErr.message };
+      throw new Error(profileErr.message);
     }
 
-    // Upsert into tutors table
     const { error: tutorErr } = await supabase.from("tutors").upsert({
       id: uid,
       user_id: uid,
-      full_name: user?.user_metadata?.full_name || "Tutor",
+      full_name: auth.email || "Tutor",
       institution: "Independent",
-      contact_phone: user?.phone || "",
+      contact_phone: "",
     });
 
     if (tutorErr) {
-      console.warn("tutors upsert error:", tutorErr);
-      return { success: false, error: tutorErr.message };
+      throw new Error(tutorErr.message);
     }
-  } catch (err) {
-    console.warn("Could not write to Supabase profiles/tutors:", err);
-    return { success: false, error: String(err) };
-  }
 
-  return { success: true };
-}
+    return { success: true };
+  },
+  { requireAuth: false }
+);
+
+const GetUserProfileSchema = z.object({
+  uid: z.string().min(1, "UID is required"),
+});
 
 /**
  * Checks if user profile exists in Supabase `profiles` table.
  */
-export async function getUserProfile(uid: string) {
-  try {
+export const getUserProfile = createSafeAction(
+  GetUserProfileSchema,
+  async ({ uid }) => {
     const supabase = createAdminClient();
     const { data, error } = await supabase
       .from("profiles")
@@ -81,63 +79,56 @@ export async function getUserProfile(uid: string) {
       return { exists: false, data: null };
     }
     return { exists: true, data };
-  } catch (err) {
-    console.warn("Could not fetch user profile via Supabase:", err);
-    return { exists: false, data: null };
-  }
-}
+  },
+  { requireAuth: false }
+);
+
+const OnboardTutorUserSchema = z.object({
+  data: z.object({
+    email: z.string().nullable().optional(),
+    displayName: z.string().min(1, "Display name is required"),
+    phoneNumber: z.string().nullable().optional(),
+    institution: z.string().optional(),
+    role: z.enum(["tutor", "owner"]).optional().default("tutor"),
+  }),
+  uidOrToken: z.string().min(1, "UID or token is required"),
+});
 
 /**
  * Onboard a Google or Phone user as a Tutor via Supabase Admin Client.
  */
-export async function onboardTutorUser(
-  data: {
-    email: string | null;
-    displayName: string;
-    phoneNumber?: string | null;
-    institution?: string;
-    role?: "tutor" | "owner";
-  },
-  uidOrToken: string
-) {
-  const supabase = createAdminClient();
-  let uid = "";
-  let user: any = null;
+export const onboardTutorUser = createSafeAction(
+  OnboardTutorUserSchema,
+  async ({ data, uidOrToken }) => {
+    const supabase = createAdminClient();
 
-  try {
     const { verifyUserAuth } = await import("@/lib/authHelpers");
     const auth = await verifyUserAuth(uidOrToken);
-    uid = auth.uid;
-    user = { id: auth.uid, email: auth.email };
-  } catch (err) {
-    return { success: false, error: "Unauthorized" };
-  }
+    const uid = auth.uid;
 
-  try {
-    const headersList = await headers();
-    const ip = headersList.get("x-forwarded-for") ?? "127.0.0.1";
-    await authRateLimiter.limit(ip);
-  } catch {
-    // Continue silently if rate limiter fails
-  }
+    try {
+      const headersList = await headers();
+      const ip = headersList.get("x-forwarded-for") ?? "127.0.0.1";
+      await authRateLimiter.limit(ip);
+    } catch {
+      // Continue silently if rate limiter fails
+    }
 
-  const { email, displayName, phoneNumber, institution } = data;
+    const { email, displayName, phoneNumber, institution, role } = data;
 
-  try {
     // 1. Create or update profile
     const { error: profileErr } = await supabase.from("profiles").upsert({
       id: uid,
       email: email || "",
       display_name: displayName || "Tutor",
       phone_number: phoneNumber || null,
-      role: data.role || "tutor",
+      role: role || "tutor",
       tutor_id: uid,
       updated_at: new Date().toISOString(),
     });
 
     if (profileErr) {
-      console.warn("profiles upsert error:", profileErr);
-      return { success: false, error: profileErr.message, role: data.role || "tutor" };
+      throw new Error(`Profile creation failed: ${profileErr.message}`);
     }
 
     // 2. Create or update tutor record
@@ -150,12 +141,11 @@ export async function onboardTutorUser(
     });
 
     if (tutorErr) {
-      console.warn("tutors upsert error:", tutorErr);
-      return { success: false, error: tutorErr.message, role: data.role || "tutor" };
+      throw new Error(`Tutor creation failed: ${tutorErr.message}`);
     }
 
     // 3. If role is owner, automatically create coaching center if not already created
-    if (data.role === "owner") {
+    if (role === "owner") {
       try {
         const { data: existingCenter } = await supabase
           .from("coaching_centers")
@@ -197,20 +187,19 @@ export async function onboardTutorUser(
         console.warn("Auto create coaching center error:", centerErr);
       }
     }
-    // Sync user_metadata in Supabase Auth so client-side fetchUserClaims uses fast-path
+
+    // Sync user_metadata in Supabase Auth
     await supabase.auth.admin.updateUserById(uid, {
       user_metadata: {
-        role: data.role || "tutor",
+        role: role || "tutor",
         tutorId: uid,
         full_name: displayName,
       },
     }).catch((metaErr) => {
       console.warn("User metadata update error in onboardTutorUser:", metaErr);
     });
-  } catch (err) {
-    console.warn("Could not complete onboardTutorUser via Supabase:", err);
-    return { success: false, error: String(err), role: data.role || "tutor" };
-  }
 
-  return { success: true, role: data.role || "tutor" };
-}
+    return { success: true, role: role || "tutor" };
+  },
+  { requireAuth: false }
+);

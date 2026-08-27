@@ -4,8 +4,11 @@ import { useEffect, useState } from "react";
 import { Building2, Phone, MapPin, Save, AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
 import { getOwnerCenterInfo, updateOwnerCenterInfo } from "@/actions/ownerActions";
 import type { CoachingCenterDoc } from "@/types";
+import { useLanguage } from "@/context/LanguageContext";
 
 export default function OwnerSettingsPage() {
+  const { t, language } = useLanguage();
+  const isBn = language === "bn";
   const [center, setCenter] = useState<CoachingCenterDoc | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -63,19 +66,19 @@ export default function OwnerSettingsPage() {
       <div className="rounded-2xl p-6 flex items-center gap-3"
         style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)" }}>
         <AlertCircle className="w-5 h-5 text-red-500 shrink-0" />
-        <p className="text-sm text-red-500">No coaching center found. Create one from the Tutor portal.</p>
+        <p className="text-sm text-red-500">{t("owner.noCenterFound") || "No coaching center found. Create one from the Tutor portal."}</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-5 max-w-2xl">
+    <div className="space-y-5 max-w-3xl mx-auto">
       <div>
         <h1 className="text-xl font-extrabold tracking-tight" style={{ color: "var(--color-text)" }}>
-          Center Settings
+          {t("owner.centerSettings") || "Center Settings"}
         </h1>
         <p className="text-xs mt-0.5" style={{ color: "var(--color-text-muted)" }}>
-          Update your coaching center information
+          {t("owner.centerSettingsDesc") || "Update your coaching center information"}
         </p>
       </div>
 
@@ -87,13 +90,13 @@ export default function OwnerSettingsPage() {
         <Building2 className="w-5 h-5 shrink-0" style={{ color: "rgb(245,158,11)" }} />
         <div>
           <p className="text-xs font-semibold" style={{ color: "var(--color-text)" }}>
-            Center Join Code
+            {t("owner.centerJoinCode") || "Center Join Code"}
           </p>
           <p className="text-lg font-mono font-extrabold mt-0.5" style={{ color: "rgb(245,158,11)" }}>
             {center.code}
           </p>
           <p className="text-[10px] mt-0.5" style={{ color: "var(--color-text-muted)" }}>
-            Share this code with tutors so they can join your center.
+            {t("owner.shareCodeDesc") || "Share this code with tutors so they can join your center."}
           </p>
         </div>
       </div>
@@ -105,13 +108,13 @@ export default function OwnerSettingsPage() {
           style={{ background: "var(--color-bg)", border: "1px solid var(--color-border)" }}
         >
           <h2 className="text-sm font-bold" style={{ color: "var(--color-text)" }}>
-            Center Information
+            {t("owner.centerInfo") || "Center Information"}
           </h2>
 
           {/* Name */}
           <div className="space-y-1.5">
             <label className="text-xs font-semibold" style={{ color: "var(--color-text-muted)" }}>
-              Center Name <span className="text-red-400">*</span>
+              {t("owner.centerNameLabel") || "Center Name"} <span className="text-red-400">*</span>
             </label>
             <div className="relative">
               <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: "var(--color-text-muted)" }} />
@@ -133,7 +136,7 @@ export default function OwnerSettingsPage() {
           {/* Address */}
           <div className="space-y-1.5">
             <label className="text-xs font-semibold" style={{ color: "var(--color-text-muted)" }}>
-              Address
+              {t("owner.addressLabel") || "Address"}
             </label>
             <div className="relative">
               <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: "var(--color-text-muted)" }} />
@@ -154,7 +157,7 @@ export default function OwnerSettingsPage() {
           {/* Phone */}
           <div className="space-y-1.5">
             <label className="text-xs font-semibold" style={{ color: "var(--color-text-muted)" }}>
-              Contact Phone
+              {t("owner.contactPhoneLabel") || "Contact Phone"}
             </label>
             <div className="relative">
               <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: "var(--color-text-muted)" }} />
@@ -183,7 +186,7 @@ export default function OwnerSettingsPage() {
         {success && (
           <div className="rounded-xl px-4 py-2.5 text-xs font-semibold text-emerald-600 flex gap-2 items-center"
             style={{ background: "rgba(16,185,129,0.1)", border: "1px solid rgba(16,185,129,0.2)" }}>
-            <CheckCircle2 className="w-4 h-4 shrink-0" /> Center information updated successfully!
+            <CheckCircle2 className="w-4 h-4 shrink-0" /> {t("owner.centerUpdateSuccess") || "Center information updated successfully!"}
           </div>
         )}
 
@@ -199,7 +202,7 @@ export default function OwnerSettingsPage() {
           ) : (
             <Save className="w-4 h-4" />
           )}
-          {saving ? "Saving..." : "Save Changes"}
+          {saving ? (t("common.saving") || "Saving...") : (t("common.saveChanges") || "Save Changes")}
         </button>
       </form>
 
@@ -208,8 +211,8 @@ export default function OwnerSettingsPage() {
         className="rounded-2xl p-4 text-xs space-y-1"
         style={{ background: "var(--color-bg)", border: "1px solid var(--color-border)", color: "var(--color-text-muted)" }}
       >
-        <p className="font-semibold" style={{ color: "var(--color-text)" }}>Center Details</p>
-        <p>Created: {new Date(center.createdAt).toLocaleDateString("en-BD", { year: "numeric", month: "long", day: "numeric" })}</p>
+        <p className="font-semibold" style={{ color: "var(--color-text)" }}>{t("owner.centerDetails") || "Center Details"}</p>
+        <p>{t("owner.created") || "Created:"} {new Date(center.createdAt).toLocaleDateString(isBn ? "bn-BD" : "en-BD", { year: "numeric", month: "long", day: "numeric" })}</p>
         <p>Center ID: <span className="font-mono opacity-70">{center.id}</span></p>
       </div>
     </div>

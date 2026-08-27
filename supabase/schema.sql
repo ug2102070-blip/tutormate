@@ -26,6 +26,8 @@ CREATE TABLE IF NOT EXISTS public.tutors (
   contact_phone TEXT NOT NULL,
   bkash_number TEXT,
   nagad_number TEXT,
+  bio TEXT,
+  address TEXT,
   subscription JSONB NOT NULL DEFAULT '{"plan": "free_trial", "status": "active", "validUntil": "2099-12-31T23:59:59Z", "maxStudents": 50}'::jsonb,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -190,45 +192,76 @@ DROP POLICY IF EXISTS "Public user_presence" ON public.user_presence;
 DROP POLICY IF EXISTS "Public all feedback" ON public.feedback;
 DROP POLICY IF EXISTS "Public feedback" ON public.feedback;
 
-CREATE POLICY "Profiles SELECT policy" ON public.profiles FOR SELECT USING (true);
-CREATE POLICY "Profiles INSERT policy" ON public.profiles FOR INSERT TO authenticated WITH CHECK (auth.uid() = id OR auth.role() = 'authenticated');
-CREATE POLICY "Profiles UPDATE policy" ON public.profiles FOR UPDATE TO authenticated USING (auth.uid() = id OR auth.role() = 'authenticated') WITH CHECK (auth.uid() = id OR auth.role() = 'authenticated');
-CREATE POLICY "Profiles DELETE policy" ON public.profiles FOR DELETE TO authenticated USING (auth.uid() = id OR auth.role() = 'authenticated');
+CREATE POLICY "Profiles SELECT policy" ON public.profiles FOR SELECT TO authenticated USING (
+  auth.uid() = id OR
+  EXISTS (SELECT 1 FROM public.students s WHERE s.auth_uid = public.profiles.id AND s.tutor_id IN (SELECT id FROM public.tutors WHERE user_id = auth.uid())) OR
+  EXISTS (SELECT 1 FROM public.tutors t WHERE t.id = public.profiles.tutor_id AND t.user_id = auth.uid())
+);
+CREATE POLICY "Profiles INSERT policy" ON public.profiles FOR INSERT TO authenticated WITH CHECK (auth.uid() = id);
+CREATE POLICY "Profiles UPDATE policy" ON public.profiles FOR UPDATE TO authenticated USING (auth.uid() = id) WITH CHECK (auth.uid() = id);
+CREATE POLICY "Profiles DELETE policy" ON public.profiles FOR DELETE TO authenticated USING (auth.uid() = id);
 
-CREATE POLICY "Tutors SELECT policy" ON public.tutors FOR SELECT USING (true);
-CREATE POLICY "Tutors INSERT policy" ON public.tutors FOR INSERT TO authenticated WITH CHECK (auth.role() = 'authenticated');
-CREATE POLICY "Tutors UPDATE policy" ON public.tutors FOR UPDATE TO authenticated USING (auth.role() = 'authenticated') WITH CHECK (auth.role() = 'authenticated');
-CREATE POLICY "Tutors DELETE policy" ON public.tutors FOR DELETE TO authenticated USING (auth.role() = 'authenticated');
+CREATE POLICY "Tutors SELECT policy" ON public.tutors FOR SELECT TO authenticated USING (true);
+CREATE POLICY "Tutors INSERT policy" ON public.tutors FOR INSERT TO authenticated WITH CHECK (user_id = auth.uid());
+CREATE POLICY "Tutors UPDATE policy" ON public.tutors FOR UPDATE TO authenticated USING (user_id = auth.uid()) WITH CHECK (user_id = auth.uid());
+CREATE POLICY "Tutors DELETE policy" ON public.tutors FOR DELETE TO authenticated USING (user_id = auth.uid());
 
-CREATE POLICY "Batches SELECT policy" ON public.batches FOR SELECT USING (true);
-CREATE POLICY "Batches INSERT policy" ON public.batches FOR INSERT TO authenticated WITH CHECK (auth.role() = 'authenticated');
-CREATE POLICY "Batches UPDATE policy" ON public.batches FOR UPDATE TO authenticated USING (auth.role() = 'authenticated') WITH CHECK (auth.role() = 'authenticated');
-CREATE POLICY "Batches DELETE policy" ON public.batches FOR DELETE TO authenticated USING (auth.role() = 'authenticated');
+CREATE POLICY "Batches SELECT policy" ON public.batches FOR SELECT TO authenticated USING (
+  tutor_id IN (SELECT id FROM public.tutors WHERE user_id = auth.uid()) OR
+  id::text = ANY(SELECT unnest(enrolled_batch_ids) FROM public.students WHERE auth_uid = auth.uid())
+);
+CREATE POLICY "Batches INSERT policy" ON public.batches FOR INSERT TO authenticated WITH CHECK (tutor_id IN (SELECT id FROM public.tutors WHERE user_id = auth.uid()));
+CREATE POLICY "Batches UPDATE policy" ON public.batches FOR UPDATE TO authenticated USING (tutor_id IN (SELECT id FROM public.tutors WHERE user_id = auth.uid())) WITH CHECK (tutor_id IN (SELECT id FROM public.tutors WHERE user_id = auth.uid()));
+CREATE POLICY "Batches DELETE policy" ON public.batches FOR DELETE TO authenticated USING (tutor_id IN (SELECT id FROM public.tutors WHERE user_id = auth.uid()));
 
-CREATE POLICY "Students SELECT policy" ON public.students FOR SELECT USING (true);
-CREATE POLICY "Students INSERT policy" ON public.students FOR INSERT TO authenticated WITH CHECK (auth.role() = 'authenticated');
-CREATE POLICY "Students UPDATE policy" ON public.students FOR UPDATE TO authenticated USING (auth.role() = 'authenticated') WITH CHECK (auth.role() = 'authenticated');
-CREATE POLICY "Students DELETE policy" ON public.students FOR DELETE TO authenticated USING (auth.role() = 'authenticated');
+CREATE POLICY "Students SELECT policy" ON public.students FOR SELECT TO authenticated USING (
+  auth_uid = auth.uid() OR
+  tutor_id IN (SELECT id FROM public.tutors WHERE user_id = auth.uid())
+);
+CREATE POLICY "Students INSERT policy" ON public.students FOR INSERT TO authenticated WITH CHECK (tutor_id IN (SELECT id FROM public.tutors WHERE user_id = auth.uid()) OR auth_uid = auth.uid());
+CREATE POLICY "Students UPDATE policy" ON public.students FOR UPDATE TO authenticated USING (tutor_id IN (SELECT id FROM public.tutors WHERE user_id = auth.uid()) OR auth_uid = auth.uid()) WITH CHECK (tutor_id IN (SELECT id FROM public.tutors WHERE user_id = auth.uid()) OR auth_uid = auth.uid());
+CREATE POLICY "Students DELETE policy" ON public.students FOR DELETE TO authenticated USING (tutor_id IN (SELECT id FROM public.tutors WHERE user_id = auth.uid()));
 
-CREATE POLICY "Attendance SELECT policy" ON public.attendance FOR SELECT USING (true);
-CREATE POLICY "Attendance WRITE policy" ON public.attendance FOR ALL TO authenticated USING (auth.role() = 'authenticated') WITH CHECK (auth.role() = 'authenticated');
+CREATE POLICY "Attendance SELECT policy" ON public.attendance FOR SELECT TO authenticated USING (
+  tutor_id IN (SELECT id FROM public.tutors WHERE user_id = auth.uid()) OR
+  batch_id::text = ANY(SELECT unnest(enrolled_batch_ids) FROM public.students WHERE auth_uid = auth.uid())
+);
+CREATE POLICY "Attendance WRITE policy" ON public.attendance FOR ALL TO authenticated USING (tutor_id IN (SELECT id FROM public.tutors WHERE user_id = auth.uid())) WITH CHECK (tutor_id IN (SELECT id FROM public.tutors WHERE user_id = auth.uid()));
 
-CREATE POLICY "Fees SELECT policy" ON public.fees FOR SELECT USING (true);
-CREATE POLICY "Fees WRITE policy" ON public.fees FOR ALL TO authenticated USING (auth.role() = 'authenticated') WITH CHECK (auth.role() = 'authenticated');
+CREATE POLICY "Fees SELECT policy" ON public.fees FOR SELECT TO authenticated USING (
+  tutor_id IN (SELECT id FROM public.tutors WHERE user_id = auth.uid()) OR
+  student_id IN (SELECT id FROM public.students WHERE auth_uid = auth.uid())
+);
+CREATE POLICY "Fees WRITE policy" ON public.fees FOR ALL TO authenticated USING (tutor_id IN (SELECT id FROM public.tutors WHERE user_id = auth.uid())) WITH CHECK (tutor_id IN (SELECT id FROM public.tutors WHERE user_id = auth.uid()));
 
-CREATE POLICY "Doubts SELECT policy" ON public.doubts FOR SELECT USING (true);
-CREATE POLICY "Doubts WRITE policy" ON public.doubts FOR ALL TO authenticated USING (auth.role() = 'authenticated') WITH CHECK (auth.role() = 'authenticated');
+CREATE POLICY "Doubts SELECT policy" ON public.doubts FOR SELECT TO authenticated USING (
+  student_auth_uid = auth.uid() OR
+  tutor_id IN (SELECT id FROM public.tutors WHERE user_id = auth.uid())
+);
+CREATE POLICY "Doubts WRITE policy" ON public.doubts FOR ALL TO authenticated USING (
+  student_auth_uid = auth.uid() OR
+  tutor_id IN (SELECT id FROM public.tutors WHERE user_id = auth.uid())
+) WITH CHECK (
+  student_auth_uid = auth.uid() OR
+  tutor_id IN (SELECT id FROM public.tutors WHERE user_id = auth.uid())
+);
 
-CREATE POLICY "Doubt Messages SELECT policy" ON public.doubt_messages FOR SELECT USING (true);
-CREATE POLICY "Doubt Messages WRITE policy" ON public.doubt_messages FOR ALL TO authenticated USING (auth.role() = 'authenticated') WITH CHECK (auth.role() = 'authenticated');
+CREATE POLICY "Doubt Messages SELECT policy" ON public.doubt_messages FOR SELECT TO authenticated USING (
+  sender_uid = auth.uid() OR
+  EXISTS (SELECT 1 FROM public.doubts d WHERE d.id = public.doubt_messages.doubt_id AND (d.student_auth_uid = auth.uid() OR d.tutor_id IN (SELECT id FROM public.tutors WHERE user_id = auth.uid())))
+);
+CREATE POLICY "Doubt Messages WRITE policy" ON public.doubt_messages FOR ALL TO authenticated USING (
+  sender_uid = auth.uid() OR
+  EXISTS (SELECT 1 FROM public.doubts d WHERE d.id = public.doubt_messages.doubt_id AND (d.student_auth_uid = auth.uid() OR d.tutor_id IN (SELECT id FROM public.tutors WHERE user_id = auth.uid())))
+) WITH CHECK (sender_uid = auth.uid());
 
-CREATE POLICY "User Presence SELECT policy" ON public.user_presence FOR SELECT USING (true);
-CREATE POLICY "User Presence WRITE policy" ON public.user_presence FOR ALL TO authenticated USING (auth.role() = 'authenticated') WITH CHECK (auth.role() = 'authenticated');
+CREATE POLICY "User Presence SELECT policy" ON public.user_presence FOR SELECT TO authenticated USING (true);
+CREATE POLICY "User Presence WRITE policy" ON public.user_presence FOR ALL TO authenticated USING (uid = auth.uid()) WITH CHECK (uid = auth.uid());
 
-CREATE POLICY "Feedback SELECT policy" ON public.feedback FOR SELECT USING (true);
-CREATE POLICY "Feedback INSERT policy" ON public.feedback FOR INSERT TO authenticated WITH CHECK (auth.role() = 'authenticated');
-CREATE POLICY "Feedback UPDATE policy" ON public.feedback FOR UPDATE TO authenticated USING (auth.role() = 'authenticated');
-CREATE POLICY "Feedback DELETE policy" ON public.feedback FOR DELETE TO authenticated USING (auth.role() = 'authenticated');
+CREATE POLICY "Feedback SELECT policy" ON public.feedback FOR SELECT TO authenticated USING (user_id = auth.uid());
+CREATE POLICY "Feedback INSERT policy" ON public.feedback FOR INSERT TO authenticated WITH CHECK (user_id = auth.uid());
+CREATE POLICY "Feedback UPDATE policy" ON public.feedback FOR UPDATE TO authenticated USING (user_id = auth.uid());
+CREATE POLICY "Feedback DELETE policy" ON public.feedback FOR DELETE TO authenticated USING (user_id = auth.uid());
 
 -- Enable Supabase Realtime for Doubts & Messages tables
 ALTER PUBLICATION supabase_realtime ADD TABLE public.doubts;

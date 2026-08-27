@@ -3,11 +3,16 @@
 import { useEffect, useState } from "react";
 import { CreditCard, TrendingUp, TrendingDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { getOwnerFeeReport, type OwnerFeeRow } from "@/actions/ownerActions";
+import { useLanguage } from "@/context/LanguageContext";
 
 function MonthPicker({
   year, month, onPrev, onNext,
 }: { year: number; month: number; onPrev: () => void; onNext: () => void }) {
-  const monthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const { language } = useLanguage();
+  const isBn = language === "bn";
+  const monthNamesEn = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const monthNamesBn = ["জানু","ফেব্রি","মার্চ","এপ্রিল","মে","জুন","জুলাই","আগস্ট","সেপ্টে","অক্টো","নভে","ডিসে"];
+  const monthNames = isBn ? monthNamesBn : monthNamesEn;
   return (
     <div className="flex items-center gap-2">
       <button
@@ -32,6 +37,7 @@ function MonthPicker({
 }
 
 export default function OwnerFeesPage() {
+  const { t } = useLanguage();
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth() + 1);
@@ -70,10 +76,10 @@ export default function OwnerFeesPage() {
       <div className="flex flex-col sm:flex-row sm:items-center gap-3 justify-between">
         <div>
           <h1 className="text-xl font-extrabold tracking-tight" style={{ color: "var(--color-text)" }}>
-            Fee Reports
+            {t("owner.feeReports") || "Fee Reports"}
           </h1>
           <p className="text-xs mt-0.5" style={{ color: "var(--color-text-muted)" }}>
-            Center-wide fee collection overview
+            {t("owner.feeReportsDesc") || "Center-wide fee collection overview"}
           </p>
         </div>
         <MonthPicker year={year} month={month} onPrev={prevMonth} onNext={nextMonth} />
@@ -82,10 +88,10 @@ export default function OwnerFeesPage() {
       {/* Summary Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { label: "Total Due", value: `৳${totalDue.toLocaleString()}`, icon: CreditCard, color: "var(--color-primary)" },
-          { label: "Collected", value: `৳${totalPaid.toLocaleString()}`, icon: TrendingUp, color: "rgb(16,185,129)" },
-          { label: "Pending", value: `৳${totalPending.toLocaleString()}`, icon: TrendingDown, color: "rgb(239,68,68)" },
-          { label: "Collection Rate", value: `${collectionRate}%`, icon: TrendingUp, color: collectionRate >= 80 ? "rgb(16,185,129)" : "rgb(245,158,11)" },
+          { label: t("fees.totalDue") || "Total Due", value: `৳${totalDue.toLocaleString()}`, icon: CreditCard, color: "var(--color-primary)" },
+          { label: t("owner.collected") || "Collected", value: `৳${totalPaid.toLocaleString()}`, icon: TrendingUp, color: "rgb(16,185,129)" },
+          { label: t("fees.pending") || "Pending", value: `৳${totalPending.toLocaleString()}`, icon: TrendingDown, color: "rgb(239,68,68)" },
+          { label: t("owner.collectionRate") || "Collection Rate", value: `${collectionRate}%`, icon: TrendingUp, color: collectionRate >= 80 ? "rgb(16,185,129)" : "rgb(245,158,11)" },
         ].map(({ label, value, icon: Icon, color }) => (
           <div
             key={label}
@@ -107,7 +113,7 @@ export default function OwnerFeesPage() {
         style={{ background: "var(--color-bg)", border: "1px solid var(--color-border)" }}
       >
         <div className="px-5 py-3.5 border-b" style={{ borderColor: "var(--color-border)" }}>
-          <h2 className="text-sm font-bold" style={{ color: "var(--color-text)" }}>Per-Tutor Breakdown</h2>
+          <h2 className="text-sm font-bold" style={{ color: "var(--color-text)" }}>{t("owner.perTutorBreakdown") || "Per-Tutor Breakdown"}</h2>
         </div>
 
         {loading ? (
@@ -117,7 +123,7 @@ export default function OwnerFeesPage() {
         ) : rows.length === 0 ? (
           <div className="text-center py-10" style={{ color: "var(--color-text-muted)" }}>
             <CreditCard className="w-7 h-7 mx-auto mb-2" />
-            <p className="text-xs">No fee data for this period.</p>
+            <p className="text-xs">{t("owner.noFeeData") || "No fee data for this period."}</p>
           </div>
         ) : (
           <>
@@ -125,11 +131,11 @@ export default function OwnerFeesPage() {
               className="grid grid-cols-12 gap-2 px-5 py-2.5 text-[11px] font-bold uppercase tracking-wide"
               style={{ color: "var(--color-text-muted)", borderBottom: "1px solid var(--color-border)" }}
             >
-              <span className="col-span-3">Tutor</span>
-              <span className="col-span-2 text-right">Due</span>
-              <span className="col-span-2 text-right">Paid</span>
-              <span className="col-span-2 text-right">Pending</span>
-              <span className="col-span-3 text-right">Rate</span>
+              <span className="col-span-3">{t("common.tutor") || "Tutor"}</span>
+              <span className="col-span-2 text-right">{t("owner.due") || "Due"}</span>
+              <span className="col-span-2 text-right">{t("fees.paid") || "Paid"}</span>
+              <span className="col-span-2 text-right">{t("fees.pending") || "Pending"}</span>
+              <span className="col-span-3 text-right">{t("owner.rate") || "Rate"}</span>
             </div>
             {rows.map((r) => {
               const rate = r.totalDue > 0 ? Math.round((r.totalPaid / r.totalDue) * 100) : 100;

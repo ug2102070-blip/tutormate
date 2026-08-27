@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { X } from "lucide-react";
 import {
   tutorNavCategories,
@@ -28,8 +28,17 @@ const categoriesByRole = {
 
 export function MobileDrawer({ role, isOpen, onClose }: MobileDrawerProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const { t } = useLanguage();
   const categories = categoriesByRole[role] ?? tutorNavCategories;
+
+  const handlePrefetch = (href: string) => {
+    try {
+      router.prefetch(href);
+    } catch {
+      // ignore
+    }
+  };
 
   // Prevent background scrolling when mobile menu drawer is open
   useEffect(() => {
@@ -65,7 +74,12 @@ export function MobileDrawer({ role, isOpen, onClose }: MobileDrawerProps) {
         <div className="space-y-6">
           {/* Header */}
           <div className="flex items-center justify-between px-2 py-1 border-b pb-3" style={{ borderColor: "var(--color-border)" }}>
-            <Link href={role ? `/${role}/dashboard` : "/"} onClick={onClose} className="flex items-center gap-2">
+            <Link
+              href={role ? `/${role}/dashboard` : "/"}
+              prefetch={true}
+              onClick={onClose}
+              className="flex items-center gap-2"
+            >
               <span
                 className="text-xl font-extrabold tracking-tight"
                 style={{ color: "var(--color-primary)" }}
@@ -121,6 +135,9 @@ export function MobileDrawer({ role, isOpen, onClose }: MobileDrawerProps) {
                     <Link
                       key={item.href}
                       href={item.href}
+                      prefetch={true}
+                      onTouchStart={() => handlePrefetch(item.href)}
+                      onMouseEnter={() => handlePrefetch(item.href)}
                       onClick={onClose}
                       className="flex items-center justify-between px-3 py-2.5 text-xs font-semibold rounded-xl transition-all duration-150 active:scale-98"
                       style={{

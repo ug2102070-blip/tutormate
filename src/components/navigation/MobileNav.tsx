@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import {
   LayoutDashboard,
@@ -53,6 +53,7 @@ const navItemsByRole: Record<string, { href: string; label: string; icon: React.
 
 export function MobileNav({ role }: MobileNavProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const { role: userRole } = useAuth();
 
   let items = navItemsByRole[role] ?? navItemsByRole.tutor;
@@ -67,6 +68,14 @@ export function MobileNav({ role }: MobileNavProps) {
       { href: "/owner/dashboard", label: "Center", icon: Building2 },
     ];
   }
+
+  const handlePrefetch = (href: string) => {
+    try {
+      router.prefetch(href);
+    } catch {
+      // ignore
+    }
+  };
 
   return (
     <nav
@@ -87,6 +96,9 @@ export function MobileNav({ role }: MobileNavProps) {
             <Link
               key={item.href}
               href={item.href}
+              prefetch={true}
+              onTouchStart={() => handlePrefetch(item.href)}
+              onMouseEnter={() => handlePrefetch(item.href)}
               className="flex flex-col items-center justify-center flex-1 gap-0.5 py-1 transition-all duration-200 active:scale-90"
             >
               {/* Icon Container */}

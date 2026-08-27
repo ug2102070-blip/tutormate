@@ -3,8 +3,11 @@
 import { useEffect, useState, useMemo } from "react";
 import { Search, BookOpen, Archive, CheckCircle2 } from "lucide-react";
 import { getOwnerBatches, type OwnerBatchRow } from "@/actions/ownerActions";
+import { useLanguage } from "@/context/LanguageContext";
 
 export default function OwnerBatchesPage() {
+  const { t, language } = useLanguage();
+  const isBn = language === "bn";
   const [batches, setBatches] = useState<OwnerBatchRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -48,10 +51,10 @@ export default function OwnerBatchesPage() {
       <div className="flex flex-col sm:flex-row sm:items-center gap-3 justify-between">
         <div>
           <h1 className="text-xl font-extrabold tracking-tight" style={{ color: "var(--color-text)" }}>
-            All Batches
+            {t("owner.allBatches") || "All Batches"}
           </h1>
           <p className="text-xs mt-0.5" style={{ color: "var(--color-text-muted)" }}>
-            {active.length} active batch{active.length !== 1 ? "es" : ""} across center
+            {isBn ? `সেন্টারে মোট ${active.length} টি ব্যাচ সক্রিয় আছে` : `${active.length} active batch${active.length !== 1 ? "es" : ""} across center`}
           </p>
         </div>
         <button
@@ -64,7 +67,7 @@ export default function OwnerBatchesPage() {
           }}
         >
           <Archive className="w-3.5 h-3.5" />
-          {showArchived ? "Hide Archived" : "Show Archived"}
+          {showArchived ? (t("owner.hideArchived") || "Hide Archived") : (t("owner.showArchived") || "Show Archived")}
         </button>
       </div>
 
@@ -75,7 +78,7 @@ export default function OwnerBatchesPage() {
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by name, subject or tutor..."
+            placeholder={t("owner.searchBatchesPlaceholder") || "Search by name, subject or tutor..."}
             className="pl-9 pr-4 py-2 text-xs rounded-xl outline-none w-full"
             style={{ background: "var(--color-bg)", border: "1px solid var(--color-border)", color: "var(--color-text)" }}
           />
@@ -87,7 +90,7 @@ export default function OwnerBatchesPage() {
           style={{ background: "var(--color-bg)", border: "1px solid var(--color-border)", color: "var(--color-text)" }}
         >
           {tutorNames.map((n) => (
-            <option key={n} value={n}>{n === "all" ? "All Tutors" : n}</option>
+            <option key={n} value={n}>{n === "all" ? (t("owner.allTutors") || "All Tutors") : n}</option>
           ))}
         </select>
       </div>
@@ -102,7 +105,7 @@ export default function OwnerBatchesPage() {
       ) : filtered.length === 0 ? (
         <div className="text-center py-12" style={{ color: "var(--color-text-muted)" }}>
           <BookOpen className="w-8 h-8 mx-auto mb-2" />
-          <p className="text-sm font-medium">No batches found.</p>
+          <p className="text-sm font-medium">{t("owner.noBatchesFound") || "No batches found."}</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -122,7 +125,7 @@ export default function OwnerBatchesPage() {
                     {b.name}
                   </p>
                   <p className="text-[11px] truncate mt-0.5" style={{ color: "var(--color-text-muted)" }}>
-                    {b.subject} · Class {b.gradeClass}
+                    {b.subject} · {t("common.class") || "Class"} {b.gradeClass}
                   </p>
                 </div>
                 {b.isArchived ? (
@@ -146,10 +149,10 @@ export default function OwnerBatchesPage() {
 
               <div className="flex items-center justify-between pt-1 border-t" style={{ borderColor: "var(--color-border)" }}>
                 <span className="text-[11px] font-semibold" style={{ color: "var(--color-text-muted)" }}>
-                  {b.studentCount} students
+                  {isBn ? `${b.studentCount} জন ছাত্র` : `${b.studentCount} students`}
                 </span>
                 <span className="text-xs font-bold" style={{ color: "var(--color-primary)" }}>
-                  ৳{b.monthlyFee.toLocaleString()}/mo
+                  ৳{b.monthlyFee.toLocaleString()}/{isBn ? "মাস" : "mo"}
                 </span>
               </div>
             </div>

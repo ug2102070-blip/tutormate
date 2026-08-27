@@ -49,10 +49,14 @@ DO $$ BEGIN
     DROP POLICY IF EXISTS "Profiles UPDATE policy" ON public.profiles;
     DROP POLICY IF EXISTS "Profiles DELETE policy" ON public.profiles;
 
-    CREATE POLICY "Profiles SELECT policy" ON public.profiles FOR SELECT USING (true);
-    CREATE POLICY "Profiles INSERT policy" ON public.profiles FOR INSERT TO authenticated WITH CHECK (auth.uid() = id OR auth.role() = 'authenticated');
-    CREATE POLICY "Profiles UPDATE policy" ON public.profiles FOR UPDATE TO authenticated USING (auth.uid() = id OR auth.role() = 'authenticated') WITH CHECK (auth.uid() = id OR auth.role() = 'authenticated');
-    CREATE POLICY "Profiles DELETE policy" ON public.profiles FOR DELETE TO authenticated USING (auth.uid() = id OR auth.role() = 'authenticated');
+    CREATE POLICY "Profiles SELECT policy" ON public.profiles FOR SELECT TO authenticated USING (
+      auth.uid() = id OR
+      EXISTS (SELECT 1 FROM public.students s WHERE s.auth_uid = public.profiles.id AND s.tutor_id IN (SELECT id FROM public.tutors WHERE user_id = auth.uid())) OR
+      EXISTS (SELECT 1 FROM public.tutors t WHERE t.id = public.profiles.tutor_id AND t.user_id = auth.uid())
+    );
+    CREATE POLICY "Profiles INSERT policy" ON public.profiles FOR INSERT TO authenticated WITH CHECK (auth.uid() = id);
+    CREATE POLICY "Profiles UPDATE policy" ON public.profiles FOR UPDATE TO authenticated USING (auth.uid() = id) WITH CHECK (auth.uid() = id);
+    CREATE POLICY "Profiles DELETE policy" ON public.profiles FOR DELETE TO authenticated USING (auth.uid() = id);
   END IF;
 END $$;
 
@@ -68,10 +72,10 @@ DO $$ BEGIN
     DROP POLICY IF EXISTS "Tutors UPDATE policy" ON public.tutors;
     DROP POLICY IF EXISTS "Tutors DELETE policy" ON public.tutors;
 
-    CREATE POLICY "Tutors SELECT policy" ON public.tutors FOR SELECT USING (true);
-    CREATE POLICY "Tutors INSERT policy" ON public.tutors FOR INSERT TO authenticated WITH CHECK (auth.role() = 'authenticated');
-    CREATE POLICY "Tutors UPDATE policy" ON public.tutors FOR UPDATE TO authenticated USING (auth.role() = 'authenticated') WITH CHECK (auth.role() = 'authenticated');
-    CREATE POLICY "Tutors DELETE policy" ON public.tutors FOR DELETE TO authenticated USING (auth.role() = 'authenticated');
+    CREATE POLICY "Tutors SELECT policy" ON public.tutors FOR SELECT TO authenticated USING (true);
+    CREATE POLICY "Tutors INSERT policy" ON public.tutors FOR INSERT TO authenticated WITH CHECK (user_id = auth.uid());
+    CREATE POLICY "Tutors UPDATE policy" ON public.tutors FOR UPDATE TO authenticated USING (user_id = auth.uid()) WITH CHECK (user_id = auth.uid());
+    CREATE POLICY "Tutors DELETE policy" ON public.tutors FOR DELETE TO authenticated USING (user_id = auth.uid());
   END IF;
 END $$;
 
@@ -87,10 +91,13 @@ DO $$ BEGIN
     DROP POLICY IF EXISTS "Batches UPDATE policy" ON public.batches;
     DROP POLICY IF EXISTS "Batches DELETE policy" ON public.batches;
 
-    CREATE POLICY "Batches SELECT policy" ON public.batches FOR SELECT USING (true);
-    CREATE POLICY "Batches INSERT policy" ON public.batches FOR INSERT TO authenticated WITH CHECK (auth.role() = 'authenticated');
-    CREATE POLICY "Batches UPDATE policy" ON public.batches FOR UPDATE TO authenticated USING (auth.role() = 'authenticated') WITH CHECK (auth.role() = 'authenticated');
-    CREATE POLICY "Batches DELETE policy" ON public.batches FOR DELETE TO authenticated USING (auth.role() = 'authenticated');
+    CREATE POLICY "Batches SELECT policy" ON public.batches FOR SELECT TO authenticated USING (
+      tutor_id IN (SELECT id FROM public.tutors WHERE user_id = auth.uid()) OR
+      id::text = ANY(SELECT unnest(enrolled_batch_ids) FROM public.students WHERE auth_uid = auth.uid())
+    );
+    CREATE POLICY "Batches INSERT policy" ON public.batches FOR INSERT TO authenticated WITH CHECK (tutor_id IN (SELECT id FROM public.tutors WHERE user_id = auth.uid()));
+    CREATE POLICY "Batches UPDATE policy" ON public.batches FOR UPDATE TO authenticated USING (tutor_id IN (SELECT id FROM public.tutors WHERE user_id = auth.uid())) WITH CHECK (tutor_id IN (SELECT id FROM public.tutors WHERE user_id = auth.uid()));
+    CREATE POLICY "Batches DELETE policy" ON public.batches FOR DELETE TO authenticated USING (tutor_id IN (SELECT id FROM public.tutors WHERE user_id = auth.uid()));
   END IF;
 END $$;
 
@@ -106,10 +113,13 @@ DO $$ BEGIN
     DROP POLICY IF EXISTS "Students UPDATE policy" ON public.students;
     DROP POLICY IF EXISTS "Students DELETE policy" ON public.students;
 
-    CREATE POLICY "Students SELECT policy" ON public.students FOR SELECT USING (true);
-    CREATE POLICY "Students INSERT policy" ON public.students FOR INSERT TO authenticated WITH CHECK (auth.role() = 'authenticated');
-    CREATE POLICY "Students UPDATE policy" ON public.students FOR UPDATE TO authenticated USING (auth.role() = 'authenticated') WITH CHECK (auth.role() = 'authenticated');
-    CREATE POLICY "Students DELETE policy" ON public.students FOR DELETE TO authenticated USING (auth.role() = 'authenticated');
+    CREATE POLICY "Students SELECT policy" ON public.students FOR SELECT TO authenticated USING (
+      auth_uid = auth.uid() OR
+      tutor_id IN (SELECT id FROM public.tutors WHERE user_id = auth.uid())
+    );
+    CREATE POLICY "Students INSERT policy" ON public.students FOR INSERT TO authenticated WITH CHECK (tutor_id IN (SELECT id FROM public.tutors WHERE user_id = auth.uid()) OR auth_uid = auth.uid());
+    CREATE POLICY "Students UPDATE policy" ON public.students FOR UPDATE TO authenticated USING (tutor_id IN (SELECT id FROM public.tutors WHERE user_id = auth.uid()) OR auth_uid = auth.uid()) WITH CHECK (tutor_id IN (SELECT id FROM public.tutors WHERE user_id = auth.uid()) OR auth_uid = auth.uid());
+    CREATE POLICY "Students DELETE policy" ON public.students FOR DELETE TO authenticated USING (tutor_id IN (SELECT id FROM public.tutors WHERE user_id = auth.uid()));
   END IF;
 END $$;
 
@@ -123,8 +133,11 @@ DO $$ BEGIN
     DROP POLICY IF EXISTS "Attendance SELECT policy" ON public.attendance;
     DROP POLICY IF EXISTS "Attendance WRITE policy" ON public.attendance;
 
-    CREATE POLICY "Attendance SELECT policy" ON public.attendance FOR SELECT USING (true);
-    CREATE POLICY "Attendance WRITE policy" ON public.attendance FOR ALL TO authenticated USING (auth.role() = 'authenticated') WITH CHECK (auth.role() = 'authenticated');
+    CREATE POLICY "Attendance SELECT policy" ON public.attendance FOR SELECT TO authenticated USING (
+      tutor_id IN (SELECT id FROM public.tutors WHERE user_id = auth.uid()) OR
+      batch_id::text = ANY(SELECT unnest(enrolled_batch_ids) FROM public.students WHERE auth_uid = auth.uid())
+    );
+    CREATE POLICY "Attendance WRITE policy" ON public.attendance FOR ALL TO authenticated USING (tutor_id IN (SELECT id FROM public.tutors WHERE user_id = auth.uid())) WITH CHECK (tutor_id IN (SELECT id FROM public.tutors WHERE user_id = auth.uid()));
   END IF;
 END $$;
 
@@ -138,8 +151,11 @@ DO $$ BEGIN
     DROP POLICY IF EXISTS "Fees SELECT policy" ON public.fees;
     DROP POLICY IF EXISTS "Fees WRITE policy" ON public.fees;
 
-    CREATE POLICY "Fees SELECT policy" ON public.fees FOR SELECT USING (true);
-    CREATE POLICY "Fees WRITE policy" ON public.fees FOR ALL TO authenticated USING (auth.role() = 'authenticated') WITH CHECK (auth.role() = 'authenticated');
+    CREATE POLICY "Fees SELECT policy" ON public.fees FOR SELECT TO authenticated USING (
+      tutor_id IN (SELECT id FROM public.tutors WHERE user_id = auth.uid()) OR
+      student_id IN (SELECT id FROM public.students WHERE auth_uid = auth.uid())
+    );
+    CREATE POLICY "Fees WRITE policy" ON public.fees FOR ALL TO authenticated USING (tutor_id IN (SELECT id FROM public.tutors WHERE user_id = auth.uid())) WITH CHECK (tutor_id IN (SELECT id FROM public.tutors WHERE user_id = auth.uid()));
   END IF;
 END $$;
 
@@ -153,8 +169,17 @@ DO $$ BEGIN
     DROP POLICY IF EXISTS "Doubts SELECT policy" ON public.doubts;
     DROP POLICY IF EXISTS "Doubts WRITE policy" ON public.doubts;
 
-    CREATE POLICY "Doubts SELECT policy" ON public.doubts FOR SELECT USING (true);
-    CREATE POLICY "Doubts WRITE policy" ON public.doubts FOR ALL TO authenticated USING (auth.role() = 'authenticated') WITH CHECK (auth.role() = 'authenticated');
+    CREATE POLICY "Doubts SELECT policy" ON public.doubts FOR SELECT TO authenticated USING (
+      student_auth_uid = auth.uid() OR
+      tutor_id IN (SELECT id FROM public.tutors WHERE user_id = auth.uid())
+    );
+    CREATE POLICY "Doubts WRITE policy" ON public.doubts FOR ALL TO authenticated USING (
+      student_auth_uid = auth.uid() OR
+      tutor_id IN (SELECT id FROM public.tutors WHERE user_id = auth.uid())
+    ) WITH CHECK (
+      student_auth_uid = auth.uid() OR
+      tutor_id IN (SELECT id FROM public.tutors WHERE user_id = auth.uid())
+    );
   END IF;
 END $$;
 

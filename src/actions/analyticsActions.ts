@@ -51,8 +51,7 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics> {
   const tutorId = authState.tutorId || authState.uid;
   const adminSupabase = createAdminClient();
 
-  // Try the RPC function first (single round-trip instead of 6+ queries).
-  // Falls back to parallel queries if the SQL migration hasn't been run yet.
+  // 1. Try Fast RPC First
   try {
     const { data: rpcData, error: rpcError } = await adminSupabase
       .rpc("get_tutor_dashboard_metrics", { p_tutor_id: tutorId });
@@ -68,98 +67,136 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics> {
         ungradedSubmissions:  Number(rpcData.ungradedSubmissions)  || 0,
       };
     }
-  } catch {
-    // RPC not available yet — fall through to manual queries below
+
+    if (rpcError) {
+      console.warn("Dashboard Metrics RPC unavailable, falling back to direct queries:", rpcError.message || JSON.stringify(rpcError));
+    }
+  } catch (err: any) {
+    console.warn("Dashboard Metrics RPC exception, falling back to direct queries:", err?.message || err);
   }
 
-  // ── Fallback: original parallel queries ─────────────────────────────────────
-  const [
-    studentsRes,
-    batchesRes,
-    feesRes,
-    attendanceRes,
-    doubtsRes,
-    assignmentsRes,
-  ] = await Promise.all([
-    adminSupabase
-      .from("students")
-      .select("id", { count: "exact", head: true })
-      .eq("tutor_id", tutorId)
-      .eq("status", "active"),
-    adminSupabase
-      .from("batches")
-      .select("id", { count: "exact", head: true })
-      .eq("tutor_id", tutorId)
-      .eq("is_archived", false),
-    adminSupabase
-      .from("fees")
-      .select("amount_paid, amount_due, status, month, year")
-      .eq("tutor_id", tutorId),
-    adminSupabase
-      .from("attendance")
-      .select("status")
-      .eq("tutor_id", tutorId),
-    adminSupabase
-      .from("doubts")
-      .select("id", { count: "exact", head: true })
-      .eq("tutor_id", tutorId)
-      .eq("status", "pending"),
-    adminSupabase
-      .from("assignments")
-      .select("id")
-      .eq("tutor_id", tutorId),
-  ]);
+  // 2. Resilient Direct Parallel DB Query Fallback
+  try {
+    const now = new Date();
+    const currentMonthNum = now.getMonth() + 1;
+    const currentMonthLong = now.toLocaleString("default", { month: "long" });
+    const currentMonthShort = now.toLocaleString("default", { month: "short" });
+    const currentYear = now.getFullYear();
 
-  const activeStudents = studentsRes.count || 0;
-  const activeBatches = batchesRes.count || 0;
-  const pendingDoubts = doubtsRes.count || 0;
+    const [
+      studentsRes,
+      batchesRes,
+      doubtsRes,
+      feesRes,
+      attendanceRes,
+      assignmentsRes,
+    ] = await Promise.all([
+      adminSupabase
+        .from("students")
+        .select("id", { count: "exact", head: true })
+        .eq("tutor_id", tutorId)
+        .eq("status", "active"),
+      adminSupabase
+        .from("batches")
+        .select("id", { count: "exact", head: true })
+        .eq("tutor_id", tutorId)
+        .eq("is_archived", false),
+      adminSupabase
+        .from("doubts")
+        .select("id", { count: "exact", head: true })
+        .eq("tutor_id", tutorId)
+        .eq("status", "pending"),
+      adminSupabase
+        .from("fees")
+        .select("amount_paid, amount_due, status, month, year")
+        .eq("tutor_id", tutorId),
+      adminSupabase
+        .from("attendance")
+        .select("records")
+        .eq("tutor_id", tutorId),
+      adminSupabase
+        .from("assignments")
+        .select("id")
+        .eq("tutor_id", tutorId),
+    ]);
 
-  const now = new Date();
-  const currentMonth = now.getMonth() + 1;
-  const currentYear = now.getFullYear();
+    const activeStudents = studentsRes.count || 0;
+    const activeBatches = batchesRes.count || 0;
+    const pendingDoubts = doubtsRes.count || 0;
 
-  let monthlyRevenue = 0;
-  let pendingFeeAmount = 0;
+    let monthlyRevenue = 0;
+    let pendingFeeAmount = 0;
 
-  if (feesRes.data) {
-    feesRes.data.forEach((fee) => {
-      const paid = Number(fee.amount_paid) || 0;
-      const due = Number(fee.amount_due) || 0;
-      if (fee.month === currentMonth && fee.year === currentYear) {
-        monthlyRevenue += paid;
+    feesRes.data?.forEach((f) => {
+      const isCurrentMonth =
+        Number(f.month) === currentMonthNum ||
+        f.month === currentMonthLong ||
+        f.month === currentMonthShort;
+
+      if (isCurrentMonth && Number(f.year) === currentYear) {
+        monthlyRevenue += Number(f.amount_paid) || 0;
       }
-      if (fee.status !== "paid") {
+      if (f.status !== "paid") {
+        const due = Number(f.amount_due) || 0;
+        const paid = Number(f.amount_paid) || 0;
         pendingFeeAmount += Math.max(0, due - paid);
       }
     });
-  }
 
-  let attendancePercentage = 100;
-  if (attendanceRes.data && attendanceRes.data.length > 0) {
-    const presentCount = attendanceRes.data.filter((a) => a.status === "present").length;
-    attendancePercentage = Math.round((presentCount / attendanceRes.data.length) * 100);
-  }
+    let totalAttendanceRecords = 0;
+    let presentAttendanceRecords = 0;
 
-  let ungradedSubmissions = 0;
-  if (assignmentsRes.data && assignmentsRes.data.length > 0) {
-    const assignmentIds = assignmentsRes.data.map((a) => a.id);
-    const { count } = await adminSupabase
-      .from("assignment_submissions")
-      .select("id", { count: "exact", head: true })
-      .in("assignment_id", assignmentIds)
-      .eq("status", "submitted");
-    ungradedSubmissions = count || 0;
-  }
+    attendanceRes.data?.forEach((att) => {
+      const recs = att.records as Record<string, { status?: string }> | null;
+      if (recs && typeof recs === "object") {
+        Object.values(recs).forEach((r) => {
+          if (r && typeof r === "object") {
+            totalAttendanceRecords++;
+            if (r.status === "present" || r.status === "late") {
+              presentAttendanceRecords++;
+            }
+          }
+        });
+      }
+    });
 
-  return {
-    activeStudents,
-    activeBatches,
-    monthlyRevenue,
-    pendingFeeAmount,
-    attendancePercentage,
-    pendingDoubts,
-    ungradedSubmissions,
-  };
+    const attendancePercentage =
+      totalAttendanceRecords > 0
+        ? Math.round((presentAttendanceRecords / totalAttendanceRecords) * 100)
+        : 100;
+
+    let ungradedSubmissions = 0;
+    const assignmentIds = assignmentsRes.data?.map((a) => a.id) || [];
+    if (assignmentIds.length > 0) {
+      const { count: subsCount } = await adminSupabase
+        .from("assignment_submissions")
+        .select("id", { count: "exact", head: true })
+        .in("assignment_id", assignmentIds)
+        .eq("status", "submitted");
+      ungradedSubmissions = subsCount || 0;
+    }
+
+    return {
+      activeStudents,
+      activeBatches,
+      monthlyRevenue,
+      pendingFeeAmount,
+      attendancePercentage,
+      pendingDoubts,
+      ungradedSubmissions,
+    };
+  } catch (err: any) {
+    console.error("Dashboard Metrics fallback queries failed:", err?.message || err);
+    return {
+      activeStudents: 0,
+      activeBatches: 0,
+      monthlyRevenue: 0,
+      pendingFeeAmount: 0,
+      attendancePercentage: 100,
+      pendingDoubts: 0,
+      ungradedSubmissions: 0,
+    };
+  }
 }
 
 
@@ -183,10 +220,15 @@ export async function getMonthlyIncomeChart(months = 6): Promise<MonthlyIncomeDa
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
     const monthName = d.toLocaleString("default", { month: "short" });
     const fullMonthName = d.toLocaleString("default", { month: "long" });
+    const monthNum = d.getMonth() + 1;
     const year = d.getFullYear();
 
     const monthFees = fees?.filter(
-      (f) => (f.month === fullMonthName || f.month === monthName) && f.year === year
+      (f) =>
+        (Number(f.month) === monthNum ||
+          f.month === fullMonthName ||
+          f.month === monthName) &&
+        Number(f.year) === year
     ) || [];
 
     const totalPaid = monthFees.reduce((sum, f) => sum + (Number(f.amount_paid) || 0), 0);
@@ -200,7 +242,7 @@ export async function getMonthlyIncomeChart(months = 6): Promise<MonthlyIncomeDa
   return result;
 }
 
-export async function getFeeDistribution(month?: string, year?: number): Promise<FeeDistributionData[]> {
+export async function getFeeDistribution(month?: string | number, year?: number): Promise<FeeDistributionData[]> {
   const authState = await verifyUserAuth();
   if (authState.role !== "tutor") return [];
 
@@ -208,8 +250,8 @@ export async function getFeeDistribution(month?: string, year?: number): Promise
   const adminSupabase = createAdminClient();
 
   let query = adminSupabase.from("fees").select("status, amount_paid, amount_due").eq("tutor_id", tutorId);
-  if (month) query = query.eq("month", month);
-  if (year) query = query.eq("year", year);
+  if (month !== undefined) query = query.eq("month", month);
+  if (year !== undefined) query = query.eq("year", year);
 
   const { data: fees } = await query;
 
@@ -250,7 +292,7 @@ export async function getAttendanceTrend(batchId?: string): Promise<AttendanceTr
 
   let query = adminSupabase
     .from("attendance")
-    .select("date, status")
+    .select("date, records")
     .eq("tutor_id", tutorId)
     .gte("date", dateFilter);
   if (batchId) query = query.eq("batch_id", batchId);
@@ -286,8 +328,17 @@ export async function getAttendanceTrend(batchId?: string): Promise<AttendanceTr
     else if (diffDays <= 28) weekIndex = 0;
 
     if (weekIndex !== -1) {
-      weeks[weekIndex].total += 1;
-      if (r.status === "present") weeks[weekIndex].present += 1;
+      const recs = r.records as Record<string, { status?: string }> | null;
+      if (recs && typeof recs === "object") {
+        Object.values(recs).forEach((st) => {
+          if (st && typeof st === "object") {
+            weeks[weekIndex].total += 1;
+            if (st.status === "present" || st.status === "late") {
+              weeks[weekIndex].present += 1;
+            }
+          }
+        });
+      }
     }
   });
 

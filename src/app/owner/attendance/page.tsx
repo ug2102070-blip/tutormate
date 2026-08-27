@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { CalendarCheck, TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { getOwnerAttendanceSummary, type OwnerAttendanceRow } from "@/actions/ownerActions";
+import { useLanguage } from "@/context/LanguageContext";
 
 function RateBar({ rate }: { rate: number }) {
   const color = rate >= 80 ? "rgb(16,185,129)" : rate >= 60 ? "rgb(245,158,11)" : "rgb(239,68,68)";
@@ -22,6 +23,8 @@ function RateBar({ rate }: { rate: number }) {
 }
 
 export default function OwnerAttendancePage() {
+  const { t, language } = useLanguage();
+  const isBn = language === "bn";
   const [rows, setRows] = useState<OwnerAttendanceRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [days, setDays] = useState(7);
@@ -52,10 +55,10 @@ export default function OwnerAttendancePage() {
       <div className="flex flex-col sm:flex-row sm:items-center gap-3 justify-between">
         <div>
           <h1 className="text-xl font-extrabold tracking-tight" style={{ color: "var(--color-text)" }}>
-            Attendance Overview
+            {t("owner.attendanceOverview") || "Attendance Overview"}
           </h1>
           <p className="text-xs mt-0.5" style={{ color: "var(--color-text-muted)" }}>
-            Center-wide attendance across all batches
+            {t("owner.attendanceOverviewDesc") || "Center-wide attendance across all batches"}
           </p>
         </div>
         <div className="flex items-center gap-1.5 text-xs font-semibold">
@@ -70,7 +73,7 @@ export default function OwnerAttendancePage() {
                 border: "1px solid var(--color-border)",
               }}
             >
-              {d}d
+              {d}{t("common.daysSuffix") || "d"}
             </button>
           ))}
         </div>
@@ -79,10 +82,10 @@ export default function OwnerAttendancePage() {
       {/* Summary */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { label: "Avg. Rate", value: `${avgRate}%`, icon: TrendingUp, color: avgRate >= 80 ? "rgb(16,185,129)" : "rgb(245,158,11)" },
-          { label: "Present", value: totalPresent, icon: CalendarCheck, color: "rgb(16,185,129)" },
-          { label: "Absent", value: totalAbsent, icon: TrendingDown, color: "rgb(239,68,68)" },
-          { label: "Late", value: totalLate, icon: Minus, color: "rgb(245,158,11)" },
+          { label: t("owner.avgRate") || "Avg. Rate", value: `${avgRate}%`, icon: TrendingUp, color: avgRate >= 80 ? "rgb(16,185,129)" : "rgb(245,158,11)" },
+          { label: t("attendance.present") || "Present", value: totalPresent, icon: CalendarCheck, color: "rgb(16,185,129)" },
+          { label: t("attendance.absent") || "Absent", value: totalAbsent, icon: TrendingDown, color: "rgb(239,68,68)" },
+          { label: t("attendance.late") || "Late", value: totalLate, icon: Minus, color: "rgb(245,158,11)" },
         ].map(({ label, value, icon: Icon, color }) => (
           <div
             key={label}
@@ -110,7 +113,7 @@ export default function OwnerAttendancePage() {
         ) : rows.length === 0 ? (
           <div className="text-center py-10" style={{ color: "var(--color-text-muted)" }}>
             <CalendarCheck className="w-7 h-7 mx-auto mb-2" />
-            <p className="text-xs">No attendance records in this period.</p>
+            <p className="text-xs">{t("owner.noAttendanceRecords") || "No attendance records in this period."}</p>
           </div>
         ) : (
           <>
@@ -118,12 +121,12 @@ export default function OwnerAttendancePage() {
               className="grid grid-cols-12 gap-2 px-5 py-2.5 text-[11px] font-bold uppercase tracking-wide"
               style={{ color: "var(--color-text-muted)", borderBottom: "1px solid var(--color-border)" }}
             >
-              <span className="col-span-3">Date</span>
-              <span className="col-span-3">Batch</span>
-              <span className="col-span-2 hidden sm:block">Tutor</span>
+              <span className="col-span-3">{t("common.date") || "Date"}</span>
+              <span className="col-span-3">{t("common.batch") || "Batch"}</span>
+              <span className="col-span-2 hidden sm:block">{t("common.tutor") || "Tutor"}</span>
               <span className="col-span-1 text-center">P</span>
               <span className="col-span-1 text-center">A</span>
-              <span className="col-span-2">Rate</span>
+              <span className="col-span-2">{t("owner.rate") || "Rate"}</span>
             </div>
             {rows.map((r, i) => (
               <div
@@ -132,7 +135,7 @@ export default function OwnerAttendancePage() {
                 style={{ borderColor: "var(--color-border)" }}
               >
                 <span className="col-span-3 text-[11px] font-mono font-semibold" style={{ color: "var(--color-text-muted)" }}>
-                  {r.date}
+                  {isBn ? new Date(r.date).toLocaleDateString("bn-BD", { month: "short", day: "numeric" }) : r.date}
                 </span>
                 <span className="col-span-3 text-xs font-semibold truncate" style={{ color: "var(--color-text)" }}>
                   {r.batchName}

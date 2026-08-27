@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import useSWR from "swr";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/context/LanguageContext";
@@ -20,11 +21,16 @@ import {
 } from "lucide-react";
 import { verifyPaymentTransaction } from "@/actions/paymentActions";
 
+const supabase = createClient();
+
+const months = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+
 export default function StudentFeesPage() {
   const { user, claims } = useAuth();
   const { t } = useLanguage();
-  const [fees, setFees] = useState<FeeDoc[]>([]);
-  const [loading, setLoading] = useState(true);
   const [selectedFee, setSelectedFee] = useState<FeeDoc | null>(null);
   const [gateway, setGateway] = useState<"bkash" | "nagad">("bkash");
   const [trxID, setTrxID] = useState("");
@@ -33,70 +39,51 @@ export default function StudentFeesPage() {
   const [actionLoading, setActionLoading] = useState(false);
   const [toastMessage, setToastMessage] = useState<{ text: string; type: "success" | "error" } | null>(null);
 
-  const supabase = createClient();
+  const studentDocId = claims?.role === "student" ? claims.studentDocId : "";
 
-  const months = [
-    "January", "February", "March", "April", "May", "June",
-    "July", "August", "September", "October", "November", "December",
-  ];
-
-  const loadFees = async () => {
-    if (!user) {
-      setLoading(false);
-      return;
-    }
-
-    try {
-      let studentDocId = claims?.role === "student" ? claims.studentDocId : "";
-
-      if (!studentDocId) {
+  const {
+    data: fees = [],
+    isLoading: loading,
+    mutate: mutateFees,
+  } = useSWR<FeeDoc[]>(
+    user ? `student-fees-${user.id}-${studentDocId}` : null,
+    async () => {
+      let resolvedStudentDocId = studentDocId;
+      if (!resolvedStudentDocId) {
         const { data: student } = await supabase
           .from("students")
           .select("id")
-          .eq("auth_uid", user.id)
+          .eq("auth_uid", user!.id)
           .maybeSingle();
-
-        if (student) {
-          studentDocId = student.id;
-        }
+        if (student) resolvedStudentDocId = student.id;
       }
 
-      if (studentDocId) {
-        const { data: feesData } = await supabase
-          .from("fees")
-          .select("*")
-          .eq("student_id", studentDocId);
+      if (!resolvedStudentDocId) return [];
 
-        if (feesData) {
-          const list: FeeDoc[] = feesData.map((f) => ({
-            id: f.id,
-            tutorId: f.tutor_id,
-            studentId: f.student_id,
-            batchId: f.batch_id,
-            year: f.year,
-            month: f.month,
-            amountDue: Number(f.amount_due),
-            amountPaid: Number(f.amount_paid),
-            status: f.status,
-            paymentMethod: f.payment_method,
-            paidAt: f.paid_at,
-            updatedAt: f.updated_at,
-          }));
+      const { data: feesData } = await supabase
+        .from("fees")
+        .select("*")
+        .eq("student_id", resolvedStudentDocId);
 
-          list.sort((a, b) => b.year - a.year || b.month - a.month);
-          setFees(list);
-        }
-      }
-    } catch (err) {
-      console.error("Error loading fees:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
+      const list: FeeDoc[] = (feesData || []).map((f) => ({
+        id: f.id,
+        tutorId: f.tutor_id,
+        studentId: f.student_id,
+        batchId: f.batch_id,
+        year: f.year,
+        month: f.month,
+        amountDue: Number(f.amount_due),
+        amountPaid: Number(f.amount_paid),
+        status: f.status,
+        paymentMethod: f.payment_method,
+        paidAt: f.paid_at,
+        updatedAt: f.updated_at,
+      }));
 
-  useEffect(() => {
-    loadFees();
-  }, [user, claims]);
+      return list.sort((a, b) => b.year - a.year || b.month - a.month);
+    },
+    { dedupingInterval: 30_000 }
+  );
 
   const showToast = (text: string, type: "success" | "error" = "success") => {
     setToastMessage({ text, type });
@@ -106,7 +93,8 @@ export default function StudentFeesPage() {
   const handleOpenPaymentModal = (fee: FeeDoc, method: "bkash" | "nagad") => {
     setSelectedFee(fee);
     setGateway(method);
-    setTrxID(`TRX-${method.toUpperCase()}-${Math.floor(100000 + Math.random() * 900000)}`);
+    const suffix = fee.id.slice(0, 6).toUpperCase();
+    setTrxID(`TRX-${method.toUpperCase()}-${suffix}`);
     setIsModalOpen(true);
   };
 
@@ -119,7 +107,7 @@ export default function StudentFeesPage() {
     if (res.success) {
       showToast(`Payment successfully completed via ${gateway.toUpperCase()}! 🎉`);
       setIsModalOpen(false);
-      await loadFees();
+      mutateFees();
     } else {
       showToast(res.error || "Payment verification failed", "error");
     }
@@ -133,7 +121,7 @@ export default function StudentFeesPage() {
   const paidCount = fees.filter((f) => f.status === "paid").length;
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto pb-12">
+    <div className="space-y-4 max-w-4xl mx-auto pb-8">
       {/* Toast Notification */}
       {toastMessage && (
         <div
@@ -161,14 +149,14 @@ export default function StudentFeesPage() {
             className="text-xs mt-0.5"
             style={{ color: "var(--color-text-muted)" }}
           >
-            Monthly fee statements & instant bKash / Nagad payment portal
+            {t("fees.studentSubtitle") || "Monthly fee statements & instant bKash / Nagad payment portal"}
           </p>
         </div>
 
         <button
-          onClick={loadFees}
+          onClick={() => mutateFees()}
           disabled={loading}
-          className="flex items-center gap-2 px-3 py-1.5 text-xs font-semibold rounded-xl border transition-all hover:bg-black/5 dark:hover:bg-white/5"
+          className="flex items-center gap-2 px-3 py-1.5 text-xs font-semibold rounded-lg border transition-all hover:bg-black/5 dark:hover:bg-white/5"
           style={{ borderColor: "var(--color-border)", color: "var(--color-text)" }}
         >
           <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
@@ -177,19 +165,19 @@ export default function StudentFeesPage() {
       </div>
 
       {/* Stats Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div
-          className="p-4 rounded-2xl flex items-center gap-4"
+          className="p-3.5 rounded-xl flex items-center gap-3"
           style={{
             background: "var(--color-surface)",
             border: "1px solid var(--color-border)",
           }}
         >
           <div
-            className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
+            className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
             style={{ background: "rgba(16,185,129,0.15)" }}
           >
-            <CreditCard className="w-5 h-5 text-emerald-500" />
+            <CreditCard className="w-4 h-4 text-emerald-500" />
           </div>
           <div>
             <div
@@ -208,20 +196,20 @@ export default function StudentFeesPage() {
         </div>
 
         <div
-          className="p-4 rounded-2xl flex items-center gap-4"
+          className="p-3.5 rounded-xl flex items-center gap-3"
           style={{
             background: "var(--color-surface)",
             border: "1px solid var(--color-border)",
           }}
         >
           <div
-            className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
+            className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
             style={{
               background: totalUnpaid > 0 ? "rgba(239,68,68,0.15)" : "var(--color-bg-tertiary)",
             }}
           >
             <AlertCircle
-              className="w-5 h-5"
+              className="w-4 h-4"
               style={{ color: totalUnpaid > 0 ? "var(--color-error)" : "var(--color-text-muted)" }}
             />
           </div>
@@ -242,24 +230,24 @@ export default function StudentFeesPage() {
         </div>
 
         <div
-          className="p-4 rounded-2xl flex items-center gap-4"
+          className="p-3.5 rounded-xl flex items-center gap-3"
           style={{
             background: "var(--color-surface)",
             border: "1px solid var(--color-border)",
           }}
         >
           <div
-            className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
+            className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
             style={{ background: "var(--color-primary-50)" }}
           >
-            <TrendingUp className="w-5 h-5" style={{ color: "var(--color-primary)" }} />
+            <TrendingUp className="w-4 h-4" style={{ color: "var(--color-primary)" }} />
           </div>
           <div>
             <div
               className="text-[11px] font-semibold uppercase tracking-wider"
               style={{ color: "var(--color-text-muted)" }}
             >
-              Months Settled
+              {t("fees.monthsSettled") || "Months Settled"}
             </div>
             <div
               className="text-xl font-extrabold tracking-tight"
@@ -274,31 +262,31 @@ export default function StudentFeesPage() {
       {/* Fee Statements List */}
       {loading ? (
         <div
-          className="h-64 rounded-2xl animate-shimmer"
+          className="h-64 rounded-xl animate-shimmer"
           style={{ border: "1px solid var(--color-border)" }}
         />
       ) : fees.length === 0 ? (
         <div
-          className="py-16 text-center border border-dashed rounded-2xl"
+          className="py-12 text-center border border-dashed rounded-xl"
           style={{
             borderColor: "var(--color-border)",
             background: "var(--color-surface)",
           }}
         >
           <CreditCard
-            className="w-10 h-10 mx-auto mb-3"
+            className="w-8 h-8 mx-auto mb-3"
             style={{ color: "var(--color-text-muted)" }}
           />
-          <h3 className="text-base font-semibold" style={{ color: "var(--color-text)" }}>
-            No fee statements yet
+          <h3 className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>
+            {t("fees.noStatements") || "No fee statements yet"}
           </h3>
-          <p className="text-xs mt-1 max-w-sm mx-auto" style={{ color: "var(--color-text-muted)" }}>
-            Monthly invoices from your tutor will appear here.
+          <p className="text-[11px] mt-1 max-w-sm mx-auto" style={{ color: "var(--color-text-muted)" }}>
+            {t("fees.noStatementsDesc") || "Monthly invoices from your tutor will appear here."}
           </p>
         </div>
       ) : (
         <div
-          className="rounded-2xl overflow-hidden"
+          className="rounded-xl overflow-hidden"
           style={{
             background: "var(--color-surface)",
             border: "1px solid var(--color-border)",
@@ -316,12 +304,12 @@ export default function StudentFeesPage() {
                 }}
               >
                 <tr>
-                  <th className="px-4 py-3 font-semibold">Billing Month</th>
-                  <th className="px-4 py-3 font-semibold">Amount Due</th>
-                  <th className="px-4 py-3 font-semibold">Amount Paid</th>
-                  <th className="px-4 py-3 font-semibold">Status</th>
-                  <th className="px-4 py-3 font-semibold">Payment Method</th>
-                  <th className="px-4 py-3 font-semibold text-right">Actions</th>
+                  <th className="px-3.5 py-2.5 font-semibold">{t("fees.billingMonth") || "Billing Month"}</th>
+                  <th className="px-3.5 py-2.5 font-semibold">{t("fees.amountDue") || "Amount Due"}</th>
+                  <th className="px-3.5 py-2.5 font-semibold">{t("fees.amountPaid") || "Amount Paid"}</th>
+                  <th className="px-3.5 py-2.5 font-semibold">{t("fees.status") || "Status"}</th>
+                  <th className="px-3.5 py-2.5 font-semibold">{t("fees.paymentMethod") || "Payment Method"}</th>
+                  <th className="px-3.5 py-2.5 font-semibold text-right">{t("common.actions") || "Actions"}</th>
                 </tr>
               </thead>
               <tbody className="divide-y" style={{ borderColor: "var(--color-border)" }}>
@@ -330,31 +318,31 @@ export default function StudentFeesPage() {
 
                   return (
                     <tr key={fee.id} className="hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
-                      <td className="px-4 py-3.5 font-bold" style={{ color: "var(--color-text)" }}>
+                      <td className="px-3.5 py-2.5 font-bold" style={{ color: "var(--color-text)" }}>
                         {months[fee.month - 1]} {fee.year}
                       </td>
 
-                      <td className="px-4 py-3.5 font-bold" style={{ color: "var(--color-text)" }}>
+                      <td className="px-3.5 py-2.5 font-bold" style={{ color: "var(--color-text)" }}>
                         {formatBDT(fee.amountDue)}
                       </td>
 
-                      <td className="px-4 py-3.5 font-bold" style={{ color: "var(--color-success)" }}>
+                      <td className="px-3.5 py-2.5 font-bold" style={{ color: "var(--color-success)" }}>
                         {formatBDT(fee.amountPaid)}
                       </td>
 
-                      <td className="px-4 py-3.5">
+                      <td className="px-3.5 py-2.5">
                         <span
-                          className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
+                          className={`px-2 py-0.5 rounded-md text-[10px] font-bold border ${
                             isPaid
                               ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30"
                               : "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/30"
                           }`}
                         >
-                          {isPaid ? "✓ Paid" : "✗ Unpaid"}
+                          {isPaid ? `✓ ${t("fees.paid") || "Paid"}` : `✗ ${t("fees.unpaid") || "Unpaid"}`}
                         </span>
                       </td>
 
-                      <td className="px-4 py-3.5 font-bold uppercase text-[11px]">
+                      <td className="px-3.5 py-2.5 font-bold uppercase text-[11px]">
                         {fee.paymentMethod ? (
                           <span
                             className={`px-2 py-0.5 rounded-md ${
@@ -372,27 +360,27 @@ export default function StudentFeesPage() {
                         )}
                       </td>
 
-                      <td className="px-4 py-3.5 text-right">
+                      <td className="px-3.5 py-2.5 text-right">
                         {isPaid ? (
                           <button
                             onClick={() => setReceiptFee(fee)}
-                            className="px-3 py-1.5 text-xs font-bold rounded-xl border flex items-center gap-1 ml-auto hover:bg-black/5 dark:hover:bg-white/5"
+                            className="px-2.5 py-1.5 text-xs font-bold rounded-lg border flex items-center gap-1 ml-auto hover:bg-black/5 dark:hover:bg-white/5"
                             style={{ borderColor: "var(--color-border)" }}
                           >
-                            <Printer className="w-3.5 h-3.5" /> Receipt
+                            <Printer className="w-3.5 h-3.5" /> {t("fees.receipt") || "Receipt"}
                           </button>
                         ) : (
                           <div className="flex items-center justify-end gap-2">
                             <button
                               onClick={() => handleOpenPaymentModal(fee, "bkash")}
-                              className="px-2.5 py-1 rounded-xl text-xs font-extrabold bg-pink-600 hover:bg-pink-700 text-white shadow-sm transition-all flex items-center gap-1"
+                              className="px-2.5 py-1 rounded-lg text-xs font-extrabold bg-pink-600 hover:bg-pink-700 text-white shadow-sm transition-all flex items-center gap-1"
                             >
                               bKash 🌸
                             </button>
 
                             <button
                               onClick={() => handleOpenPaymentModal(fee, "nagad")}
-                              className="px-2.5 py-1 rounded-xl text-xs font-extrabold bg-orange-600 hover:bg-orange-700 text-white shadow-sm transition-all flex items-center gap-1"
+                              className="px-2.5 py-1 rounded-lg text-xs font-extrabold bg-orange-600 hover:bg-orange-700 text-white shadow-sm transition-all flex items-center gap-1"
                             >
                               Nagad 🟠
                             </button>
@@ -413,7 +401,7 @@ export default function StudentFeesPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
           <form
             onSubmit={handleConfirmPayment}
-            className="w-full max-w-md rounded-2xl border p-6 space-y-5 shadow-2xl"
+            className="w-full max-w-sm rounded-xl border p-5 space-y-4 shadow-2xl"
             style={{
               background: "var(--color-card-bg)",
               borderColor: "var(--color-card-border)",
@@ -423,46 +411,46 @@ export default function StudentFeesPage() {
             <div className="flex items-center justify-between border-b pb-3" style={{ borderColor: "var(--color-border)" }}>
               <div className="flex items-center gap-2">
                 <span
-                  className={`p-2 rounded-xl text-white font-bold text-xs ${
+                  className={`p-1.5 rounded-lg text-white font-bold text-[10px] ${
                     gateway === "bkash" ? "bg-pink-600" : "bg-orange-600"
                   }`}
                 >
                   {gateway.toUpperCase()}
                 </span>
                 <div>
-                  <h3 className="text-base font-extrabold">Instant MFS Checkout</h3>
-                  <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
-                    {months[selectedFee.month - 1]} {selectedFee.year} Fee Statement
+                  <h3 className="text-sm font-extrabold">{t("fees.checkoutTitle") || "Instant MFS Checkout"}</h3>
+                  <p className="text-[11px]" style={{ color: "var(--color-text-muted)" }}>
+                    {months[selectedFee.month - 1]} {selectedFee.year} {t("fees.feeStatement") || "Fee Statement"}
                   </p>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => setIsModalOpen(false)}
-                className="p-1.5 rounded-xl text-gray-400 hover:text-gray-600 dark:hover:text-white"
+                className="p-1 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-white"
               >
                 ✕
               </button>
             </div>
 
             {/* Merchant Details Box */}
-            <div className="p-4 rounded-xl bg-black/5 dark:bg-white/5 border border-gray-200 dark:border-gray-800 space-y-2">
-              <div className="flex items-center justify-between text-xs font-semibold">
-                <span className="text-gray-500">Merchant Account:</span>
-                <span className="font-bold">TutorMate Coaching Portal</span>
+            <div className="p-3.5 rounded-lg bg-black/5 dark:bg-white/5 border border-gray-200 dark:border-gray-800 space-y-1.5">
+              <div className="flex items-center justify-between text-[11px] font-semibold">
+                <span className="text-gray-500">{t("fees.merchantAccount") || "Merchant Account:"}</span>
+                <span className="font-bold">{t("fees.tutorMateCoaching") || "TutorMate Coaching Portal"}</span>
               </div>
-              <div className="flex items-center justify-between text-xs font-semibold">
-                <span className="text-gray-500">Invoice Amount:</span>
-                <span className="text-base font-black text-emerald-600 dark:text-emerald-400">
+              <div className="flex items-center justify-between text-[11px] font-semibold">
+                <span className="text-gray-500">{t("fees.invoiceAmount") || "Invoice Amount:"}</span>
+                <span className="text-sm font-black text-emerald-600 dark:text-emerald-400">
                   {formatBDT(selectedFee.amountDue)}
                 </span>
               </div>
             </div>
 
             {/* TrxID Input */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold uppercase text-gray-400">
-                Transaction TrxID / PIN Reference
+            <div className="space-y-1">
+              <label className="text-[11px] font-bold uppercase text-gray-400">
+                {t("fees.trxIdLabel") || "Transaction TrxID / PIN Reference"}
               </label>
               <input
                 type="text"
@@ -470,11 +458,11 @@ export default function StudentFeesPage() {
                 value={trxID}
                 onChange={(e) => setTrxID(e.target.value)}
                 placeholder="e.g. TRX-BKASH-948102"
-                className="w-full px-3.5 py-2.5 text-sm font-mono font-bold rounded-xl border bg-transparent focus:outline-none focus:ring-2 focus:ring-primary"
+                className="w-full px-3 py-2 text-xs font-mono font-bold rounded-lg border bg-transparent focus:outline-none focus:ring-2 focus:ring-primary"
                 style={{ borderColor: "var(--color-border)", color: "var(--color-text)" }}
               />
-              <p className="text-[11px] text-gray-500 font-medium">
-                Simulation Mode: TrxID auto-generated. Click below to verify & generate receipt.
+              <p className="text-[10px] text-gray-500 font-medium leading-tight pt-0.5">
+                {t("fees.simulationDesc") || "Simulation Mode: TrxID auto-generated. Click below to verify & generate receipt."}
               </p>
             </div>
 
@@ -483,15 +471,15 @@ export default function StudentFeesPage() {
               <button
                 type="button"
                 onClick={() => setIsModalOpen(false)}
-                className="px-4 py-2 text-xs font-semibold rounded-xl border hover:bg-black/5 dark:hover:bg-white/5"
+                className="px-3.5 py-2 text-[11px] font-semibold rounded-lg border hover:bg-black/5 dark:hover:bg-white/5"
                 style={{ borderColor: "var(--color-border)" }}
               >
-                Cancel
+                {t("common.cancel") || "Cancel"}
               </button>
               <button
                 type="submit"
                 disabled={actionLoading}
-                className={`px-5 py-2.5 text-xs font-extrabold rounded-xl text-white shadow-md flex items-center gap-2 ${
+                className={`px-4 py-2 text-[11px] font-extrabold rounded-lg text-white shadow-md flex items-center gap-1.5 ${
                   gateway === "bkash" ? "bg-pink-600 hover:bg-pink-700" : "bg-orange-600 hover:bg-orange-700"
                 }`}
               >
@@ -499,7 +487,7 @@ export default function StudentFeesPage() {
                   <RefreshCw className="w-4 h-4 animate-spin" />
                 ) : (
                   <>
-                    Confirm & Verify Payment <CheckCircle2 className="w-4 h-4" />
+                    {t("fees.confirmPayment") || "Confirm & Verify Payment"} <CheckCircle2 className="w-3.5 h-3.5" />
                   </>
                 )}
               </button>
@@ -512,55 +500,55 @@ export default function StudentFeesPage() {
       {receiptFee && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
           <div
-            className="w-full max-w-md rounded-2xl border p-6 space-y-6 shadow-2xl bg-white text-slate-900"
+            className="w-full max-w-sm rounded-xl border p-5 space-y-4 shadow-2xl bg-white text-slate-900"
           >
             {/* Receipt Header */}
-            <div className="text-center border-b pb-4 space-y-1">
-              <div className="inline-flex p-2 rounded-xl bg-emerald-100 text-emerald-600 mb-1">
-                <ShieldCheck className="w-6 h-6" />
+            <div className="text-center border-b pb-3 space-y-1">
+              <div className="inline-flex p-1.5 rounded-lg bg-emerald-100 text-emerald-600 mb-1">
+                <ShieldCheck className="w-5 h-5" />
               </div>
-              <h3 className="text-lg font-extrabold tracking-tight">TutorMate Payment Receipt</h3>
-              <p className="text-xs text-slate-500 font-medium">Official Digital Fee Statement Confirmation</p>
+              <h3 className="text-base font-extrabold tracking-tight">{t("fees.receiptTitle") || "TutorMate Payment Receipt"}</h3>
+              <p className="text-[11px] text-slate-500 font-medium">{t("fees.receiptSubtitle") || "Official Digital Fee Statement Confirmation"}</p>
             </div>
 
             {/* Receipt Details */}
-            <div className="space-y-3 text-xs font-medium border-b pb-4">
+            <div className="space-y-2.5 text-[11px] font-medium border-b pb-3">
               <div className="flex justify-between">
-                <span className="text-slate-500">Statement Month:</span>
+                <span className="text-slate-500">{t("fees.statementMonth") || "Statement Month:"}</span>
                 <span className="font-bold text-slate-900">
                   {months[receiptFee.month - 1]} {receiptFee.year}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-500">Amount Paid:</span>
-                <span className="font-extrabold text-emerald-600 text-sm">
+                <span className="text-slate-500">{t("fees.amountPaid") || "Amount Paid:"}</span>
+                <span className="font-extrabold text-emerald-600 text-xs">
                   {formatBDT(receiptFee.amountPaid)}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-500">Payment Gateway:</span>
+                <span className="text-slate-500">{t("fees.paymentMethod") || "Payment Gateway:"}</span>
                 <span className="font-bold uppercase text-slate-800">{receiptFee.paymentMethod || "MFS"}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-500">Settled Timestamp:</span>
+                <span className="text-slate-500">{t("fees.settledTimestamp") || "Settled Timestamp:"}</span>
                 <span className="font-mono text-slate-700">
-                  {receiptFee.paidAt ? new Date(receiptFee.paidAt).toLocaleDateString() : "Instant"}
+                  {receiptFee.paidAt ? new Date(receiptFee.paidAt).toLocaleDateString() : t("fees.instant") || "Instant"}
                 </span>
               </div>
             </div>
 
-            <div className="flex justify-between items-center text-[10px] text-slate-400 font-semibold">
-              <span>Verified by Supabase Engine</span>
-              <span>Status: CONFIRMED</span>
+            <div className="flex justify-between items-center text-[9px] text-slate-400 font-semibold">
+              <span>{t("fees.verifiedBy") || "Verified by Supabase Engine"}</span>
+              <span>{t("fees.statusConfirmed") || "Status: CONFIRMED"}</span>
             </div>
 
             {/* Modal Actions */}
             <div className="flex items-center justify-end gap-3 pt-2">
               <button
                 onClick={() => setReceiptFee(null)}
-                className="w-full py-2.5 text-xs font-bold rounded-xl bg-slate-900 text-white hover:bg-slate-800 transition-all"
+                className="w-full py-2 text-xs font-bold rounded-lg bg-slate-900 text-white hover:bg-slate-800 transition-all"
               >
-                Close Receipt
+                {t("common.close") || "Close Receipt"}
               </button>
             </div>
           </div>

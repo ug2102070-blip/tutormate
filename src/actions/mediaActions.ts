@@ -18,6 +18,17 @@ export async function getMediaSignedUrl(storagePath: string): Promise<string | n
   }
 
   const supabase = createAdminClient();
+  
+  // Try signed URL first (supports both private and public buckets, 1 hour validity)
+  const { data: signedData, error } = await supabase.storage
+    .from("attachments")
+    .createSignedUrl(storagePath, 3600);
+
+  if (!error && signedData?.signedUrl) {
+    return signedData.signedUrl;
+  }
+
+  // Fallback to public URL
   const { data } = supabase.storage.from("attachments").getPublicUrl(storagePath);
 
   return data.publicUrl || null;

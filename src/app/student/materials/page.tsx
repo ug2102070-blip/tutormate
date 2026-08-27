@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/context/LanguageContext";
 import { createClient } from "@/lib/supabase/client";
@@ -20,12 +20,7 @@ export default function StudentMaterialsPage() {
 
   const supabase = createClient();
 
-  useEffect(() => {
-    if (!user) return;
-    loadData();
-  }, [user, selectedBatchId]);
-
-  async function loadData() {
+  const loadData = useCallback(async () => {
     setLoading(true);
     try {
       // 1. Get student's enrolled batches
@@ -66,7 +61,12 @@ export default function StudentMaterialsPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [user, selectedBatchId, supabase]);
+
+  useEffect(() => {
+    if (!user) return;
+    loadData();
+  }, [user, selectedBatchId, loadData]);
 
   const handleDownload = async (path: string) => {
     try {
@@ -79,17 +79,17 @@ export default function StudentMaterialsPage() {
 
   const getFileIcon = (type: string) => {
     switch (type) {
-      case "pdf": return <FileText className="w-10 h-10 text-red-500" />;
-      case "video": return <Video className="w-10 h-10 text-blue-500" />;
-      case "image": return <ImageIcon className="w-10 h-10 text-green-500" />;
-      case "docx": return <File className="w-10 h-10 text-blue-700" />;
-      case "ppt": return <FileArchive className="w-10 h-10 text-orange-500" />;
-      default: return <File className="w-10 h-10 text-slate-500 dark:text-slate-400" />;
+      case "pdf": return <FileText className="w-8 h-8 text-red-500" />;
+      case "video": return <Video className="w-8 h-8 text-blue-500" />;
+      case "image": return <ImageIcon className="w-8 h-8 text-green-500" />;
+      case "docx": return <File className="w-8 h-8 text-blue-700" />;
+      case "ppt": return <FileArchive className="w-8 h-8 text-orange-500" />;
+      default: return <File className="w-8 h-8 text-slate-500 dark:text-slate-400" />;
     }
   };
 
   const formatSize = (bytes: number | null) => {
-    if (!bytes) return "Unknown size";
+    if (!bytes) return t("materials.unknownSize") || "Unknown size";
     const mb = bytes / (1024 * 1024);
     if (mb < 1) return Math.round(bytes / 1024) + " KB";
     return mb.toFixed(1) + " MB";
@@ -98,7 +98,7 @@ export default function StudentMaterialsPage() {
   if (authLoading) return null;
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
+    <div className="max-w-5xl mx-auto space-y-4">
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
@@ -111,24 +111,24 @@ export default function StudentMaterialsPage() {
 
         <Link
           href="/student/recorded-classes"
-          className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm rounded-xl transition-all shadow-sm shrink-0"
+          className="flex items-center gap-2 px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs rounded-lg transition-all shadow-sm shrink-0"
         >
           <Video className="w-4 h-4" />
-          Recorded Classes 🎥 <ArrowRight className="w-4 h-4" />
+          {t("materials.recordedClasses") || "Recorded Classes 🎥"} <ArrowRight className="w-3.5 h-3.5" />
         </Link>
       </div>
 
-      <div className="bg-white dark:bg-[#131b2e] rounded-2xl border border-slate-200 dark:border-white/10 shadow-sm overflow-hidden flex flex-col min-h-[500px]">
+      <div className="bg-white dark:bg-[#131b2e] rounded-xl border border-slate-200 dark:border-white/10 shadow-sm overflow-hidden flex flex-col min-h-[500px]">
         {/* Filter Bar */}
-        <div className="p-4 border-b border-slate-100 dark:border-white/5 bg-slate-50/50 dark:bg-[#0b0f19]/50 flex flex-wrap gap-3 items-center justify-between">
+        <div className="p-3.5 border-b border-slate-100 dark:border-white/5 bg-slate-50/50 dark:bg-[#0b0f19]/50 flex flex-wrap gap-3 items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-slate-600 dark:text-slate-400">Filter by Subject:</span>
+            <span className="text-xs font-medium text-slate-600 dark:text-slate-400">{t("materials.filterBySubject") || "Filter by Subject:"}</span>
             <select 
               value={selectedBatchId}
               onChange={(e) => setSelectedBatchId(e.target.value)}
-              className="px-3 py-1.5 bg-white dark:bg-[#131b2e] border border-slate-200 dark:border-white/10 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-300 outline-none focus:ring-2 focus:ring-indigo-500/20"
+              className="px-2.5 py-1.5 bg-white dark:bg-[#131b2e] border border-slate-200 dark:border-white/10 rounded-md text-xs font-medium text-slate-700 dark:text-slate-300 outline-none focus:ring-2 focus:ring-indigo-500/20"
             >
-              <option value="all">All Subjects</option>
+              <option value="all">{t("materials.allSubjects") || "All Subjects"}</option>
               {batches.map(b => (
                 <option key={b.id} value={b.id}>{b.subject} ({b.name})</option>
               ))}
@@ -141,58 +141,58 @@ export default function StudentMaterialsPage() {
           {loading ? (
             <div className="flex flex-col items-center justify-center h-48 text-slate-400">
               <Loader2 className="w-8 h-8 animate-spin mb-2 text-indigo-500" />
-              <p className="text-sm">Loading your materials...</p>
+              <p className="text-xs">{t("materials.loading") || "Loading your materials..."}</p>
             </div>
           ) : materials.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-64 text-center px-4">
-              <div className="w-16 h-16 bg-slate-50 dark:bg-[#0b0f19] rounded-full flex items-center justify-center mb-3">
-                <BookOpen className="w-8 h-8 text-slate-300" />
+              <div className="w-14 h-14 bg-slate-50 dark:bg-[#0b0f19] rounded-full flex items-center justify-center mb-3">
+                <BookOpen className="w-7 h-7 text-slate-300" />
               </div>
-              <h3 className="text-slate-800 dark:text-slate-200 font-bold mb-1">No Materials Found</h3>
-              <p className="text-slate-500 dark:text-slate-400 text-sm max-w-sm">
+              <h3 className="text-slate-800 dark:text-slate-200 font-bold mb-1 text-sm">{t("materials.noMaterials") || "No Materials Found"}</h3>
+              <p className="text-slate-500 dark:text-slate-400 text-xs max-w-sm">
                 {selectedBatchId === "all" 
-                  ? "Your tutor hasn't shared any study materials yet." 
-                  : "No materials available for this specific subject."}
+                  ? t("materials.noMaterialsDescAll") || "Your tutor hasn't shared any study materials yet." 
+                  : t("materials.noMaterialsDescSubject") || "No materials available for this specific subject."}
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 p-3.5">
               {materials.map((mat) => {
                 const batch = batches.find(b => b.id === mat.batchId);
                 
                 return (
-                  <div key={mat.id} className="border border-slate-200 dark:border-white/10 rounded-2xl p-5 hover:border-indigo-300 hover:shadow-md transition-all bg-white dark:bg-[#131b2e] group flex flex-col h-full">
-                    <div className="flex items-start gap-4 mb-4">
-                      <div className="shrink-0 p-3 bg-slate-50 dark:bg-[#0b0f19] rounded-xl group-hover:bg-indigo-50 transition-colors">
+                  <div key={mat.id} className="border border-slate-200 dark:border-white/10 rounded-xl p-4 hover:border-indigo-300 hover:shadow-sm transition-all bg-white dark:bg-[#131b2e] group flex flex-col h-full">
+                    <div className="flex items-start gap-3 mb-3">
+                      <div className="shrink-0 p-2 bg-slate-50 dark:bg-[#0b0f19] rounded-lg group-hover:bg-indigo-50 transition-colors">
                         {getFileIcon(mat.fileType)}
                       </div>
-                      <div className="flex-1 min-w-0 pt-1">
-                        <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wide uppercase mb-1 ${mat.batchId ? 'bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700' : 'bg-emerald-100 text-emerald-700 dark:text-emerald-400'}`}>
-                          {mat.batchId && batch ? batch.subject : "General"}
+                      <div className="flex-1 min-w-0 pt-0.5">
+                        <span className={`inline-block px-2 py-0.5 rounded-md text-[9px] font-bold tracking-wide uppercase mb-1 ${mat.batchId ? 'bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700' : 'bg-emerald-100 text-emerald-700 dark:text-emerald-400'}`}>
+                          {mat.batchId && batch ? batch.subject : t("materials.general") || "General"}
                         </span>
-                        <h4 className="font-bold text-slate-900 dark:text-slate-100 text-base leading-snug line-clamp-2">
+                        <h4 className="font-bold text-slate-900 dark:text-slate-100 text-sm leading-snug line-clamp-2">
                           {mat.title}
                         </h4>
                       </div>
                     </div>
                     
                     {mat.description && (
-                      <p className="text-sm text-slate-600 dark:text-slate-400 line-clamp-3 mb-4 flex-1">
+                      <p className="text-xs text-slate-600 dark:text-slate-400 line-clamp-3 mb-3 flex-1">
                         {mat.description}
                       </p>
                     )}
                     {!mat.description && <div className="flex-1"></div>}
                     
-                    <div className="mt-auto pt-4 border-t border-slate-100 dark:border-white/5 flex items-center justify-between">
-                      <div className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                    <div className="mt-auto pt-3 border-t border-slate-100 dark:border-white/5 flex items-center justify-between">
+                      <div className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
                         {formatSize(mat.fileSize)} • {new Date(mat.createdAt).toLocaleDateString()}
                       </div>
                       <button
                         onClick={() => handleDownload(mat.filePath)}
-                        className="flex items-center justify-center gap-1.5 py-1.5 px-3 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 hover:bg-indigo-600 hover:text-white rounded-lg text-sm font-semibold transition-colors"
+                        className="flex items-center justify-center gap-1.5 py-1.5 px-3 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 hover:bg-indigo-600 hover:text-white rounded-md text-xs font-semibold transition-colors"
                       >
-                        <Download className="w-4 h-4" />
-                        View
+                        <Download className="w-3.5 h-3.5" />
+                        {t("common.view") || "View"}
                       </button>
                     </div>
                   </div>

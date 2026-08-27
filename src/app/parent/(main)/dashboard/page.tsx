@@ -240,7 +240,7 @@ export default function ParentDashboardPage() {
               <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold"
                 style={{ background: "rgba(255,255,255,0.15)", color: "#fff" }}>
                 <CalendarCheck className="w-3 h-3" />
-                {presentClasses} / {totalClasses} {isBn ? "ক্লাস" : "classes"}
+                {presentClasses} / {totalClasses} {t("common.classes") || "classes"}
               </div>
               {fee && (
                 <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold"
@@ -339,7 +339,7 @@ export default function ParentDashboardPage() {
                   {t("dashboard.latestFee")}
                 </p>
                 <p className="text-[10px] mt-0.5" style={{ color: "var(--color-text-muted)" }}>
-                  {MONTH_NAMES[fee.month]} {fee.year} · ৳{fee.amountDue} {isBn ? "মোট" : "total"}
+                  {MONTH_NAMES[fee.month]} {fee.year} · ৳{fee.amountDue} {t("common.total") || "total"}
                 </p>
               </>
             ) : (
@@ -376,7 +376,7 @@ export default function ParentDashboardPage() {
               {t("dashboard.pendingAssignments")}
             </p>
             <p className="text-[10px] mt-0.5 font-bold" style={{ color: pendingCount > 0 ? "var(--color-warning, #d97706)" : "var(--color-success, #16a34a)" }}>
-              {pendingCount === 0 ? (isBn ? "সব জমা দেওয়া ✓" : "All submitted ✓") : (isBn ? "জমা বাকি আছে" : "Action Required")}
+              {pendingCount === 0 ? (t("dashboard.allSubmitted") || "All submitted ✓") : (t("dashboard.actionRequired") || "Action Required")}
             </p>
           </div>
         </Link>
@@ -458,7 +458,7 @@ export default function ParentDashboardPage() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-semibold truncate" style={{ color: "var(--color-text)" }}>
-                      {rec.batchName ?? (isBn ? "ক্লাস" : "Class")}
+                      {rec.batchName ?? (t("common.class") || "Class")}
                     </p>
                     <p className="text-[11px]" style={{ color: "var(--color-text-muted)" }}>
                       {new Date(rec.date).toLocaleDateString(isBn ? "bn-BD" : "en-US", { weekday: "short", month: "short", day: "numeric" })}
@@ -520,7 +520,7 @@ export default function ParentDashboardPage() {
                     </p>
                     {a.deadline && (
                       <p className="text-[11px]" style={{ color: "var(--color-text-muted)" }}>
-                        {isBn ? "শেষ তারিখ:" : "Due:"}{" "}
+                        {t("common.due") || "Due:"}{" "}
                         {new Date(a.deadline).toLocaleDateString(isBn ? "bn-BD" : "en-US", { month: "short", day: "numeric" })}
                       </p>
                     )}

@@ -200,7 +200,7 @@ export async function deleteMaterial(materialId: string) {
 export async function getTutorMaterials(batchId?: string) {
   const authState = await verifyUserAuth();
   if (!hasRoleAtLeast(authState.role, "tutor")) {
-    throw new Error("Unauthorized");
+    throw new Error("Unauthorized: Only tutors can view materials.");
   }
   const tutorId = authState.tutorId || authState.uid;
 

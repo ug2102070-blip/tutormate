@@ -11,6 +11,7 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 DECLARE
+  v_resolved_tutor_id  UUID;
   v_active_students    BIGINT := 0;
   v_active_batches     BIGINT := 0;
   v_pending_doubts     BIGINT := 0;
@@ -23,43 +24,54 @@ DECLARE
   v_current_month      INT;
   v_current_year       INT;
 BEGIN
+  -- Resolve actual tutor id in case user_id (auth UID) was passed
+  SELECT id INTO v_resolved_tutor_id
+  FROM tutors
+  WHERE id = p_tutor_id OR user_id = p_tutor_id
+  LIMIT 1;
+
+  IF v_resolved_tutor_id IS NULL THEN
+    v_resolved_tutor_id := p_tutor_id;
+  END IF;
+
   v_current_month := EXTRACT(MONTH FROM NOW())::INT;
   v_current_year  := EXTRACT(YEAR  FROM NOW())::INT;
 
   -- Active students
   SELECT COUNT(*) INTO v_active_students
   FROM students
-  WHERE tutor_id = p_tutor_id AND status = 'active';
+  WHERE tutor_id = v_resolved_tutor_id AND status = 'active';
 
   -- Active batches
   SELECT COUNT(*) INTO v_active_batches
   FROM batches
-  WHERE tutor_id = p_tutor_id AND is_archived = false;
+  WHERE tutor_id = v_resolved_tutor_id AND is_archived = false;
 
   -- Pending doubts
   SELECT COUNT(*) INTO v_pending_doubts
   FROM doubts
-  WHERE tutor_id = p_tutor_id AND status = 'pending';
+  WHERE tutor_id = v_resolved_tutor_id AND status = 'pending';
 
   -- Monthly revenue (current month collected)
   SELECT COALESCE(SUM(amount_paid), 0) INTO v_monthly_revenue
   FROM fees
-  WHERE tutor_id = p_tutor_id
+  WHERE tutor_id = v_resolved_tutor_id
     AND month = v_current_month
     AND year  = v_current_year;
 
   -- Pending fee amount (all unpaid)
   SELECT COALESCE(SUM(GREATEST(amount_due - amount_paid, 0)), 0) INTO v_pending_fee_amount
   FROM fees
-  WHERE tutor_id = p_tutor_id AND status != 'paid';
+  WHERE tutor_id = v_resolved_tutor_id AND status != 'paid';
 
-  -- Attendance percentage (all time, present vs total)
+  -- Attendance percentage (all time, present/late vs total in JSONB records)
   SELECT
     COUNT(*),
-    COUNT(*) FILTER (WHERE status = 'present')
+    COUNT(*) FILTER (WHERE (elem.value->>'status') IN ('present', 'late'))
   INTO v_total_att, v_present_att
-  FROM attendance
-  WHERE tutor_id = p_tutor_id;
+  FROM attendance a,
+  LATERAL jsonb_each(a.records) elem
+  WHERE a.tutor_id = v_resolved_tutor_id;
 
   IF v_total_att > 0 THEN
     v_attendance_pct := ROUND((v_present_att::NUMERIC / v_total_att) * 100)::INT;
@@ -69,7 +81,7 @@ BEGIN
   SELECT COUNT(*) INTO v_ungraded_subs
   FROM assignment_submissions asub
   INNER JOIN assignments a ON a.id = asub.assignment_id
-  WHERE a.tutor_id = p_tutor_id
+  WHERE a.tutor_id = v_resolved_tutor_id
     AND asub.status = 'submitted';
 
   RETURN json_build_object(

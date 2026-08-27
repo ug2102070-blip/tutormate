@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -17,6 +17,7 @@ function LoginContent() {
   const searchParams = useSearchParams();
   const { user, loading: authLoading, refreshClaims } = useAuth();
   const supabase = createClient();
+  const isRedirectingRef = useRef(false);
 
   // Auth Modes & Form States
   const [authMethod, setAuthMethod] = useState<"email" | "phone">("email");
@@ -36,30 +37,33 @@ function LoginContent() {
 
   // Onboarding modal for new users
   const [pendingUser, setPendingUser] = useState<User | null>(null);
+  const [isCheckingProfile, setIsCheckingProfile] = useState(false);
   const [onboardRole, setOnboardRole] = useState<"tutor" | "student" | "owner" | "parent">("tutor");
   const [onboardName, setOnboardName] = useState("");
   const [onboardInstitution, setOnboardInstitution] = useState("");
   const [onboardInviteCode, setOnboardInviteCode] = useState("");
 
   useEffect(() => {
-    if (!authLoading && user && !pendingUser) {
+    if (!authLoading && user && !pendingUser && !isCheckingProfile && !isRedirectingRef.current) {
       handlePostSignIn(user);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id, authLoading, pendingUser]);
+  }, [user?.id, authLoading, pendingUser, isCheckingProfile]);
 
   // Read URL error param (e.g. from OAuth callback failure)
   useEffect(() => {
     const urlError = searchParams.get("error");
     if (urlError === "auth_callback_error") {
-      setError("Authentication failed. Please try again.");
+      setError("Google authentication failed. Please check your Supabase dashboard settings or try again.");
     } else if (urlError) {
       setError(decodeURIComponent(urlError));
     }
   }, [searchParams]);
 
   async function handlePostSignIn(user: User) {
+    if (isRedirectingRef.current) return;
     try {
+      setIsCheckingProfile(true);
       const { data: profile, error: profileError } = await supabase
         .from("profiles")
         .select("id, role")
@@ -71,21 +75,28 @@ function LoginContent() {
       if (profileError && profileError.code !== "PGRST116") {
         setError("Unable to fetch your account. Please try again.");
         setLoading(false);
+        setIsCheckingProfile(false);
         return;
       }
 
-      // Existing user — redirect straight to their dashboard
+      // Existing user — redirect straight to their dashboard or requested redirect
       if (profile) {
+        isRedirectingRef.current = true;
         await refreshClaims().catch(() => {});
+        const redirectParam = searchParams.get("redirect");
+
+        let destination = "/tutor/dashboard";
         if (profile.role === "student") {
-          router.push("/student/dashboard");
+          destination = redirectParam && redirectParam.startsWith("/student") ? redirectParam : "/student/dashboard";
         } else if (profile.role === "parent") {
-          router.push("/parent/dashboard");
+          destination = redirectParam && redirectParam.startsWith("/parent") ? redirectParam : "/parent/dashboard";
         } else if (profile.role === "owner" || profile.role === "admin") {
-          router.push("/owner/dashboard");
+          destination = redirectParam && (redirectParam.startsWith("/owner") || redirectParam.startsWith("/tutor")) ? redirectParam : "/owner/dashboard";
         } else {
-          router.push("/tutor/dashboard");
+          destination = redirectParam && redirectParam.startsWith("/tutor") ? redirectParam : "/tutor/dashboard";
         }
+
+        router.replace(destination);
         return;
       }
 
@@ -115,8 +126,10 @@ function LoginContent() {
       localStorage.removeItem("tm_onboard_data");
     } catch {
       // Unexpected error — do not silently fall into onboarding
-      setError("Something went wrong. Please refresh and try again.");
+      setError("Something went wrong while verifying your account. Please refresh.");
       setLoading(false);
+    } finally {
+      setIsCheckingProfile(false);
     }
   }
 
@@ -230,16 +243,16 @@ function LoginContent() {
 
     try {
       if (onboardRole === "tutor" || onboardRole === "owner") {
-        const res = await onboardTutorUser(
-          {
+        const res = await onboardTutorUser({
+          data: {
             email: pendingUser.email || null,
             displayName: onboardName || "User",
             phoneNumber: pendingUser.phone || undefined,
             institution: onboardInstitution || "Independent",
-            role: onboardRole,
+            role: onboardRole as "tutor" | "owner",
           },
-          pendingUser.id
-        );
+          uidOrToken: pendingUser.id,
+        });
         if (res && !res.success && (res as any).error) {
           setError((res as any).error);
           setLoading(false);
@@ -263,7 +276,7 @@ function LoginContent() {
           setLoading(false);
           return;
         }
-        const claimRes = await claimStudentInvite(onboardInviteCode, pendingUser.id);
+        const claimRes = await claimStudentInvite({ inviteCode: onboardInviteCode, uidOrToken: pendingUser.id });
         if (claimRes && !claimRes.success && claimRes.error) {
           setError(claimRes.error);
           setLoading(false);
@@ -295,7 +308,14 @@ function LoginContent() {
         </p>
       </div>
 
-      {!pendingUser ? (
+      {(authLoading || isCheckingProfile) ? (
+        <div className="flex flex-col items-center justify-center py-12 space-y-4">
+          <Loader2 className="w-10 h-10 animate-spin text-indigo-500" />
+          <p className="text-sm font-medium text-slate-500">
+            {authLoading ? "Checking authentication..." : "Verifying account profile..."}
+          </p>
+        </div>
+      ) : !pendingUser ? (
         <>
           <h2 className="text-2xl font-bold" style={{ color: "var(--color-text)" }}>
             Welcome back

@@ -8,6 +8,8 @@ export const createAssignmentSchema = z.object({
     message: "Invalid date format",
   }),
   maxMarks: z.coerce.number().min(1, "Max marks must be at least 1").default(100),
+  filePath: z.string().nullable().optional(),
+  isPublished: z.boolean().optional(),
 });
 
 export const updateAssignmentSchema = createAssignmentSchema.partial();
@@ -21,3 +23,12 @@ export const gradeSubmissionSchema = z.object({
 });
 
 export type GradeSubmissionInput = z.infer<typeof gradeSubmissionSchema>;
+
+export const submitAssignmentSchema = z.object({
+  submissionId: z.string().uuid("Invalid submission ID"),
+  filePath: z.string().nullable().optional(),
+  studentNotes: z.string().optional(),
+});
+
+export type SubmitAssignmentInput = z.infer<typeof submitAssignmentSchema>;
+

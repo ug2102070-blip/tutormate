@@ -68,7 +68,7 @@ export default function RegisterPage() {
         }
 
         if (role === "student") {
-          const valRes = await validateInviteCode(inviteCode);
+          const valRes = await validateInviteCode({ inviteCode });
           if (valRes && !valRes.success && valRes.error) {
             setError(valRes.error);
             setLoading(false);
@@ -96,12 +96,15 @@ export default function RegisterPage() {
 
       if (role === "tutor" || role === "owner") {
         await onboardTutorUser({
-          email: user.email || email,
-          displayName: fullName,
-          phoneNumber: contactPhone || undefined,
-          institution: institution || "Independent",
-          role: role,
-        }, user.id).catch(() => {});
+          data: {
+            email: user.email || email,
+            displayName: fullName,
+            phoneNumber: contactPhone || undefined,
+            institution: institution || "Independent",
+            role: role as "tutor" | "owner",
+          },
+          uidOrToken: user.id,
+        }).catch(() => {});
       } else if (role === "parent") {
         const linkRes = await linkParentToStudent(inviteCode);
         if (!linkRes.success && linkRes.message) {
@@ -110,7 +113,7 @@ export default function RegisterPage() {
           return;
         }
       } else {
-        const claimRes = await claimStudentInvite(inviteCode, user.id);
+        const claimRes = await claimStudentInvite({ inviteCode, uidOrToken: user.id });
         if (claimRes && !claimRes.success && claimRes.error) {
           setError(claimRes.error);
           setLoading(false);
@@ -141,7 +144,7 @@ export default function RegisterPage() {
         return;
       }
       if (role === "student") {
-        const valRes = await validateInviteCode(inviteCode);
+        const valRes = await validateInviteCode({ inviteCode });
         if (valRes && !valRes.success && valRes.error) {
           setError(valRes.error);
           return;
@@ -191,7 +194,7 @@ export default function RegisterPage() {
         return;
       }
       if (role === "student") {
-        const valRes = await validateInviteCode(inviteCode);
+        const valRes = await validateInviteCode({ inviteCode });
         if (valRes && !valRes.success && valRes.error) {
           setError(valRes.error);
           return;
@@ -245,12 +248,15 @@ export default function RegisterPage() {
 
       if (role === "tutor" || role === "owner") {
         await onboardTutorUser({
-          email: user.email || null,
-          displayName: fullName,
-          phoneNumber: contactPhone,
-          institution: institution || "Independent",
-          role: role,
-        }, user.id).catch(() => {});
+          data: {
+            email: user.email || null,
+            displayName: fullName,
+            phoneNumber: contactPhone,
+            institution: institution || "Independent",
+            role: role as "tutor" | "owner",
+          },
+          uidOrToken: user.id,
+        }).catch(() => {});
       } else if (role === "parent") {
         const linkRes = await linkParentToStudent(inviteCode);
         if (!linkRes.success && linkRes.message) {
@@ -259,7 +265,7 @@ export default function RegisterPage() {
           return;
         }
       } else {
-        const claimRes = await claimStudentInvite(inviteCode, user.id);
+        const claimRes = await claimStudentInvite({ inviteCode, uidOrToken: user.id });
         if (claimRes && !claimRes.success && claimRes.error) {
           setError(claimRes.error);
           setLoading(false);

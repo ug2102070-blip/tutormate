@@ -189,12 +189,12 @@ export default function TutorRecordedClassesPage() {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-500/20 text-indigo-200 border border-indigo-400/30 uppercase tracking-wider">
-              Feature 16
+              {t("recordedClasses.title")}
             </span>
           </div>
           <h1 className="text-2xl font-bold flex items-center gap-2 text-white">
             <Video className="w-6 h-6 text-indigo-400" />
-            {t("recordedClasses.title")} 🎥
+            {t("recordedClasses.title")}
           </h1>
           <p className="text-indigo-200 text-sm mt-1">
             {t("recordedClasses.subtitle")}
@@ -205,7 +205,7 @@ export default function TutorRecordedClassesPage() {
           className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 text-white font-semibold text-sm rounded-xl transition-all border border-white/15 shrink-0"
         >
           <BookOpen className="w-4 h-4" />
-          Study Materials <ArrowRight className="w-4 h-4" />
+          {t("recordedClasses.studyMaterials")} <ArrowRight className="w-4 h-4" />
         </Link>
       </div>
 
@@ -227,7 +227,7 @@ export default function TutorRecordedClassesPage() {
             <form onSubmit={handleVideoUpload} className="space-y-4">
               <div>
                 <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Class / Topic Title *
+                  {t("recordedClasses.titleLabel")}
                 </label>
                 <input
                   type="text"
@@ -235,32 +235,32 @@ export default function TutorRecordedClassesPage() {
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                   className="w-full px-3 py-2 bg-slate-50 dark:bg-[#0b0f19] border border-slate-200 dark:border-white/10 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none"
-                  placeholder="e.g. Physics Chapter 3: Newton's Laws"
+                  placeholder={t("recordedClasses.titlePlaceholder")}
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Description / Topic Summary
+                  {t("recordedClasses.descLabel")}
                 </label>
                 <textarea
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   className="w-full px-3 py-2 bg-slate-50 dark:bg-[#0b0f19] border border-slate-200 dark:border-white/10 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none min-h-[80px] resize-y"
-                  placeholder="Details of what was covered in this session..."
+                  placeholder={t("recordedClasses.descPlaceholder")}
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Target Batch
+                  {t("materials.targetBatchLabel")}
                 </label>
                 <select
                   value={formData.batchId}
                   onChange={(e) => setFormData({ ...formData, batchId: e.target.value })}
                   className="w-full px-3 py-2 bg-slate-50 dark:bg-[#0b0f19] border border-slate-200 dark:border-white/10 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none"
                 >
-                  <option value="all">Global (All Students)</option>
+                  <option value="all">{t("materials.globalAllStudents")}</option>
                   {batches.map((b) => (
                     <option key={b.id} value={b.id}>
                       {b.name} ({b.subject})
@@ -271,7 +271,7 @@ export default function TutorRecordedClassesPage() {
 
               <div>
                 <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Video File (.mp4, .webm, .mkv, .mov) *
+                  {t("recordedClasses.fileLabel")}
                 </label>
                 <div className="flex items-center gap-3">
                   <input
@@ -296,7 +296,7 @@ export default function TutorRecordedClassesPage() {
                   htmlFor="publishVideo"
                   className="text-sm font-medium text-slate-700 dark:text-slate-300"
                 >
-                  Publish to students immediately
+                  {t("materials.publishImmediately")}
                 </label>
               </div>
 
@@ -307,11 +307,11 @@ export default function TutorRecordedClassesPage() {
               >
                 {isUploading ? (
                   <>
-                    <Loader2 className="w-5 h-5 animate-spin" /> Uploading Video...
+                    <Loader2 className="w-5 h-5 animate-spin" /> {t("recordedClasses.uploadingVideo")}
                   </>
                 ) : (
                   <>
-                    <Plus className="w-5 h-5" /> Upload Recorded Class
+                    <Plus className="w-5 h-5" /> {t("recordedClasses.uploadVideo")}
                   </>
                 )}
               </button>
@@ -326,14 +326,14 @@ export default function TutorRecordedClassesPage() {
             <div className="flex items-center gap-2">
               <Film className="w-5 h-5 text-indigo-500" />
               <span className="text-sm font-bold text-slate-800 dark:text-slate-200">
-                Filter by Batch:
+                {t("recordedClasses.filterByBatch")}
               </span>
               <select
                 value={selectedBatchId}
                 onChange={(e) => setSelectedBatchId(e.target.value)}
                 className="px-3 py-1.5 bg-slate-50 dark:bg-[#0b0f19] border border-slate-200 dark:border-white/10 rounded-xl text-sm font-medium text-slate-700 dark:text-slate-300 outline-none focus:ring-2 focus:ring-indigo-500/20"
               >
-                <option value="all">All Class Recordings ({videoMaterials.length})</option>
+                <option value="all">{t("recordedClasses.allClassRecordings")} ({videoMaterials.length})</option>
                 {batches.map((b) => (
                   <option key={b.id} value={b.id}>
                     {b.name}
@@ -353,9 +353,9 @@ export default function TutorRecordedClassesPage() {
             <EmptyState
               variant="videos"
               title={t("recordedClasses.noVideos") || "No Recorded Classes Found"}
-              description={t("recordedClasses.noVideosDesc") || (selectedBatchId === "all"
-                ? "You haven't uploaded any recorded class videos yet."
-                : "No recorded class videos available for this specific batch.")}
+              description={selectedBatchId === "all"
+                ? t("recordedClasses.noVideosDescAll")
+                : t("recordedClasses.noVideosDescBatch")}
             />
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -383,7 +383,7 @@ export default function TutorRecordedClassesPage() {
 
                       {!vid.isPublished && (
                         <div className="absolute top-3 right-3 bg-amber-500/90 backdrop-blur-md px-2.5 py-1 rounded-full text-[11px] font-bold text-white flex items-center gap-1">
-                          <EyeOff className="w-3 h-3" /> Draft
+                          <EyeOff className="w-3 h-3" /> {t("recordedClasses.draft")}
                         </div>
                       )}
                     </div>

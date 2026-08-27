@@ -151,7 +151,7 @@ export async function sendChatMessage(
   conversationId: string,
   text: string,
   attachmentPath?: string
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: boolean; message?: ChatMessageDoc; error?: string }> {
   try {
     const auth = await verifyUserAuth();
     const cleanText = text ? text.trim() : "";
@@ -162,23 +162,38 @@ export async function sendChatMessage(
 
     const supabase = createAdminClient();
 
-    const { error: insertErr } = await supabase.from("chat_messages").insert({
-      conversation_id: conversationId,
-      sender_uid: auth.uid,
-      sender_role: auth.role || "user",
-      text: cleanText,
-      attachment_path: attachmentPath || null,
-      created_at: new Date().toISOString(),
-    });
+    const { data: insertedMsg, error: insertErr } = await supabase
+      .from("chat_messages")
+      .insert({
+        conversation_id: conversationId,
+        sender_uid: auth.uid,
+        sender_role: auth.role || "user",
+        text: cleanText,
+        attachment_path: attachmentPath || null,
+        created_at: new Date().toISOString(),
+      })
+      .select("*, profiles(display_name, email)")
+      .single();
 
-    if (insertErr) {
-      return { success: false, error: insertErr.message };
+    if (insertErr || !insertedMsg) {
+      return { success: false, error: insertErr?.message || "Failed to send message." };
     }
+
+    const newMsgDoc: ChatMessageDoc = {
+      id: insertedMsg.id,
+      conversationId: insertedMsg.conversation_id,
+      senderUid: insertedMsg.sender_uid,
+      senderRole: insertedMsg.sender_role,
+      text: insertedMsg.text,
+      attachmentPath: insertedMsg.attachment_path || null,
+      createdAt: insertedMsg.created_at,
+      senderName: insertedMsg.profiles?.display_name || insertedMsg.profiles?.email?.split("@")[0] || "You",
+    };
 
     revalidatePath("/tutor/chat");
     revalidatePath("/student/chat");
 
-    return { success: true };
+    return { success: true, message: newMsgDoc };
   } catch (err: any) {
     return { success: false, error: err.message || "Failed to send message." };
   }

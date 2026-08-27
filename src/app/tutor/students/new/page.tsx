@@ -68,7 +68,11 @@ export default function AddStudentPage() {
         institution: institution || null,
         enrolledBatchIds: selectedBatchIds,
       });
-      setCreatedInviteCode(result.inviteCode);
+      if (result.success && result.data) {
+        setCreatedInviteCode(result.data.inviteCode);
+      } else {
+        setError(result.error || "Failed to add student.");
+      }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to add student.";
       setError(msg);

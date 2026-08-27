@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Receipt, Plus, TrendingDown, DollarSign, Calendar, Tag, Trash2 } from "lucide-react";
+import { useLanguage } from "@/context/LanguageContext";
 
 interface Expense {
   id: string;
@@ -13,6 +14,7 @@ interface Expense {
 }
 
 export default function OwnerExpensesPage() {
+  const { t } = useLanguage();
   const [expenses, setExpenses] = useState<Expense[]>([
     {
       id: "1",
@@ -78,10 +80,10 @@ export default function OwnerExpensesPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-xl font-extrabold tracking-tight flex items-center gap-2" style={{ color: "var(--color-text)" }}>
-            <Receipt className="w-6 h-6 text-rose-500" /> Expenses & Payroll
+            <Receipt className="w-6 h-6 text-rose-500" /> {t("owner.expensesTitle") || "Expenses & Payroll"}
           </h1>
           <p className="text-xs mt-1" style={{ color: "var(--color-text-muted)" }}>
-            Track center operational costs, electricity, rent, marketing, and tutor payouts
+            {t("owner.expensesDesc") || "Track center operational costs, electricity, rent, marketing, and tutor payouts"}
           </p>
         </div>
 
@@ -90,7 +92,7 @@ export default function OwnerExpensesPage() {
           className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold text-white shadow-sm transition-all active:scale-95 shrink-0"
           style={{ background: "linear-gradient(135deg, rgb(225, 29, 72) 0%, rgb(190, 18, 60) 100%)" }}
         >
-          <Plus className="w-4 h-4" /> Record New Expense
+          <Plus className="w-4 h-4" /> {t("owner.recordExpenseBtn") || "Record New Expense"}
         </button>
       </div>
 
@@ -104,7 +106,7 @@ export default function OwnerExpensesPage() {
       >
         <div className="space-y-1">
           <div className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--color-text-muted)" }}>
-            Total Center Expenses This Month
+            {t("owner.totalExpensesThisMonth") || "Total Center Expenses This Month"}
           </div>
           <div className="text-2xl font-black text-rose-500">
             ৳{totalExpense.toLocaleString()}
@@ -141,7 +143,7 @@ export default function OwnerExpensesPage() {
                 </div>
                 <div className="flex items-center gap-3 text-[10px]" style={{ color: "var(--color-text-muted)" }}>
                   <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> {item.date}</span>
-                  {item.paidTo && <span>Paid to: {item.paidTo}</span>}
+                  {item.paidTo && <span>{t("owner.paidTo") || "Paid to:"} {item.paidTo}</span>}
                 </div>
               </div>
             </div>
@@ -153,7 +155,7 @@ export default function OwnerExpensesPage() {
               <button
                 onClick={() => handleDelete(item.id)}
                 className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-500/10 transition-colors"
-                title="Delete expense"
+                title={t("owner.deleteExpense") || "Delete expense"}
               >
                 <Trash2 className="w-3.5 h-3.5" />
               </button>
@@ -170,18 +172,18 @@ export default function OwnerExpensesPage() {
             style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
           >
             <h2 className="text-base font-extrabold" style={{ color: "var(--color-text)" }}>
-              Record Center Expense
+              {t("owner.recordCenterExpense") || "Record Center Expense"}
             </h2>
 
             <form onSubmit={handleAddExpense} className="space-y-4">
               <div>
                 <label className="block text-xs font-semibold mb-1" style={{ color: "var(--color-text-secondary)" }}>
-                  Expense Description
+                  {t("owner.expenseDescLabel") || "Expense Description"}
                 </label>
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Electricity bill or Tutor Salary"
+                  placeholder={t("owner.expenseDescPlaceholder") || "e.g. Electricity bill or Tutor Salary"}
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   className="w-full px-3 py-2 text-xs rounded-xl border outline-none"
@@ -195,7 +197,7 @@ export default function OwnerExpensesPage() {
 
               <div>
                 <label className="block text-xs font-semibold mb-1" style={{ color: "var(--color-text-secondary)" }}>
-                  Category
+                  {t("owner.categoryLabel") || "Category"}
                 </label>
                 <select
                   value={category}
@@ -207,17 +209,17 @@ export default function OwnerExpensesPage() {
                     color: "var(--color-text)",
                   }}
                 >
-                  <option value="Rent">Premises Rent</option>
-                  <option value="Utilities">Electricity & Utility Bills</option>
-                  <option value="Payroll">Tutor & Staff Payroll</option>
-                  <option value="Marketing">Marketing & Banners</option>
-                  <option value="Other">Other Expenses</option>
+                  <option value="Rent">{t("owner.catRent") || "Premises Rent"}</option>
+                  <option value="Utilities">{t("owner.catUtilities") || "Electricity & Utility Bills"}</option>
+                  <option value="Payroll">{t("owner.catPayroll") || "Tutor & Staff Payroll"}</option>
+                  <option value="Marketing">{t("owner.catMarketing") || "Marketing & Banners"}</option>
+                  <option value="Other">{t("owner.catOther") || "Other Expenses"}</option>
                 </select>
               </div>
 
               <div>
                 <label className="block text-xs font-semibold mb-1" style={{ color: "var(--color-text-secondary)" }}>
-                  Amount (৳ BDT)
+                  {t("owner.amountLabel") || "Amount (৳ BDT)"}
                 </label>
                 <input
                   type="number"
@@ -236,11 +238,11 @@ export default function OwnerExpensesPage() {
 
               <div>
                 <label className="block text-xs font-semibold mb-1" style={{ color: "var(--color-text-secondary)" }}>
-                  Paid To / Recipient (Optional)
+                  {t("owner.paidToLabel") || "Paid To / Recipient (Optional)"}
                 </label>
                 <input
                   type="text"
-                  placeholder="e.g. DESCO / Landlord / Tutor Name"
+                  placeholder={t("owner.paidToPlaceholder") || "e.g. DESCO / Landlord / Tutor Name"}
                   value={paidTo}
                   onChange={(e) => setPaidTo(e.target.value)}
                   className="w-full px-3 py-2 text-xs rounded-xl border outline-none"
@@ -259,14 +261,14 @@ export default function OwnerExpensesPage() {
                   className="px-4 py-2 text-xs font-bold rounded-xl border"
                   style={{ borderColor: "var(--color-border)", color: "var(--color-text-muted)" }}
                 >
-                  Cancel
+                  {t("common.cancel") || "Cancel"}
                 </button>
                 <button
                   type="submit"
                   className="px-4 py-2 text-xs font-bold text-white rounded-xl"
                   style={{ background: "rgb(225, 29, 72)" }}
                 >
-                  Save Expense
+                  {t("owner.saveExpenseBtn") || "Save Expense"}
                 </button>
               </div>
             </form>

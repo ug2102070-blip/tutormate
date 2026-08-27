@@ -2,6 +2,7 @@ import { cache } from "react";
 import { createAdminClient, createClient } from "@/lib/supabase/server";
 import type { UserRole, Permission } from "@/types";
 import { getRoleDefaultPermissions, assertPermission } from "@/lib/permissions";
+import type { User } from "@supabase/supabase-js";
 
 export interface VerifiedAuth {
   uid: string;
@@ -29,7 +30,12 @@ export const verifyUserAuth = cache(async (idToken?: string): Promise<VerifiedAu
     const cookieRes = await serverSupabase.auth.getUser();
     const cookieUser = cookieRes?.data?.user;
     if (cookieUser && !cookieRes.error) {
-      return await fetchProfileAuth(cookieUser.id, cookieUser.email);
+      return await fetchProfileAuth(
+        cookieUser.id,
+        cookieUser.email,
+        cookieUser.app_metadata,
+        cookieUser.user_metadata
+      );
     }
   } catch {
     // Ignore error if cookie context isn't available or fails
@@ -41,7 +47,12 @@ export const verifyUserAuth = cache(async (idToken?: string): Promise<VerifiedAu
       const tokenRes = await adminSupabase.auth.getUser(idToken);
       const user = tokenRes?.data?.user;
       if (user && !tokenRes.error) {
-        return await fetchProfileAuth(user.id, user.email);
+        return await fetchProfileAuth(
+          user.id,
+          user.email,
+          user.app_metadata,
+          user.user_metadata
+        );
       }
     } catch {
       // Token verification failed
@@ -64,118 +75,77 @@ export const verifyUserAuthWithPermission = cache(async (
   return auth;
 });
 
-async function fetchProfileAuth(uid: string, email?: string): Promise<VerifiedAuth> {
+async function fetchProfileAuth(
+  uid: string,
+  email?: string,
+  appMetadata?: Record<string, any>,
+  userMetadata?: Record<string, any>
+): Promise<VerifiedAuth> {
+  // 1. Zero-Latency Path: Check JWT Custom Claims (app_metadata)
+  // This is the fastest path and requires NO database hits.
+  if (appMetadata?.role) {
+    const role = appMetadata.role as UserRole;
+    const permissionsSet = new Set<Permission>(getRoleDefaultPermissions(role));
+
+    return {
+      uid,
+      role: role,
+      tutorId: appMetadata.tutorId,
+      studentDocId: appMetadata.studentDocId || appMetadata.studentId,
+      studentAuthUid: appMetadata.studentAuthUid,
+      email: email,
+      permissions: Array.from(permissionsSet),
+    };
+  }
+
   const supabase = createAdminClient();
 
-  let role: UserRole | null = null;
-  let tutorId: string | undefined = undefined;
-  let studentDocId: string | undefined = undefined;
-  let studentAuthUid: string | undefined = undefined;
+  // 2. Database Path: Single RPC call (cached if possible by DB)
+  const { data, error } = await supabase.rpc("get_user_auth_context", {
+    p_uid: uid,
+  });
 
-  // 1. First, check tutors table directly (If user_id or id matches, this user IS a tutor)
-  const { data: tutor } = await supabase
-    .from("tutors")
-    .select("id")
-    .or(`user_id.eq.${uid},id.eq.${uid}`)
-    .limit(1)
-    .maybeSingle();
+  if (error || !data || !data.role) {
+    // 3. Fallback Path: Public User Metadata (less secure, used during provisioning)
+    if (userMetadata?.role) {
+      const role = userMetadata.role as UserRole;
+      const permissionsSet = new Set<Permission>(getRoleDefaultPermissions(role));
 
-  if (tutor) {
-    role = "tutor";
-    tutorId = tutor.id;
+      return {
+        uid,
+        role: role,
+        tutorId: userMetadata.tutorId,
+        studentDocId: userMetadata.studentDocId || userMetadata.studentId,
+        studentAuthUid: userMetadata.studentAuthUid,
+        email: email,
+        permissions: Array.from(permissionsSet),
+      };
+    }
+
+    // Ultimate fallback
+    return {
+      uid,
+      role: null,
+      permissions: [],
+      email: email,
+    };
   }
 
-  // 2. Fetch from profiles table
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("id", uid)
-    .maybeSingle();
-
-  if (profile) {
-    if (profile.role) {
-      if (profile.role === "admin" || profile.role === "owner" || !role) {
-        role = profile.role as UserRole;
-      }
-    }
-    // If tutorId wasn't found from tutors table, check profile or default to uid for tutor/admin/owner
-    if (!tutorId) {
-      if (profile.tutor_id) {
-        tutorId = profile.tutor_id;
-      } else if (role === "tutor" || role === "admin" || role === "owner") {
-        tutorId = profile.id || uid;
-      }
-    }
-    if (!studentDocId) {
-      studentDocId = profile.student_doc_id || undefined;
-    }
-  }
-
-  // 3. Check students table
-  if (role === "student" || !role) {
-    const { data: student } = await supabase
-      .from("students")
-      .select("id, tutor_id")
-      .or(`auth_uid.eq.${uid},id.eq.${uid}`)
-      .limit(1)
-      .maybeSingle();
-
-    if (student) {
-      studentDocId = student.id;
-      if (!tutorId) tutorId = student.tutor_id || undefined;
-      role = "student";
-    }
-  }
-
-  // 4. Check parent_links table
-  if (role === "parent" || !role) {
-    const { data: parentLink } = await supabase
-      .from("parent_links")
-      .select("student_id, students(id, auth_uid, tutor_id)")
-      .eq("parent_uid", uid)
-      .limit(1)
-      .maybeSingle();
-
-    if (parentLink) {
-      const student = parentLink.students as any;
-      studentDocId = parentLink.student_id;
-      if (student) {
-        tutorId = student.tutor_id || undefined;
-        studentAuthUid = student.auth_uid || undefined;
-      }
-      role = "parent";
-    }
-  }
-
-  // NOTE: No fallback role — if role cannot be determined, it stays null.
-  // Callers (layouts, guards) should handle null role by redirecting to login.
-
-  // 5. Fetch custom per-user permissions from user_permissions table
+  // Combine RPC permissions with default role permissions
+  const role = data.role as UserRole;
   const permissionsSet = new Set<Permission>(getRoleDefaultPermissions(role));
-  try {
-    const { data: customPerms } = await supabase
-      .from("user_permissions")
-      .select("permission")
-      .eq("user_id", uid);
 
-    if (customPerms && customPerms.length > 0) {
-      customPerms.forEach((row) => {
-        if (row.permission) {
-          permissionsSet.add(row.permission as Permission);
-        }
-      });
-    }
-  } catch {
-    // If user_permissions table doesn't exist yet, fallback to default role permissions
+  if (Array.isArray(data.permissions)) {
+    data.permissions.forEach((p: string) => permissionsSet.add(p as Permission));
   }
 
   return {
-    uid,
-    role,
-    tutorId,
-    studentDocId,
-    studentAuthUid,
-    email: email || profile?.email,
+    uid: data.uid || uid,
+    role: role,
+    tutorId: data.tutorId,
+    studentDocId: data.studentDocId,
+    studentAuthUid: data.studentAuthUid,
+    email: data.email || email,
     permissions: Array.from(permissionsSet),
   };
 }

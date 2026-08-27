@@ -132,6 +132,7 @@ TutorMate relies on Supabase PostgreSQL with strict **Row Level Security (RLS)**
 - [x] Role permission helper functions
 - [x] Dark/Light Mode support via `next-themes`
 - [x] PWA Install Prompt component
+- [x] Timetable & Routine Management System (Conflict detection, slot editor, custom periods/days, CSV & print export)
 
 ---
 

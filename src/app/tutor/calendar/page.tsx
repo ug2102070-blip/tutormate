@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
+import useSWR from "swr";
 import { useAuth } from "@/hooks/useAuth";
 import {
   ChevronLeft,
@@ -38,27 +39,20 @@ export default function TutorCalendarPage() {
   const today = new Date();
   const [year, setYear] = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth() + 1);
-  const [events, setEvents] = useState<CalendarEvent[]>([]);
-  const [loading, setLoading] = useState(true);
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [addLoading, setAddLoading] = useState(false);
   const [addError, setAddError] = useState("");
 
-  const loadEvents = useCallback(async () => {
-    if (!user?.id) return;
-    setLoading(true);
-    try {
-      const data = await getCalendarEvents(year, month);
-      setEvents(data);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  }, [year, month, user?.id]);
-
-  useEffect(() => { loadEvents(); }, [loadEvents]);
+  const {
+    data: events = [],
+    isLoading: loading,
+    mutate: mutateEvents,
+  } = useSWR<CalendarEvent[]>(
+    user?.id ? `tutor-calendar-${year}-${month}` : null,
+    () => getCalendarEvents(year, month),
+    { dedupingInterval: 60_000 }
+  );
 
   function prevMonth() {
     if (month === 1) { setMonth(12); setYear(y => y - 1); }
@@ -97,7 +91,7 @@ export default function TutorCalendarPage() {
       const formData = new FormData(e.currentTarget);
       await createEvent(formData);
       setShowAddModal(false);
-      await loadEvents();
+      mutateEvents();
     } catch (err: any) {
       setAddError(err.message || "Failed to create event");
     } finally {
@@ -109,7 +103,7 @@ export default function TutorCalendarPage() {
     if (!confirm("Delete this event?")) return;
     try {
       await deleteEvent(eventId);
-      await loadEvents();
+      mutateEvents();
       setSelectedDay(null);
     } catch (err: any) {
       alert(err.message || "Failed to delete event");

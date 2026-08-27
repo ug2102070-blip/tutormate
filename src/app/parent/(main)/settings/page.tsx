@@ -13,9 +13,11 @@ import {
   UserCircle,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { useLanguage } from "@/context/LanguageContext";
 
 export default function ParentSettingsPage() {
   const supabase = createClient();
+  const { t } = useLanguage();
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -109,10 +111,10 @@ export default function ParentSettingsPage() {
     <div className="space-y-5 max-w-xl">
       <div>
         <h1 className="text-xl font-extrabold tracking-tight" style={{ color: "var(--color-text)" }}>
-          Settings
+          {t("settings.title") || "Settings"}
         </h1>
         <p className="text-xs mt-0.5" style={{ color: "var(--color-text-muted)" }}>
-          Manage your parent profile
+          {t("settings.parentSubtitle") || "Manage your parent profile"}
         </p>
       </div>
 
@@ -133,7 +135,7 @@ export default function ParentSettingsPage() {
           </div>
           <div>
             <p className="text-[10px] font-bold uppercase tracking-wide" style={{ color: "rgb(109,40,217)" }}>
-              Monitoring Child
+              {t("settings.monitoringChild") || "Monitoring Child"}
             </p>
             <p className="text-sm font-bold" style={{ color: "var(--color-text)" }}>
               {childName}
@@ -149,13 +151,13 @@ export default function ParentSettingsPage() {
           style={{ background: "var(--color-bg)", border: "1px solid var(--color-border)" }}
         >
           <h2 className="text-sm font-bold" style={{ color: "var(--color-text)" }}>
-            Profile Information
+            {t("settings.profileInfo") || "Profile Information"}
           </h2>
 
           {/* Display Name */}
           <div className="space-y-1.5">
             <label className="text-xs font-semibold" style={{ color: "var(--color-text-muted)" }}>
-              Full Name
+              {t("settings.fullName") || "Full Name"}
             </label>
             <div className="relative">
               <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: "var(--color-text-muted)" }} />
@@ -176,7 +178,7 @@ export default function ParentSettingsPage() {
           {/* Email (read-only) */}
           <div className="space-y-1.5">
             <label className="text-xs font-semibold" style={{ color: "var(--color-text-muted)" }}>
-              Email Address <span className="text-[10px] opacity-60">(cannot change)</span>
+              {t("settings.emailAddress") || "Email Address"} <span className="text-[10px] opacity-60">({t("settings.cannotChange") || "cannot change"})</span>
             </label>
             <div className="relative">
               <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: "var(--color-text-muted)" }} />
@@ -196,7 +198,7 @@ export default function ParentSettingsPage() {
           {/* Phone */}
           <div className="space-y-1.5">
             <label className="text-xs font-semibold" style={{ color: "var(--color-text-muted)" }}>
-              Phone Number
+              {t("settings.phoneNumber") || "Phone Number"}
             </label>
             <div className="relative">
               <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: "var(--color-text-muted)" }} />
@@ -225,7 +227,7 @@ export default function ParentSettingsPage() {
         {success && (
           <div className="rounded-xl px-4 py-2.5 text-xs font-semibold text-emerald-600 flex gap-2 items-center"
             style={{ background: "rgba(16,185,129,0.1)", border: "1px solid rgba(16,185,129,0.2)" }}>
-            <CheckCircle2 className="w-4 h-4 shrink-0" /> Profile updated successfully!
+            <CheckCircle2 className="w-4 h-4 shrink-0" /> {t("settings.profileUpdated") || "Profile updated successfully!"}
           </div>
         )}
 
@@ -236,7 +238,7 @@ export default function ParentSettingsPage() {
           style={{ background: "var(--color-primary)" }}
         >
           {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-          {saving ? "Saving..." : "Save Changes"}
+          {saving ? (t("common.saving") || "Saving...") : (t("common.saveChanges") || "Save Changes")}
         </button>
       </form>
 
@@ -245,14 +247,14 @@ export default function ParentSettingsPage() {
         className="rounded-2xl p-4"
         style={{ background: "var(--color-bg)", border: "1px solid var(--color-border)" }}
       >
-        <h2 className="text-sm font-bold mb-3" style={{ color: "var(--color-text)" }}>Account</h2>
+        <h2 className="text-sm font-bold mb-3" style={{ color: "var(--color-text)" }}>{t("settings.account") || "Account"}</h2>
         <button
           onClick={handleLogout}
           className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all hover:opacity-90"
           style={{ background: "rgba(239,68,68,0.08)", color: "rgb(220,38,38)", border: "1px solid rgba(239,68,68,0.2)" }}
         >
           <LogOut className="w-4 h-4" />
-          Sign Out
+          {t("common.signOut") || "Sign Out"}
         </button>
       </div>
     </div>

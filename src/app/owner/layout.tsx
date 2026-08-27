@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Sidebar } from "@/components/navigation/Sidebar";
 import { Header } from "@/components/navigation/Header";
 import { MobileNav } from "@/components/navigation/MobileNav";
+import { useLanguage } from "@/context/LanguageContext";
 
 export default function OwnerLayout({
   children,
@@ -14,6 +15,7 @@ export default function OwnerLayout({
 }) {
   const router = useRouter();
   const { user, role, loading } = useAuth();
+  const { t } = useLanguage();
 
   useEffect(() => {
     if (!loading) {
@@ -40,7 +42,7 @@ export default function OwnerLayout({
             style={{ borderColor: "rgb(245,158,11)", borderTopColor: "transparent" }}
           />
           <span className="text-xs font-medium" style={{ color: "var(--color-text-muted)" }}>
-            Loading Center Portal...
+            {t("owner.loadingPortal") || "Loading Center Portal..."}
           </span>
         </div>
       </div>

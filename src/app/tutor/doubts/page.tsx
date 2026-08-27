@@ -423,19 +423,19 @@ export default function TutorDoubtsPage({
             {t("doubts.title") || "Student Doubts & Questions"}
           </h1>
           <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-            Answer questions submitted by your batch students with images, files & voice messages
+            {t("doubts.subtitle")}
           </p>
         </div>
 
         {pendingCount > 0 && (
-          <span className="px-3 py-1 rounded-xl text-xs font-extrabold bg-amber-500 text-white shadow-xs">
+          <span className="px-3 py-1.5 rounded-lg text-xs font-extrabold bg-amber-500 text-white shadow-xs">
             {pendingCount} {t("doubts.pending") || "Pending"}
           </span>
         )}
       </div>
 
       {/* Dual Panel Messenger Inbox */}
-      <div className="flex-1 flex flex-col md:flex-row bg-white dark:bg-[#131b2e] border border-slate-200 dark:border-white/10 rounded-2xl shadow-xs overflow-hidden min-h-0">
+      <div className="flex-1 flex flex-col md:flex-row bg-white dark:bg-[#131b2e] border border-slate-200 dark:border-white/10 rounded-xl shadow-xs overflow-hidden min-h-0">
         {/* LEFT SIDEBAR: Student Conversations List */}
         <div
           className={`w-full md:w-80 lg:w-96 border-r border-slate-200 dark:border-white/10 flex flex-col bg-slate-50/50 dark:bg-[#0b0f19]/50 shrink-0 h-full ${
@@ -450,8 +450,8 @@ export default function TutorDoubtsPage({
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search student or topic..."
-                className="w-full pl-9 pr-3 py-1.5 text-xs rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#0b0f19] outline-none focus:border-indigo-500 font-medium"
+                placeholder={t("doubts.searchPlaceholder")}
+                className="w-full pl-9 pr-3 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#0b0f19] outline-none focus:border-indigo-500 font-medium"
               />
             </div>
 
@@ -466,7 +466,7 @@ export default function TutorDoubtsPage({
                       : "text-slate-500 dark:text-slate-400 hover:text-slate-900"
                   }`}
                 >
-                  {st}
+                  {st === "all" ? t("common.all") : t(`doubts.${st}`)}
                 </button>
               ))}
             </div>
@@ -483,8 +483,8 @@ export default function TutorDoubtsPage({
             ) : filteredDoubts.length === 0 ? (
               <EmptyState
                 variant="doubts"
-                title="No student doubts"
-                description="No questions match your current filters."
+                title={t("doubts.noStudentDoubts")}
+                description={t("doubts.noMatch")}
                 size="sm"
                 className="my-8 mx-4"
               />
@@ -495,7 +495,7 @@ export default function TutorDoubtsPage({
                   <button
                     key={d.id}
                     onClick={() => setSelectedDoubtId(d.id)}
-                    className={`w-full text-left p-3.5 transition-all flex items-start gap-3 relative ${
+                    className={`w-full text-left p-3 transition-all flex items-start gap-3 relative ${
                       isSelected
                         ? "bg-indigo-50/70 dark:bg-indigo-500/10 border-l-4 border-indigo-600"
                         : "hover:bg-slate-100/70"
@@ -527,23 +527,23 @@ export default function TutorDoubtsPage({
                       <div className="flex items-center gap-2 mt-1.5">
                         {d.status === "pending" && (
                           <span className="px-2 py-0.5 rounded-md text-[9px] font-extrabold bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-500/20">
-                            Needs Answer
+                            {t("doubts.needsAnswer")}
                           </span>
                         )}
                         {d.status === "answered" && (
                           <span className="px-2 py-0.5 rounded-md text-[9px] font-extrabold bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20">
-                            Answered
+                            {t("doubts.answered")}
                           </span>
                         )}
                         {d.status === "resolved" && (
                           <span className="px-2 py-0.5 rounded-md text-[9px] font-extrabold bg-slate-100 dark:bg-[#252535] text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-white/10">
-                            Resolved
+                            {t("doubts.resolved")}
                           </span>
                         )}
 
                         {d.unreadByTutor && (
                           <span className="px-1.5 py-0.5 rounded text-[9px] font-extrabold bg-indigo-600 text-white ml-auto shrink-0">
-                            NEW
+                            {t("doubts.new")}
                           </span>
                         )}
                       </div>
@@ -564,7 +564,7 @@ export default function TutorDoubtsPage({
           {activeDoubt ? (
             <>
               {/* Header */}
-              <div className="p-3.5 border-b border-slate-200 dark:border-white/10 flex items-center justify-between bg-white dark:bg-[#131b2e] shrink-0">
+              <div className="p-3 border-b border-slate-200 dark:border-white/10 flex items-center justify-between bg-white dark:bg-[#131b2e] shrink-0">
                 <div className="flex items-center gap-3">
                   <button
                     onClick={() => setSelectedDoubtId(null)}
@@ -597,11 +597,11 @@ export default function TutorDoubtsPage({
                             : "bg-slate-100 dark:bg-[#252535] text-slate-500 dark:text-slate-400"
                         }`}
                       >
-                        {studentPresence.lastSeenText}
+                        {studentPresence.isOnline ? t("doubts.studentOnline") : studentPresence.lastSeenText}
                       </span>
                     </div>
                     <p className="text-xs text-slate-500 dark:text-slate-400 truncate max-w-xs md:max-w-md font-medium">
-                      Topic: <strong className="text-slate-800 dark:text-slate-200">{activeDoubt.title}</strong>
+                      {t("doubts.topic")} <strong className="text-slate-800 dark:text-slate-200">{activeDoubt.title}</strong>
                     </p>
                   </div>
                 </div>
@@ -610,9 +610,9 @@ export default function TutorDoubtsPage({
                   {activeDoubt.status !== "resolved" && (
                     <button
                       onClick={handleMarkResolved}
-                      className="px-3 py-1.5 text-xs font-bold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-[#252535] hover:bg-slate-200 rounded-xl flex items-center gap-1.5 transition-colors"
+                      className="px-3 py-1.5 text-[11px] font-bold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-[#252535] hover:bg-slate-200 rounded-lg flex items-center gap-1.5 transition-colors"
                     >
-                      <CheckCircle className="w-3.5 h-3.5 text-emerald-600" /> Mark Resolved
+                      <CheckCircle className="w-3.5 h-3.5 text-emerald-600" /> {t("doubts.markResolved")}
                     </button>
                   )}
                 </div>
@@ -625,10 +625,10 @@ export default function TutorDoubtsPage({
                 className="flex-1 p-4 overflow-y-auto min-h-0 space-y-4 bg-slate-50/40 dark:bg-[#0b0f19]/40"
               >
                 {/* Initial Question Overview */}
-                <div className="max-w-xl mx-auto p-4 rounded-2xl bg-white dark:bg-[#131b2e] border border-slate-200 dark:border-white/10 shadow-xs space-y-2">
+                <div className="max-w-xl mx-auto p-3.5 rounded-xl bg-white dark:bg-[#131b2e] border border-slate-200 dark:border-white/10 shadow-xs space-y-2">
                   <div className="text-[10px] font-extrabold uppercase tracking-wider text-indigo-600 flex items-center justify-between">
-                    <span>Student Question</span>
-                    <span>Status: {activeDoubt.status}</span>
+                    <span>{t("doubts.studentQuestion")}</span>
+                    <span>{t("common.status")}: {t(`doubts.${activeDoubt.status}`) || activeDoubt.status}</span>
                   </div>
                   <p className="text-xs text-slate-800 dark:text-slate-200 leading-relaxed whitespace-pre-wrap font-medium">
                     {activeDoubt.initialQuestion}
@@ -650,10 +650,10 @@ export default function TutorDoubtsPage({
                           href={signedUrls[activeDoubt.attachmentPath]}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-2 p-2.5 rounded-xl bg-slate-100 dark:bg-[#252535] hover:bg-slate-200 text-xs font-bold text-indigo-600 transition-colors"
+                          className="inline-flex items-center gap-2 p-2.5 rounded-lg bg-slate-100 dark:bg-[#252535] hover:bg-slate-200 text-xs font-bold text-indigo-600 transition-colors"
                         >
                           <FileText className="w-4 h-4" />
-                          <span>{activeDoubt.attachmentName || "Attached Document"}</span>
+                          <span>{activeDoubt.attachmentName || t("doubts.attachedDocument")}</span>
                           <Download className="w-3.5 h-3.5 ml-1 text-slate-400" />
                         </a>
                       )}
@@ -662,7 +662,7 @@ export default function TutorDoubtsPage({
                 </div>
 
                 <div className="text-center text-[10px] font-bold text-slate-400 uppercase tracking-widest my-2">
-                  Reply Thread
+                  {t("doubts.replyThread")}
                 </div>
 
                 {messages.map((msg) => {
@@ -675,7 +675,7 @@ export default function TutorDoubtsPage({
                       className={`flex flex-col ${isMe ? "items-end" : "items-start"}`}
                     >
                       <div
-                        className={`max-w-[80%] p-3.5 rounded-2xl text-xs space-y-2 shadow-xs ${
+                        className={`max-w-[80%] p-3 rounded-xl text-xs space-y-2 shadow-xs ${
                           isMe
                             ? "bg-indigo-600 text-white rounded-br-xs"
                             : "bg-white dark:bg-[#131b2e] text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-white/10 rounded-bl-xs"
@@ -686,7 +686,7 @@ export default function TutorDoubtsPage({
                             isMe ? "text-indigo-200" : "text-slate-400"
                           }`}
                         >
-                          <span>{isMe ? "You (Tutor)" : activeDoubt.studentName}</span>
+                          <span>{isMe ? t("doubts.youTutor") : activeDoubt.studentName}</span>
                           <span>
                             {msg.createdAt
                               ? new Date(msg.createdAt).toLocaleTimeString([], {
@@ -788,8 +788,8 @@ export default function TutorDoubtsPage({
                   <form onSubmit={handleSendMessage} className="flex items-center gap-2">
                     {/* Attach Image */}
                     <label
-                      className="p-2.5 rounded-xl text-slate-500 dark:text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 cursor-pointer transition-colors"
-                      title="Attach Image"
+                      className="p-2 rounded-lg text-slate-500 dark:text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 cursor-pointer transition-colors"
+                      title={t("doubts.attachImage")}
                     >
                       <ImageIcon className="w-5 h-5" />
                       <input
@@ -805,8 +805,8 @@ export default function TutorDoubtsPage({
 
                     {/* Attach Document */}
                     <label
-                      className="p-2.5 rounded-xl text-slate-500 dark:text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 cursor-pointer transition-colors"
-                      title="Attach File/Document"
+                      className="p-2 rounded-lg text-slate-500 dark:text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 cursor-pointer transition-colors"
+                      title={t("doubts.attachDocument")}
                     >
                       <Paperclip className="w-5 h-5" />
                       <input
@@ -824,8 +824,8 @@ export default function TutorDoubtsPage({
                     <button
                       type="button"
                       onClick={() => setShowVoiceRecorder(true)}
-                      className="p-2.5 rounded-xl text-slate-500 dark:text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
-                      title="Record Voice Note"
+                      className="p-2 rounded-lg text-slate-500 dark:text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                      title={t("doubts.recordVoice")}
                     >
                       <Mic className="w-5 h-5" />
                     </button>
@@ -835,15 +835,15 @@ export default function TutorDoubtsPage({
                       type="text"
                       value={newMessageText}
                       onChange={(e) => setNewMessageText(e.target.value)}
-                      placeholder={`Reply to ${activeDoubt.studentName}...`}
-                      className="flex-1 px-4 py-2.5 text-xs rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#0b0f19] outline-none focus:border-indigo-500 text-slate-900 dark:text-slate-100 font-medium"
+                      placeholder={t("doubts.replyTo").replace("{name}", activeDoubt.studentName)}
+                      className="flex-1 px-3 py-2 text-xs rounded-lg border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#0b0f19] outline-none focus:border-indigo-500 text-slate-900 dark:text-slate-100 font-medium"
                     />
 
                     {/* Send Button */}
                     <button
                       type="submit"
                       disabled={sending || (!newMessageText.trim() && !selectedAttachment)}
-                      className="p-2.5 text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-xs transition-all disabled:opacity-50"
+                      className="p-2 text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-xs transition-all disabled:opacity-50"
                     >
                       <Send className="w-4 h-4" />
                     </button>
@@ -854,9 +854,9 @@ export default function TutorDoubtsPage({
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-slate-50/50 dark:bg-[#0b0f19]/50">
               <MessageSquare className="w-12 h-12 text-slate-300 mb-3" />
-              <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200">Select a student doubt thread</h3>
+              <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200">{t("doubts.selectThreadTitle")}</h3>
               <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mt-1">
-                Choose a student question from the left sidebar to start replying.
+                {t("doubts.selectThreadDesc")}
               </p>
             </div>
           )}

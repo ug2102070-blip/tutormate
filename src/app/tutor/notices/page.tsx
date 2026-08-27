@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import useSWR from "swr";
 import {
   Megaphone, Plus, Send, Trash2, Calendar, Clock,
   CheckCircle2, Loader2, AlertCircle, Building2,
@@ -297,9 +298,6 @@ function NoticeFormModal({
 // ─── Main Page ─────────────────────────────────────────────────────────────────
 
 export default function TutorNoticesPage() {
-  const [notices, setNotices] = useState<TutorNotice[]>([]);
-  const [centerNotices, setCenterNotices] = useState<CenterNotice[]>([]);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
@@ -315,23 +313,24 @@ export default function TutorNoticesPage() {
   // Pin loading
   const [pinningId, setPinningId] = useState<string | null>(null);
 
-  const loadNotices = useCallback(async () => {
-    try {
-      setLoading(true);
+  const {
+    data: noticesData,
+    isLoading: loading,
+    mutate: mutateNotices,
+  } = useSWR<{ notices: TutorNotice[]; centerNotices: CenterNotice[] }>(
+    "tutor-notices-data",
+    async () => {
       const [myNotices, centerData] = await Promise.all([
         getTutorNotices(),
         getCenterNoticesForTutor(),
       ]);
-      setNotices(myNotices);
-      setCenterNotices(centerData);
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to load notices.");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+      return { notices: myNotices, centerNotices: centerData };
+    },
+    { dedupingInterval: 30_000 }
+  );
 
-  useEffect(() => { loadNotices(); }, [loadNotices]);
+  const notices = noticesData?.notices || [];
+  const centerNotices = noticesData?.centerNotices || [];
 
   function showSuccess(msg: string) {
     setSuccess(msg);
@@ -351,7 +350,13 @@ export default function TutorNoticesPage() {
     setError(null);
     try {
       const newNotice = await createTutorNotice(formData);
-      setNotices((prev) => sortNotices([newNotice, ...prev]));
+      mutateNotices(
+        {
+          notices: sortNotices([newNotice, ...notices]),
+          centerNotices,
+        },
+        false
+      );
       setShowForm(false);
       showSuccess("Notice published and sent to students/parents!");
     } catch (err: unknown) {
@@ -368,7 +373,13 @@ export default function TutorNoticesPage() {
     setError(null);
     try {
       const updated = await updateTutorNotice(editingNotice.id, formData);
-      setNotices((prev) => sortNotices(prev.map((n) => (n.id === updated.id ? updated : n))));
+      mutateNotices(
+        {
+          notices: sortNotices(notices.map((n: TutorNotice) => (n.id === updated.id ? updated : n))),
+          centerNotices,
+        },
+        false
+      );
       setEditingNotice(null);
       showSuccess("Notice updated successfully!");
     } catch (err: unknown) {
@@ -384,7 +395,13 @@ export default function TutorNoticesPage() {
     setDeleting(true);
     try {
       await deleteTutorNotice(deleteTarget);
-      setNotices((prev) => prev.filter((n) => n.id !== deleteTarget));
+      mutateNotices(
+        {
+          notices: notices.filter((n: TutorNotice) => n.id !== deleteTarget),
+          centerNotices,
+        },
+        false
+      );
       setDeleteTarget(null);
       showSuccess("Notice deleted.");
     } catch (err: unknown) {
@@ -399,7 +416,13 @@ export default function TutorNoticesPage() {
     setPinningId(notice.id);
     try {
       const updated = await togglePinTutorNotice(notice.id, notice.isPinned);
-      setNotices((prev) => sortNotices(prev.map((n) => (n.id === updated.id ? updated : n))));
+      mutateNotices(
+        {
+          notices: sortNotices(notices.map((n: TutorNotice) => (n.id === updated.id ? updated : n))),
+          centerNotices,
+        },
+        false
+      );
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to update pin.");
     } finally {
@@ -465,7 +488,7 @@ export default function TutorNoticesPage() {
                 </span>
               </div>
 
-              {centerNotices.map((notice) => (
+              {centerNotices.map((notice: CenterNotice) => (
                 <div
                   key={notice.id}
                   className="p-4 rounded-2xl border space-y-2 relative overflow-hidden"
@@ -489,7 +512,7 @@ export default function TutorNoticesPage() {
                       Center Broadcast
                     </span>
                     <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-black/5 dark:bg-white/10 text-gray-600 dark:text-gray-300 capitalize">
-                      {CENTER_TARGET_LABELS[notice.target] ?? notice.target}
+                      {CENTER_TARGET_LABELS[notice.target as keyof typeof CENTER_TARGET_LABELS] ?? notice.target}
                     </span>
                   </div>
                   <h3 className="text-sm font-bold" style={{ color: "var(--color-text)" }}>{notice.title}</h3>
@@ -529,8 +552,8 @@ export default function TutorNoticesPage() {
                 action={{ label: "Create Notice", onClick: () => setShowForm(true) }}
               />
             ) : (
-              notices.map((notice) => {
-                const colors = MY_TARGET_COLORS[notice.target];
+              notices.map((notice: TutorNotice) => {
+                const colors = MY_TARGET_COLORS[notice.target as keyof typeof MY_TARGET_COLORS] || MY_TARGET_COLORS.all;
                 return (
                   <div
                     key={notice.id}
@@ -560,7 +583,7 @@ export default function TutorNoticesPage() {
                             className="text-[10px] font-bold px-2 py-0.5 rounded-full border"
                             style={{ background: colors.bg, color: colors.text, borderColor: colors.border }}
                           >
-                            {MY_TARGET_LABELS[notice.target]}
+                            {MY_TARGET_LABELS[notice.target as keyof typeof MY_TARGET_LABELS] || notice.target}
                           </span>
                         </div>
                         <h3 className="text-sm font-extrabold truncate" style={{ color: "var(--color-text)" }}>

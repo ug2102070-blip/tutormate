@@ -5,16 +5,22 @@
 
 -- 1. Create or Replace Trigger Function for Automatic User Provisioning
 CREATE OR REPLACE FUNCTION public.handle_new_user()
-RETURNS trigger AS $$
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
 DECLARE
   default_role text;
   display_name_val text;
 BEGIN
   -- Extract role from user_metadata (default to 'tutor')
   default_role := COALESCE(new.raw_user_meta_data->>'role', 'tutor');
+
+  -- Support various metadata keys for Google/Social logins
   display_name_val := COALESCE(
     new.raw_user_meta_data->>'full_name',
     new.raw_user_meta_data->>'displayName',
+    new.raw_user_meta_data->>'name',
     split_part(new.email, '@', 1),
     'User'
   );
@@ -40,9 +46,9 @@ BEGIN
   )
   ON CONFLICT (id) DO UPDATE SET
     email = EXCLUDED.email,
-    display_name = COALESCE(EXCLUDED.display_name, public.profiles.display_name),
-    phone_number = COALESCE(EXCLUDED.phone_number, public.profiles.phone_number),
-    role = COALESCE(EXCLUDED.role, public.profiles.role),
+    display_name = COALESCE(public.profiles.display_name, EXCLUDED.display_name),
+    phone_number = COALESCE(public.profiles.phone_number, EXCLUDED.phone_number),
+    role = COALESCE(public.profiles.role, EXCLUDED.role),
     updated_at = NOW();
 
   -- 2. Create Tutor row automatically if role is tutor/owner/admin
@@ -62,13 +68,13 @@ BEGIN
       COALESCE(new.phone, '')
     )
     ON CONFLICT (id) DO UPDATE SET
-      full_name = COALESCE(EXCLUDED.full_name, public.tutors.full_name),
-      contact_phone = COALESCE(EXCLUDED.contact_phone, public.tutors.contact_phone);
+      full_name = COALESCE(public.tutors.full_name, EXCLUDED.full_name),
+      contact_phone = COALESCE(public.tutors.contact_phone, EXCLUDED.contact_phone);
   END IF;
 
   RETURN new;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$;
 
 -- 2. Bind trigger to auth.users table for all new user registrations
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;

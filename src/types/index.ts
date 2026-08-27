@@ -90,6 +90,8 @@ export interface TutorDoc {
   contactPhone: string;
   bkashNumber: string | null;
   nagadNumber: string | null;
+  bio?: string | null;
+  address?: string | null;
   subscription: SubscriptionInfo;
   stats: TutorStats;
   coachingCenterId?: string | null;
@@ -217,10 +219,18 @@ export interface AssignmentDoc {
   batchId: string;
   title: string;
   description: string | null;
+  filePath?: string | null;
   deadline: string;
   maxMarks: number;
   isPublished: boolean;
   createdAt: string;
+  batchName?: string;
+  batchSubject?: string;
+  totalStudents?: number;
+  submittedCount?: number;
+  gradedCount?: number;
+  pendingCount?: number;
+  averageScore?: number | null;
 }
 
 export interface SubmissionDoc {
@@ -228,12 +238,23 @@ export interface SubmissionDoc {
   assignmentId: string;
   studentId: string;
   filePath: string | null;
+  studentNotes?: string | null;
   submittedAt: string | null;
   marksObtained: number | null;
   feedback: string | null;
   status: "pending" | "submitted" | "graded" | "late";
   updatedAt: string;
+  studentName?: string;
+  studentPhone?: string;
+  studentAvatar?: string | null;
+  assignmentTitle?: string;
+  assignmentDeadline?: string;
+  assignmentMaxMarks?: number;
+  assignmentDescription?: string | null;
+  assignmentFilePath?: string | null;
+  batchName?: string;
 }
+
 
 export interface ExamDoc {
   id: string;
@@ -245,6 +266,19 @@ export interface ExamDoc {
   totalMarks: number;
   passMarks: number | null;
   createdAt: string;
+}
+
+export interface ExamWithStatsDoc extends ExamDoc {
+  batchName?: string;
+  gradeClass?: string;
+  markedCount: number;
+  absentCount: number;
+  totalStudents: number;
+  averagePercentage: string | null;
+  highestMarks: number | null;
+  lowestMarks: number | null;
+  passCount: number;
+  failCount: number;
 }
 
 export interface ExamResultDoc {

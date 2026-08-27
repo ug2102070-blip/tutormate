@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { getParentAttendance } from "@/actions/parentActions";
 import { CalendarCheck, Loader2 } from "lucide-react";
+import { useLanguage } from "@/context/LanguageContext";
 
 const STATUS_CONFIG = {
   present: { label: "Present", color: "var(--color-success, #16a34a)", bg: "var(--color-success-bg, #f0fdf4)" },
@@ -13,6 +14,8 @@ const STATUS_CONFIG = {
 
 export default function ParentAttendancePage() {
   const supabase = createClient();
+  const { t, language } = useLanguage();
+  const isBn = language === "bn";
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -47,8 +50,8 @@ export default function ParentAttendancePage() {
               <CalendarCheck className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h1 className="text-lg font-bold text-white">Attendance</h1>
-              <p className="text-xs text-white/70">Your child's attendance log</p>
+              <h1 className="text-lg font-bold text-white">{t("attendance.title") || "Attendance"}</h1>
+              <p className="text-xs text-white/70">{t("attendance.parentSubtitle") || "Your child's attendance log"}</p>
             </div>
           </div>
 
@@ -77,9 +80,9 @@ export default function ParentAttendancePage() {
         {!loading && (
           <div className="flex gap-4 mt-4">
             {[
-              { label: "Total", value: data?.stats?.total ?? 0 },
-              { label: "Present", value: data?.stats?.present ?? 0 },
-              { label: "Absent", value: data?.stats?.absent ?? 0 },
+              { label: t("common.total") || "Total", value: data?.stats?.total ?? 0 },
+              { label: t("attendance.present") || "Present", value: data?.stats?.present ?? 0 },
+              { label: t("attendance.absent") || "Absent", value: data?.stats?.absent ?? 0 },
             ].map((s) => (
               <div key={s.label}
                 className="px-3 py-2 rounded-xl"
@@ -98,8 +101,8 @@ export default function ParentAttendancePage() {
           <Loader2 className="w-6 h-6 animate-spin" style={{ color: "var(--color-primary)" }} />
         </div>
       ) : data?.records?.length === 0 ? (
-        <div className="text-center py-12" style={{ color: "var(--color-text-muted)" }}>
-          No attendance records found.
+        <div className="text-center py-12 text-sm font-medium" style={{ color: "var(--color-text-muted)" }}>
+          {t("attendance.noRecords") || "No attendance records found."}
         </div>
       ) : (
         <div
@@ -125,10 +128,10 @@ export default function ParentAttendancePage() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>
-                    {new Date(r.date).toLocaleDateString("en-BD", { weekday: "short", month: "short", day: "numeric" })}
+                    {new Date(r.date).toLocaleDateString(isBn ? "bn-BD" : "en-BD", { weekday: "short", month: "short", day: "numeric" })}
                   </p>
                   <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
-                    {r.batchName}
+                    {r.batchName || (t("common.class") || "Class")}
                   </p>
                   {r.remarks && (
                     <p className="text-xs italic mt-0.5" style={{ color: "var(--color-text-muted)" }}>
@@ -140,7 +143,7 @@ export default function ParentAttendancePage() {
                   className="shrink-0 text-[11px] font-bold px-2 py-0.5 rounded-full"
                   style={{ background: config.bg, color: config.color }}
                 >
-                  {config.label}
+                  {config.label === "Present" ? (t("attendance.present") || "Present") : config.label === "Absent" ? (t("attendance.absent") || "Absent") : (t("attendance.late") || "Late")}
                 </span>
               </div>
             );

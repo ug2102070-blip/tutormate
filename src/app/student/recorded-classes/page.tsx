@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/context/LanguageContext";
 import { createClient } from "@/lib/supabase/client";
@@ -32,12 +32,7 @@ export default function StudentRecordedClassesPage() {
 
   const supabase = createClient();
 
-  useEffect(() => {
-    if (!user) return;
-    loadData();
-  }, [user, selectedBatchId]);
-
-  async function loadData() {
+  const loadData = useCallback(async () => {
     setLoading(true);
     try {
       // 1. Get student's enrolled batches
@@ -81,7 +76,12 @@ export default function StudentRecordedClassesPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [user, selectedBatchId, supabase]);
+
+  useEffect(() => {
+    if (!user) return;
+    loadData();
+  }, [user, selectedBatchId, loadData]);
 
   const formatSize = (bytes: number | null) => {
     if (!bytes) return "Unknown size";
@@ -104,7 +104,7 @@ export default function StudentRecordedClassesPage() {
           </div>
           <h1 className="text-2xl font-bold flex items-center gap-2 text-white">
             <Video className="w-6 h-6 text-indigo-400" />
-            {t("recordedClasses.title")} 🎥
+            {t("recordedClasses.title")}
           </h1>
           <p className="text-indigo-200 text-sm mt-1">
             {t("recordedClasses.subtitle")}

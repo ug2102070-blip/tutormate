@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { getParentExamResults } from "@/actions/parentActions";
 import { Award, Loader2 } from "lucide-react";
+import { useLanguage } from "@/context/LanguageContext";
 
 const GRADE_COLORS: Record<string, { bg: string; color: string }> = {
   "A+": { bg: "#f0fdf4", color: "#15803d" },
@@ -16,6 +17,8 @@ const GRADE_COLORS: Record<string, { bg: string; color: string }> = {
 
 export default function ParentResultsPage() {
   const supabase = createClient();
+  const { t, language } = useLanguage();
+  const isBn = language === "bn";
   const [results, setResults] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -54,15 +57,15 @@ export default function ParentResultsPage() {
               <Award className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h1 className="text-lg font-bold text-white">Exam Results</h1>
-              <p className="text-xs text-white/70">Academic performance history</p>
+              <h1 className="text-lg font-bold text-white">{t("results.title") || "Exam Results"}</h1>
+              <p className="text-xs text-white/70">{t("results.parentSubtitle") || "Academic performance history"}</p>
             </div>
           </div>
 
           {!loading && avgPct !== null && (
             <div className="text-right">
               <p className="text-2xl font-black text-white">{avgPct}%</p>
-              <p className="text-[11px] text-white/60">Average Score</p>
+              <p className="text-[11px] text-white/60">{t("results.avgScore") || "Average Score"}</p>
             </div>
           )}
         </div>
@@ -71,19 +74,19 @@ export default function ParentResultsPage() {
           <div className="flex gap-3 mt-4">
             <div className="px-3 py-2 rounded-xl" style={{ background: "rgba(255,255,255,0.15)" }}>
               <p className="text-base font-black text-white">{results.length}</p>
-              <p className="text-[11px] text-white/60">Exams</p>
+              <p className="text-[11px] text-white/60">{t("exams.title") || "Exams"}</p>
             </div>
             <div className="px-3 py-2 rounded-xl" style={{ background: "rgba(255,255,255,0.15)" }}>
               <p className="text-base font-black text-white">
                 {results.filter((r) => !r.isAbsent).length}
               </p>
-              <p className="text-[11px] text-white/60">Appeared</p>
+              <p className="text-[11px] text-white/60">{t("attendance.present") || "Appeared"}</p>
             </div>
             <div className="px-3 py-2 rounded-xl" style={{ background: "rgba(255,255,255,0.15)" }}>
               <p className="text-base font-black text-white">
                 {results.filter((r) => r.isAbsent).length}
               </p>
-              <p className="text-[11px] text-white/60">Absent</p>
+              <p className="text-[11px] text-white/60">{t("attendance.absent") || "Absent"}</p>
             </div>
           </div>
         )}
@@ -95,8 +98,8 @@ export default function ParentResultsPage() {
           <Loader2 className="w-6 h-6 animate-spin" style={{ color: "var(--color-primary)" }} />
         </div>
       ) : results.length === 0 ? (
-        <div className="text-center py-12" style={{ color: "var(--color-text-muted)" }}>
-          No exam results yet.
+        <div className="text-center py-12 text-sm font-medium" style={{ color: "var(--color-text-muted)" }}>
+          {t("results.noRecords") || "No exam results yet."}
         </div>
       ) : (
         <div className="space-y-3">
@@ -140,7 +143,7 @@ export default function ParentResultsPage() {
                       </p>
                     )}
                     <p className="text-[11px] mt-0.5" style={{ color: "var(--color-text-muted)" }}>
-                      {new Date(r.exam.examDate).toLocaleDateString("en-BD", { month: "long", day: "numeric", year: "numeric" })}
+                      {new Date(r.exam.examDate).toLocaleDateString(isBn ? "bn-BD" : "en-BD", { month: "long", day: "numeric", year: "numeric" })}
                     </p>
                   </div>
 
@@ -149,7 +152,7 @@ export default function ParentResultsPage() {
                     {r.isAbsent ? (
                       <span className="text-xs font-bold px-2 py-0.5 rounded-full"
                         style={{ background: "var(--color-error-bg, #fef2f2)", color: "var(--color-error, #dc2626)" }}>
-                        Absent
+                        {t("attendance.absent") || "Absent"}
                       </span>
                     ) : (
                       <>
@@ -164,7 +167,7 @@ export default function ParentResultsPage() {
                         )}
                         {r.position && (
                           <p className="text-[11px] font-semibold" style={{ color: "var(--color-primary)" }}>
-                            Rank #{r.position}
+                            {t("results.rank") || "Rank"} #{r.position}
                           </p>
                         )}
                       </>

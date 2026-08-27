@@ -1,110 +1,95 @@
 "use server";
 
+import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/server";
 import { inviteRateLimiter } from "@/lib/ratelimit";
 import { headers } from "next/headers";
+import { createSafeAction } from "@/lib/actionHandler";
+
+const ValidateInviteSchema = z.object({
+  inviteCode: z.string().min(4, "Please enter a valid invite code (at least 4 characters).").transform(val => val.toUpperCase().trim())
+});
 
 /**
  * Validates a student invite code without claiming it.
  */
-export async function validateInviteCode(inviteCode: string) {
-  const cleanCode = inviteCode ? inviteCode.toUpperCase().trim() : "";
-  if (!cleanCode || cleanCode.length < 4) {
-    return { success: false, error: "Please enter a valid invite code (at least 4 characters)." };
-  }
-
-  try {
+export const validateInviteCode = createSafeAction(
+  ValidateInviteSchema,
+  async ({ inviteCode }) => {
     const supabase = createAdminClient();
 
     const { data: student } = await supabase
       .from("students")
       .select("id, auth_uid")
-      .eq("invite_code", cleanCode)
+      .eq("invite_code", inviteCode)
       .maybeSingle();
 
     if (!student) {
-      return { success: false, error: "Invalid invite code. Please check the code provided by your tutor." };
+      throw new Error("Invalid invite code. Please check the code provided by your tutor.");
     }
 
     if (student.auth_uid) {
-      return { success: false, error: "This invite code has already been claimed by another student." };
+      throw new Error("This invite code has already been claimed by another student.");
     }
 
-    return { success: true };
-  } catch (err) {
-    console.warn("Could not validate invite code:", err);
-    return { success: true };
-  }
-}
+    return { valid: true };
+  },
+  { requireAuth: false }
+);
+
+const ClaimInviteSchema = z.object({
+  inviteCode: z.string().min(4, "Invalid invite code format.").transform(val => val.toUpperCase().trim()),
+  uidOrToken: z.string(),
+});
 
 /**
  * Claims a student invite code, linking the student's Supabase Auth account to their student record.
  */
-export async function claimStudentInvite(
-  inviteCode: string,
-  uidOrToken: string
-) {
-  const supabase = createAdminClient();
-  let studentUid = "";
-  let user: any = null;
+export const claimStudentInvite = createSafeAction(
+  ClaimInviteSchema,
+  async ({ inviteCode, uidOrToken }, authContext) => {
+    const supabase = createAdminClient();
+    // authContext.uid has the verified auth uid
+    const studentUid = authContext!.uid;
+    const userEmail = authContext!.email;
 
-  try {
-    const { verifyUserAuth } = await import("@/lib/authHelpers");
-    const auth = await verifyUserAuth(uidOrToken);
-    studentUid = auth.uid;
-    user = { id: auth.uid, email: auth.email };
-  } catch (err) {
-    return { success: false, error: "Unauthorized" };
-  }
-
-  const cleanCode = inviteCode ? inviteCode.toUpperCase().trim() : "";
-  if (!cleanCode || cleanCode.length < 4) {
-    return { success: false, error: "Invalid invite code format." };
-  }
-
-  try {
-    const headersList = await headers();
-    const ip = headersList.get("x-forwarded-for") ?? "127.0.0.1";
-    const { success: rateLimitOk } = await inviteRateLimiter.limit(ip);
-
-    if (!rateLimitOk) {
-      return {
-        success: false,
-        error: "Too many attempts. Please wait 1 minute before trying again.",
-      };
+    try {
+      const headersList = await headers();
+      const ip = headersList.get("x-forwarded-for") ?? "127.0.0.1";
+      const { success: rateLimitOk } = await inviteRateLimiter.limit(ip);
+  
+      if (!rateLimitOk) {
+        throw new Error("Too many attempts. Please wait 1 minute before trying again.");
+      }
+    } catch (rlErr) {
+      if (rlErr instanceof Error && rlErr.message.includes("Too many attempts")) {
+        throw rlErr;
+      }
     }
-  } catch (rlErr) {
-    if (rlErr instanceof Error && rlErr.message.includes("Too many attempts")) {
-      return { success: false, error: rlErr.message };
-    }
-  }
 
-  try {
     // 1. Fetch student by invite code
     const { data: student, error: fetchErr } = await supabase
       .from("students")
       .select("*")
-      .eq("invite_code", cleanCode)
+      .eq("invite_code", inviteCode)
       .maybeSingle();
 
     if (fetchErr || !student) {
-      return { success: false, error: "Invalid invite code." };
+      throw new Error("Invalid invite code.");
     }
 
     if (student.auth_uid && student.auth_uid !== studentUid) {
-      return { success: false, error: "This invite code has already been claimed." };
+      throw new Error("This invite code has already been claimed.");
     }
 
     // 2. Extract auth user details to construct profile
-    let userEmail = user?.email || "";
-    let displayName = user?.user_metadata?.full_name || student.full_name || "Student";
-    let phoneNumber = user?.phone || student.phone || null;
+    let displayName = student.full_name || "Student";
+    let phoneNumber = student.phone || null;
 
     if (!userEmail) {
       try {
         const { data: adminUser } = await supabase.auth.admin.getUserById(studentUid);
         if (adminUser?.user) {
-          userEmail = adminUser.user.email || "";
           if (adminUser.user.user_metadata?.full_name) {
             displayName = adminUser.user.user_metadata.full_name;
           }
@@ -117,7 +102,7 @@ export async function claimStudentInvite(
       }
     }
 
-    // 3. Upsert profiles record FIRST (so foreign key constraint students_auth_uid_fkey is satisfied)
+    // 3. Upsert profiles record FIRST
     const { error: profileErr } = await supabase.from("profiles").upsert({
       id: studentUid,
       email: userEmail,
@@ -130,7 +115,7 @@ export async function claimStudentInvite(
     });
 
     if (profileErr) {
-      return { success: false, error: `Failed to create student profile: ${profileErr.message}` };
+      throw new Error(`Failed to create student profile: ${profileErr.message}`);
     }
 
     // 4. Link student auth_uid SECOND
@@ -139,7 +124,7 @@ export async function claimStudentInvite(
       .update({ auth_uid: studentUid })
       .eq("id", student.id);
 
-    // 5. Sync user_metadata in Supabase Auth so client-side fetchUserClaims uses fast-path
+    // 5. Sync user_metadata in Supabase Auth
     await supabase.auth.admin.updateUserById(studentUid, {
       user_metadata: {
         role: "student",
@@ -151,9 +136,7 @@ export async function claimStudentInvite(
       console.warn("User metadata update error in claimStudentInvite:", metaErr);
     });
 
-    return { success: true, tutorId: student.tutor_id };
-  } catch (err) {
-    console.warn("Error during claimStudentInvite:", err);
-    return { success: false, error: "Failed to process invite code. Please try again." };
-  }
-}
+    return { tutorId: student.tutor_id };
+  },
+  { requireAuth: true }
+);

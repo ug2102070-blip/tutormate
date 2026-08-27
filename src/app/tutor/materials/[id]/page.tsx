@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, use } from "react";
+import { useEffect, useState, use, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { createClient } from "@/lib/supabase/client";
@@ -28,12 +28,7 @@ export default function EditMaterialPage({ params }: { params: Promise<{ id: str
 
   const supabase = createClient();
 
-  useEffect(() => {
-    if (!user) return;
-    loadData();
-  }, [user, resolvedParams.id]);
-
-  async function loadData() {
+  const loadData = useCallback(async () => {
     setLoading(true);
     try {
       // Load batches
@@ -80,7 +75,12 @@ export default function EditMaterialPage({ params }: { params: Promise<{ id: str
     } finally {
       setLoading(false);
     }
-  }
+  }, [user, resolvedParams.id, supabase]);
+
+  useEffect(() => {
+    if (!user) return;
+    loadData();
+  }, [user, resolvedParams.id, loadData]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

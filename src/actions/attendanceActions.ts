@@ -6,6 +6,8 @@ import { hasRoleAtLeast } from "@/lib/permissions";
 import { z } from "zod";
 import type { AttendanceDoc, AttendanceRecord } from "@/types";
 
+import { revalidatePath } from "next/cache";
+
 const saveAttendanceSchema = z.object({
   batchId: z.string().min(1, "Batch ID is required"),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be YYYY-MM-DD format"),
@@ -18,18 +20,69 @@ const saveAttendanceSchema = z.object({
   ),
 });
 
+export interface BatchAttendanceOverviewItem {
+  id: string;
+  name: string;
+  gradeClass: string;
+  subject: string;
+  students: number;
+  marked: number;
+  present: number;
+  absent: number;
+  late: number;
+  rate: number;
+  isMarked: boolean;
+}
+
+export interface AttendanceOverviewSummary {
+  totalEnrolled: number;
+  totalMarked: number;
+  totalPresent: number;
+  totalAbsent: number;
+  totalLate: number;
+  overallRate: number;
+}
+
+export interface TutorAttendanceOverviewData {
+  batches: BatchAttendanceOverviewItem[];
+  summary: AttendanceOverviewSummary;
+}
+
+export interface RegisterStudentItem {
+  studentId: string;
+  rollNo: string;
+  fullName: string;
+  phone: string;
+  guardianPhone: string | null;
+  institution: string | null;
+  inviteCode: string;
+  avatarInitials: string;
+  status: "present" | "absent" | "late" | null;
+  remarks: string;
+}
+
+export interface BatchAttendanceRegisterData {
+  batch: {
+    id: string;
+    name: string;
+    gradeClass: string;
+    subject: string;
+  };
+  students: RegisterStudentItem[];
+  date: string;
+  isMarked: boolean;
+}
+
 interface SaveAttendancePayload {
   batchId: string;
   date: string; // YYYY-MM-DD
-  records: Record<string, AttendanceRecord>;
+  records: Record<string, { status: "present" | "absent" | "late"; remarks?: string | null }>;
 }
 
 /**
  * Saves or updates attendance record for a batch on a given date in Supabase.
  */
-export async function saveAttendance(
-  payload: SaveAttendancePayload
-) {
+export async function saveAttendance(payload: SaveAttendancePayload) {
   const authState = await verifyUserAuth();
   if (!hasRoleAtLeast(authState.role, "tutor")) {
     throw new Error("Unauthorized: Only tutors can log attendance.");
@@ -39,6 +92,17 @@ export async function saveAttendance(
   const { batchId, date, records } = validated;
 
   const supabase = createAdminClient();
+
+  // Verify batch ownership
+  const { data: batch, error: batchErr } = await supabase
+    .from("batches")
+    .select("id, tutor_id")
+    .eq("id", batchId)
+    .single();
+
+  if (batchErr || !batch || batch.tutor_id !== tutorId) {
+    throw new Error("Batch not found or unauthorized.");
+  }
 
   const { data: attendance, error } = await supabase
     .from("attendance")
@@ -58,7 +122,207 @@ export async function saveAttendance(
     throw new Error(`Failed to save attendance: ${error.message}`);
   }
 
+  // Invalidate caches across dependent routes
+  revalidatePath("/tutor/attendance");
+  revalidatePath(`/tutor/attendance/register/${batchId}`);
+  revalidatePath("/tutor/dashboard");
+  revalidatePath("/student/attendance");
+  revalidatePath("/parent/attendance");
+  revalidatePath("/owner/attendance");
+
   return { success: true, attendanceId: attendance.id };
+}
+
+/**
+ * Fetches attendance overview across all batches for a tutor on a given date.
+ */
+export async function getTutorAttendanceOverview(
+  date: string
+): Promise<TutorAttendanceOverviewData> {
+  const authState = await verifyUserAuth();
+  if (!hasRoleAtLeast(authState.role, "tutor")) {
+    throw new Error("Unauthorized: Only tutors can view attendance overview.");
+  }
+  const tutorId = authState.tutorId || authState.uid;
+  const supabase = createAdminClient();
+
+  // 1. Fetch active batches
+  const { data: batches = [] } = await supabase
+    .from("batches")
+    .select("id, name, grade_class, subject, student_count")
+    .eq("tutor_id", tutorId)
+    .eq("is_archived", false)
+    .order("created_at", { ascending: false });
+
+  // 2. Fetch active students to calculate enrollment per batch
+  const { data: students = [] } = await supabase
+    .from("students")
+    .select("id, enrolled_batch_ids, full_name")
+    .eq("tutor_id", tutorId)
+    .eq("status", "active");
+
+  // 3. Fetch attendance records for this date
+  const { data: attendanceRows = [] } = await supabase
+    .from("attendance")
+    .select("*")
+    .eq("tutor_id", tutorId)
+    .eq("date", date);
+
+  const attendanceMap = new Map<string, Record<string, AttendanceRecord>>();
+  for (const row of attendanceRows || []) {
+    attendanceMap.set(row.batch_id, (row.records || {}) as Record<string, AttendanceRecord>);
+  }
+
+  let totalMarked = 0;
+  let totalPresent = 0;
+  let totalAbsent = 0;
+  let totalLate = 0;
+
+  const batchItems: BatchAttendanceOverviewItem[] = (batches || []).map((b) => {
+    const batchStudents = (students || []).filter((s) =>
+      (s.enrolled_batch_ids || []).includes(b.id)
+    );
+    const enrolledCount = batchStudents.length;
+    const batchRecords = attendanceMap.get(b.id);
+    const isMarked = Boolean(batchRecords && Object.keys(batchRecords).length > 0);
+
+    let bMarked = 0;
+    let bPresent = 0;
+    let bAbsent = 0;
+    let bLate = 0;
+
+    if (batchRecords) {
+      for (const st of batchStudents) {
+        const r = batchRecords[st.id];
+        if (r && r.status) {
+          bMarked++;
+          if (r.status === "present") bPresent++;
+          else if (r.status === "absent") bAbsent++;
+          else if (r.status === "late") bLate++;
+        }
+      }
+    }
+
+    const bRate = bMarked > 0 ? Math.round((bPresent / bMarked) * 100) : 0;
+
+    totalMarked += bMarked;
+    totalPresent += bPresent;
+    totalAbsent += bAbsent;
+    totalLate += bLate;
+
+    return {
+      id: b.id,
+      name: b.name,
+      gradeClass: b.grade_class || "",
+      subject: b.subject || "",
+      students: enrolledCount,
+      marked: bMarked,
+      present: bPresent,
+      absent: bAbsent,
+      late: bLate,
+      rate: bRate,
+      isMarked,
+    };
+  });
+
+  const totalEnrolled = (students || []).length;
+  const overallRate = totalMarked > 0 ? Math.round((totalPresent / totalMarked) * 100) : 0;
+
+  return {
+    batches: batchItems,
+    summary: {
+      totalEnrolled,
+      totalMarked,
+      totalPresent,
+      totalAbsent,
+      totalLate,
+      overallRate,
+    },
+  };
+}
+
+/**
+ * Fetches batch attendance register for marking or editing attendance on a specific date.
+ */
+export async function getBatchAttendanceRegister(
+  batchId: string,
+  date: string
+): Promise<BatchAttendanceRegisterData> {
+  const authState = await verifyUserAuth();
+  if (!hasRoleAtLeast(authState.role, "tutor")) {
+    throw new Error("Unauthorized: Only tutors can view attendance register.");
+  }
+  const tutorId = authState.tutorId || authState.uid;
+  const supabase = createAdminClient();
+
+  // 1. Fetch batch details
+  const { data: batch, error: batchErr } = await supabase
+    .from("batches")
+    .select("id, name, grade_class, subject, tutor_id")
+    .eq("id", batchId)
+    .single();
+
+  if (batchErr || !batch || batch.tutor_id !== tutorId) {
+    throw new Error("Batch not found or unauthorized.");
+  }
+
+  // 2. Fetch enrolled students
+  const { data: students = [], error: stuErr } = await supabase
+    .from("students")
+    .select("id, full_name, phone, guardian_phone, institution, invite_code, enrolled_batch_ids, status, created_at")
+    .eq("tutor_id", tutorId)
+    .eq("status", "active")
+    .contains("enrolled_batch_ids", [batchId])
+    .order("full_name", { ascending: true });
+
+  if (stuErr) {
+    throw new Error(`Failed to fetch students: ${stuErr.message}`);
+  }
+
+  // 3. Fetch existing attendance record for this batch & date
+  const { data: attendanceRow } = await supabase
+    .from("attendance")
+    .select("id, records, scan_method, updated_at")
+    .eq("batch_id", batchId)
+    .eq("date", date)
+    .maybeSingle();
+
+  const existingRecords = (attendanceRow?.records || {}) as Record<string, AttendanceRecord>;
+  const isMarked = Boolean(attendanceRow && Object.keys(existingRecords).length > 0);
+
+  const studentRegisterItems: RegisterStudentItem[] = (students || []).map((st, idx) => {
+    const rec = existingRecords[st.id];
+    const nameParts = (st.full_name || "Student").trim().split(" ");
+    const initials =
+      nameParts.length > 1
+        ? `${nameParts[0][0]}${nameParts[nameParts.length - 1][0]}`.toUpperCase()
+        : nameParts[0].slice(0, 2).toUpperCase();
+
+    return {
+      studentId: st.id,
+      rollNo: String(idx + 1).padStart(2, "0"),
+      fullName: st.full_name,
+      phone: st.phone,
+      guardianPhone: st.guardian_phone || null,
+      institution: st.institution || null,
+      inviteCode: st.invite_code,
+      avatarInitials: initials,
+      status: (rec?.status as "present" | "absent" | "late") || null,
+      remarks: rec?.remarks || "",
+    };
+  });
+
+  return {
+    batch: {
+      id: batch.id,
+      name: batch.name,
+      gradeClass: batch.grade_class || "",
+      subject: batch.subject || "",
+    },
+    students: studentRegisterItems,
+    date,
+    isMarked,
+  };
 }
 
 /**

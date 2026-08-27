@@ -470,15 +470,27 @@ export async function generateWeeklySummary() {
   const [studentRes, batchRes, attendanceRes, feeRes, doubtRes] = await Promise.all([
     adminSupabase.from("students").select("id", { count: "exact" }).eq("tutor_id", tutorId),
     adminSupabase.from("batches").select("id", { count: "exact" }).eq("tutor_id", tutorId),
-    adminSupabase.from("attendance").select("status").eq("tutor_id", tutorId),
+    adminSupabase.from("attendance").select("records").eq("tutor_id", tutorId),
     adminSupabase.from("fees").select("amount_paid, amount_due, status").eq("tutor_id", tutorId),
     adminSupabase.from("doubts").select("status").eq("tutor_id", tutorId),
   ]);
 
   const studentCount = studentRes.count || 0;
   const batchCount = batchRes.count || 0;
-  const totalAttendance = attendanceRes.data?.length || 0;
-  const presentCount = attendanceRes.data?.filter((a) => a.status === "present").length || 0;
+  
+  let totalAttendance = 0;
+  let presentCount = 0;
+  attendanceRes.data?.forEach((att) => {
+    const recs = att.records as Record<string, { status?: string }> | null;
+    if (recs && typeof recs === "object") {
+      Object.values(recs).forEach((r) => {
+        if (r && typeof r === "object") {
+          totalAttendance++;
+          if (r.status === "present" || r.status === "late") presentCount++;
+        }
+      });
+    }
+  });
   const attendanceRate = totalAttendance > 0 ? Math.round((presentCount / totalAttendance) * 100) : 100;
   
   const pendingDoubts = doubtRes.data?.filter((d) => d.status === "pending").length || 0;

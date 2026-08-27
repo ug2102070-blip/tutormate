@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { UserCheck, Plus, ShieldCheck, Mail, Phone, Trash2, KeyRound } from "lucide-react";
+import { useLanguage } from "@/context/LanguageContext";
 
 interface StaffMember {
   id: string;
@@ -14,6 +15,7 @@ interface StaffMember {
 }
 
 export default function OwnerStaffPage() {
+  const { t } = useLanguage();
   const [staff, setStaff] = useState<StaffMember[]>([
     {
       id: "1",
@@ -72,10 +74,10 @@ export default function OwnerStaffPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-xl font-extrabold tracking-tight flex items-center gap-2" style={{ color: "var(--color-text)" }}>
-            <UserCheck className="w-6 h-6 text-amber-500" /> Staff & Roles Management
+            <UserCheck className="w-6 h-6 text-amber-500" /> {t("owner.staffRoles") || "Staff & Roles Management"}
           </h1>
           <p className="text-xs mt-1" style={{ color: "var(--color-text-muted)" }}>
-            Manage administrative staff, receptionists, accountants, and permission roles
+            {t("owner.staffRolesDesc") || "Manage administrative staff, receptionists, accountants, and permission roles"}
           </p>
         </div>
 
@@ -84,7 +86,7 @@ export default function OwnerStaffPage() {
           className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold text-white shadow-sm transition-all active:scale-95 shrink-0"
           style={{ background: "linear-gradient(135deg, rgb(217, 119, 6) 0%, rgb(180, 83, 9) 100%)" }}
         >
-          <Plus className="w-4 h-4" /> Add Staff Account
+          <Plus className="w-4 h-4" /> {t("owner.addStaffBtn") || "Add Staff Account"}
         </button>
       </div>
 
@@ -120,7 +122,7 @@ export default function OwnerStaffPage() {
                       {member.role}
                     </span>
                     <span className="text-[10px] text-emerald-600 font-semibold flex items-center gap-0.5">
-                      <ShieldCheck className="w-3 h-3" /> Active
+                      <ShieldCheck className="w-3 h-3" /> {t("owner.activeStatus") || "Active"}
                     </span>
                   </div>
                 </div>
@@ -129,7 +131,7 @@ export default function OwnerStaffPage() {
               <button
                 onClick={() => handleDelete(member.id)}
                 className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-500/10 transition-colors"
-                title="Remove staff"
+                title={t("owner.removeStaff") || "Remove staff"}
               >
                 <Trash2 className="w-4 h-4" />
               </button>
@@ -151,9 +153,9 @@ export default function OwnerStaffPage() {
               className="pt-2 border-t flex items-center justify-between text-[11px]"
               style={{ borderColor: "var(--color-border)", color: "var(--color-text-muted)" }}
             >
-              <span>Joined: {member.joinedDate}</span>
+              <span>{t("owner.joinedOn") || "Joined:"} {member.joinedDate}</span>
               <span className="flex items-center gap-1 font-semibold hover:underline cursor-pointer text-amber-600">
-                <KeyRound className="w-3 h-3" /> Edit Permissions
+                <KeyRound className="w-3 h-3" /> {t("owner.editPermissions") || "Edit Permissions"}
               </span>
             </div>
           </div>
@@ -168,18 +170,18 @@ export default function OwnerStaffPage() {
             style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
           >
             <h2 className="text-base font-extrabold" style={{ color: "var(--color-text)" }}>
-              Add Staff Member
+              {t("owner.addStaffTitle") || "Add Staff Member"}
             </h2>
 
             <form onSubmit={handleAddStaff} className="space-y-4">
               <div>
                 <label className="block text-xs font-semibold mb-1" style={{ color: "var(--color-text-secondary)" }}>
-                  Full Name
+                  {t("owner.fullNameLabel") || "Full Name"}
                 </label>
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Tariqul Islam"
+                  placeholder={t("owner.fullNamePlaceholder") || "e.g. Tariqul Islam"}
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   className="w-full px-3 py-2 text-xs rounded-xl border outline-none"
@@ -193,7 +195,7 @@ export default function OwnerStaffPage() {
 
               <div>
                 <label className="block text-xs font-semibold mb-1" style={{ color: "var(--color-text-secondary)" }}>
-                  Email Address
+                  {t("owner.emailAddressLabel") || "Email Address"}
                 </label>
                 <input
                   type="email"
@@ -212,7 +214,7 @@ export default function OwnerStaffPage() {
 
               <div>
                 <label className="block text-xs font-semibold mb-1" style={{ color: "var(--color-text-secondary)" }}>
-                  Phone Number
+                  {t("owner.phoneNumberLabel") || "Phone Number"}
                 </label>
                 <input
                   type="tel"
@@ -230,7 +232,7 @@ export default function OwnerStaffPage() {
 
               <div>
                 <label className="block text-xs font-semibold mb-1" style={{ color: "var(--color-text-secondary)" }}>
-                  Staff Role
+                  {t("owner.staffRoleLabel") || "Staff Role"}
                 </label>
                 <select
                   value={role}
@@ -242,9 +244,9 @@ export default function OwnerStaffPage() {
                     color: "var(--color-text)",
                   }}
                 >
-                  <option value="Accountant">Accountant (Fees & Financials)</option>
-                  <option value="Receptionist">Receptionist (Student Enrollments)</option>
-                  <option value="Manager">Coaching Manager (Full Ops)</option>
+                  <option value="Accountant">{t("owner.roleAccountant") || "Accountant (Fees & Financials)"}</option>
+                  <option value="Receptionist">{t("owner.roleReceptionist") || "Receptionist (Student Enrollments)"}</option>
+                  <option value="Manager">{t("owner.roleManager") || "Coaching Manager (Full Ops)"}</option>
                 </select>
               </div>
 
@@ -255,14 +257,14 @@ export default function OwnerStaffPage() {
                   className="px-4 py-2 text-xs font-bold rounded-xl border"
                   style={{ borderColor: "var(--color-border)", color: "var(--color-text-muted)" }}
                 >
-                  Cancel
+                  {t("common.cancel") || "Cancel"}
                 </button>
                 <button
                   type="submit"
                   className="px-4 py-2 text-xs font-bold text-white rounded-xl"
                   style={{ background: "rgb(217, 119, 6)" }}
                 >
-                  Add Staff Account
+                  {t("owner.addStaffBtn") || "Add Staff Account"}
                 </button>
               </div>
             </form>

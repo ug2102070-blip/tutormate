@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Bell, CalendarCheck, CreditCard, FileText, Award, Info, CheckCheck, Loader2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { useLanguage } from "@/context/LanguageContext";
 
 interface Notification {
   id: string;
@@ -30,13 +31,15 @@ const typeBg: Record<string, { bg: string; color: string }> = {
   info: { bg: "rgba(107,114,128,0.1)", color: "rgb(75,85,99)" },
 };
 
-function formatTime(iso: string) {
-  return new Date(iso).toLocaleDateString("en-BD", {
+function formatTime(iso: string, isBn: boolean) {
+  return new Date(iso).toLocaleDateString(isBn ? "bn-BD" : "en-BD", {
     day: "numeric", month: "short", year: "numeric",
   });
 }
 
 export default function ParentNotificationsPage() {
+  const { t, language } = useLanguage();
+  const isBn = language === "bn";
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -85,10 +88,10 @@ export default function ParentNotificationsPage() {
             generated.push({
               id: "att",
               type: "attendance",
-              title: rate < 75 ? "⚠️ Low Attendance Alert" : "Attendance Update",
+              title: rate < 75 ? (t("notifications.lowAttendanceAlert") || "⚠️ Low Attendance Alert") : (t("notifications.attendanceUpdate") || "Attendance Update"),
               body: total > 0
-                ? `This month's attendance: ${present}/${total} classes (${rate}%).${rate < 75 ? " Below the 75% threshold." : " Great job!"}`
-                : "No attendance records yet for this month.",
+                ? (isBn ? `এই মাসের উপস্থিতি: ${present}/${total} ক্লাস (${rate}%)।${rate < 75 ? " ৭৫% এর নিচে।" : " খুব ভালো!"}` : `This month's attendance: ${present}/${total} classes (${rate}%).${rate < 75 ? " Below the 75% threshold." : " Great job!"}`)
+                : (t("notifications.noAttendanceThisMonth") || "No attendance records yet for this month."),
               time: new Date().toISOString(),
               read: rate >= 75,
               urgent: rate < 75,
@@ -108,8 +111,8 @@ export default function ParentNotificationsPage() {
               generated.push({
                 id: "fee",
                 type: "fee",
-                title: "Fee Payment Due",
-                body: `৳${totalPending.toLocaleString()} in fees pending for this month. Please clear dues promptly.`,
+                title: t("notifications.feePaymentDue") || "Fee Payment Due",
+                body: isBn ? `এই মাসে ৳${totalPending.toLocaleString()} বকেয়া আছে। অনুগ্রহ করে দ্রুত পরিশোধ করুন।` : `৳${totalPending.toLocaleString()} in fees pending for this month. Please clear dues promptly.`,
                 time: new Date().toISOString(),
                 read: false,
                 urgent: true,
@@ -118,8 +121,8 @@ export default function ParentNotificationsPage() {
               generated.push({
                 id: "fee-ok",
                 type: "fee",
-                title: "Fees Up to Date ✓",
-                body: "All fees for this month have been paid. Thank you!",
+                title: t("notifications.feesUpToDate") || "Fees Up to Date ✓",
+                body: t("notifications.feesUpToDateBody") || "All fees for this month have been paid. Thank you!",
                 time: new Date().toISOString(),
                 read: true,
               });
@@ -136,8 +139,8 @@ export default function ParentNotificationsPage() {
               generated.push({
                 id: "assign",
                 type: "assignment",
-                title: `${subs!.length} Pending Assignment${subs!.length > 1 ? "s" : ""}`,
-                body: `Your child has ${subs!.length} assignment${subs!.length > 1 ? "s" : ""} that need${subs!.length === 1 ? "s" : ""} attention. Please remind them.`,
+                title: isBn ? `${subs!.length} টি বাকি অ্যাসাইনমেন্ট` : `${subs!.length} Pending Assignment${subs!.length > 1 ? "s" : ""}`,
+                body: isBn ? `আপনার সন্তানের ${subs!.length} টি অ্যাসাইনমেন্ট বাকি আছে। অনুগ্রহ করে স্মরণ করিয়ে দিন।` : `Your child has ${subs!.length} assignment${subs!.length > 1 ? "s" : ""} that need${subs!.length === 1 ? "s" : ""} attention. Please remind them.`,
                 time: new Date().toISOString(),
                 read: false,
               });
@@ -149,8 +152,8 @@ export default function ParentNotificationsPage() {
         generated.push({
           id: "welcome",
           type: "info",
-          title: "Welcome to Parent Portal",
-          body: "Track your child's attendance, fees, assignments and exam results — all in one place.",
+          title: t("notifications.welcomeTitle") || "Welcome to Parent Portal",
+          body: t("notifications.welcomeBody") || "Track your child's attendance, fees, assignments and exam results — all in one place.",
           time: new Date(Date.now() - 86400000 * 2).toISOString(),
           read: true,
         });
@@ -169,10 +172,10 @@ export default function ParentNotificationsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-extrabold tracking-tight" style={{ color: "var(--color-text)" }}>
-            Notifications
+            {t("notifications.title") || "Notifications"}
           </h1>
           <p className="text-xs mt-0.5" style={{ color: "var(--color-text-muted)" }}>
-            {unreadCount > 0 ? `${unreadCount} unread` : "All caught up!"}
+            {unreadCount > 0 ? (isBn ? `${unreadCount} টি অপঠিত` : `${unreadCount} unread`) : (t("notifications.allCaughtUp") || "All caught up!")}
           </p>
         </div>
         {unreadCount > 0 && (
@@ -182,7 +185,7 @@ export default function ParentNotificationsPage() {
             style={{ background: "var(--color-bg)", border: "1px solid var(--color-border)", color: "var(--color-primary)" }}
           >
             <CheckCheck className="w-3.5 h-3.5" />
-            Mark all read
+            {t("notifications.markAllRead") || "Mark all read"}
           </button>
         )}
       </div>
@@ -194,7 +197,7 @@ export default function ParentNotificationsPage() {
       ) : notifications.length === 0 ? (
         <div className="rounded-2xl p-10 text-center" style={{ background: "var(--color-bg)", border: "1px solid var(--color-border)" }}>
           <Bell className="w-8 h-8 mx-auto mb-2 opacity-30" style={{ color: "var(--color-text-muted)" }} />
-          <p className="text-sm font-medium" style={{ color: "var(--color-text-muted)" }}>No notifications yet</p>
+          <p className="text-sm font-medium" style={{ color: "var(--color-text-muted)" }}>{t("notifications.empty") || "No notifications yet"}</p>
         </div>
       ) : (
         <div className="space-y-2.5">
@@ -225,7 +228,7 @@ export default function ParentNotificationsPage() {
                     {n.urgent && (
                       <span className="text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded-full"
                         style={{ background: "rgba(239,68,68,0.12)", color: "rgb(220,38,38)" }}>
-                        Urgent
+                        {t("notifications.urgent") || "Urgent"}
                       </span>
                     )}
                     {!n.read && (
@@ -236,7 +239,7 @@ export default function ParentNotificationsPage() {
                     {n.body}
                   </p>
                   <p className="text-[10px] mt-1.5 font-medium" style={{ color: "var(--color-text-muted)" }}>
-                    {formatTime(n.time)}
+                    {formatTime(n.time, isBn)}
                   </p>
                 </div>
               </div>

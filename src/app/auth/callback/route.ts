@@ -1,50 +1,41 @@
-import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
-import { cookies } from "next/headers";
+import { createClient } from "@/lib/supabase/server";
 
+/**
+ * Supabase Auth Callback Route
+ * Handles OAuth (Google, etc.) and OTP verification redirects.
+ * Exchanges temporary code for a persistent session.
+ */
 export async function GET(request: NextRequest) {
-  const { searchParams, origin } = new URL(request.url);
+  const { searchParams } = new URL(request.url);
   const code = searchParams.get("code");
-  const next = searchParams.get("next") ?? "/";
+  const next = searchParams.get("next") ?? "/login";
 
   if (code) {
-    const cookieStore = await cookies();
-
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-        process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
-      {
-        cookies: {
-          getAll() {
-            return cookieStore.getAll();
-          },
-          setAll(cookiesToSet) {
-            cookiesToSet.forEach(({ name, value, options }) => {
-              cookieStore.set(name, value, options);
-            });
-          },
-        },
-      }
-    );
-
+    const supabase = await createClient();
     const { error } = await supabase.auth.exchangeCodeForSession(code);
 
     if (!error) {
-      // Redirect to login page which will handle onboarding/profile check
       const forwardedHost = request.headers.get("x-forwarded-host");
       const isLocalEnv = process.env.NODE_ENV === "development";
 
+      // Redirect to the dashboard-router (/login) which handles role-based redirects
       if (isLocalEnv) {
-        return NextResponse.redirect(`${origin}/login`);
-      } else if (forwardedHost) {
-        return NextResponse.redirect(`https://${forwardedHost}/login`);
-      } else {
-        return NextResponse.redirect(`${origin}/login`);
+        return NextResponse.redirect(new URL(next, request.url));
       }
+
+      if (forwardedHost) {
+        return NextResponse.redirect(`https://${forwardedHost}${next}`);
+      }
+
+      return NextResponse.redirect(new URL(next, request.url));
     }
+
+    console.error("Auth callback error:", error.message);
   }
 
-  // Return the user to an error page with instructions
-  return NextResponse.redirect(`${origin}/login?error=auth_callback_error`);
+  // Return the user to login page with an error parameter
+  const loginUrl = new URL("/login", request.url);
+  loginUrl.searchParams.set("error", "auth_callback_error");
+  return NextResponse.redirect(loginUrl);
 }

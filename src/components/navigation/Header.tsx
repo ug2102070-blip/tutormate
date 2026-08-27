@@ -8,7 +8,10 @@ import { useLanguage } from "@/context/LanguageContext";
 import { createClient } from "@/lib/supabase/client";
 import { LogOut, Settings, ChevronDown, User, Menu, Gem, Building2, GraduationCap } from "lucide-react";
 import { HeaderCalendar } from "@/components/HeaderCalendar";
+import { CommandBar } from "@/components/CommandBar";
+import { AcademicYearSelector } from "@/components/navigation/AcademicYearSelector";
 import { NotificationBell } from "@/components/NotificationBell";
+import { HeaderPersonalNote } from "@/components/navigation/HeaderPersonalNote";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { LanguageToggle } from "@/components/LanguageToggle";
 import { MobileDrawer } from "@/components/navigation/MobileDrawer";
@@ -153,10 +156,19 @@ export function Header() {
           )}
         </div>
 
-      {/* Right: Calendar + Notifications + User */}
+      {/* Right: Academic Year (Owner only) + Command Bar + Calendar + Notifications + User */}
       <div className="flex items-center gap-2 relative">
+        {/* Academic Session Selector — for institution owners */}
+        {role === "owner" && <AcademicYearSelector />}
+
+        {/* Global Command Bar (Ctrl+K) */}
+        <CommandBar />
+
         {/* Calendar Widget — available everywhere */}
         {role && <HeaderCalendar role={role as "tutor" | "student"} />}
+
+        {/* Personal Sticky Note Widget */}
+        <HeaderPersonalNote />
 
         {/* Notification Bell */}
         <NotificationBell />
@@ -264,6 +276,7 @@ export function Header() {
                 <>
                   <Link
                     href="/tutor/settings"
+                    prefetch={true}
                     onClick={() => setShowMenu(false)}
                     className="flex items-center gap-2.5 px-3.5 py-2 text-xs font-semibold transition-colors hover:bg-black/5 dark:hover:bg-white/5"
                     style={{ color: "var(--color-text-secondary)" }}
@@ -278,6 +291,7 @@ export function Header() {
 
                   <Link
                     href="/tutor/subscription"
+                    prefetch={true}
                     onClick={() => setShowMenu(false)}
                     className="flex items-center justify-between px-3.5 py-2 text-xs font-semibold transition-colors hover:bg-black/5 dark:hover:bg-white/5"
                     style={{ color: "var(--color-text-secondary)" }}

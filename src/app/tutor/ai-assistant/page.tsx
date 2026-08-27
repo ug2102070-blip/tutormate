@@ -114,7 +114,8 @@ export default function AiAssistantPage() {
     if (!user) return;
     async function loadInitialData() {
       try {
-        const studentList = await getTutorStudents();
+        const res = await getTutorStudents({});
+        const studentList = res.data || [];
         setStudents(studentList);
 
         const batchList = await getTutorBatches();

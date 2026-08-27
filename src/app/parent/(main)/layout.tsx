@@ -7,6 +7,7 @@ import { Sidebar } from "@/components/navigation/Sidebar";
 import { Header } from "@/components/navigation/Header";
 import { MobileNav } from "@/components/navigation/MobileNav";
 import { FeedbackWidget } from "@/components/FeedbackWidget";
+import { useLanguage } from "@/context/LanguageContext";
 
 export default function ParentMainLayout({
   children,
@@ -15,6 +16,7 @@ export default function ParentMainLayout({
 }) {
   const router = useRouter();
   const { user, role, loading } = useAuth();
+  const { t } = useLanguage();
 
   useEffect(() => {
     if (!loading) {
@@ -39,7 +41,7 @@ export default function ParentMainLayout({
         <div className="flex flex-col items-center gap-3">
           <div className="w-8 h-8 border-3 border-t-transparent rounded-full animate-spin" style={{ borderColor: "var(--color-primary)", borderTopColor: "transparent" }} />
           <span className="text-xs font-medium" style={{ color: "var(--color-text-muted)" }}>
-            Loading Parent Portal...
+            {t("parent.loadingPortal") || "Loading Parent Portal..."}
           </span>
         </div>
       </div>

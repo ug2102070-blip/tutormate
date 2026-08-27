@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { getParentFees } from "@/actions/parentActions";
 import { CreditCard, Loader2 } from "lucide-react";
+import { useLanguage } from "@/context/LanguageContext";
 
 const MONTH_NAMES = [
   "", "January", "February", "March", "April", "May", "June",
@@ -18,6 +19,8 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }
 
 export default function ParentFeesPage() {
   const supabase = createClient();
+  const { t, language } = useLanguage();
+  const isBn = language === "bn";
   const [fees, setFees] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -51,17 +54,17 @@ export default function ParentFeesPage() {
             <CreditCard className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h1 className="text-lg font-bold text-white">Fee History</h1>
-            <p className="text-xs text-white/70">Payment records for your child</p>
+            <h1 className="text-lg font-bold text-white">{t("fees.title") || "Fee History"}</h1>
+            <p className="text-xs text-white/70">{t("fees.parentSubtitle") || "Payment records for your child"}</p>
           </div>
         </div>
 
         {!loading && (
           <div className="grid grid-cols-3 gap-2">
             {[
-              { label: "Total Due", value: `৳${totalDue}` },
-              { label: "Total Paid", value: `৳${totalPaid}` },
-              { label: "Pending", value: `৳${totalPending}` },
+              { label: t("fees.totalDue") || "Total Due", value: `৳${totalDue}` },
+              { label: t("fees.totalPaid") || "Total Paid", value: `৳${totalPaid}` },
+              { label: t("fees.pending") || "Pending", value: `৳${totalPending}` },
             ].map((s) => (
               <div key={s.label} className="px-3 py-2 rounded-xl"
                 style={{ background: "rgba(255,255,255,0.15)" }}>
@@ -79,8 +82,8 @@ export default function ParentFeesPage() {
           <Loader2 className="w-6 h-6 animate-spin" style={{ color: "var(--color-primary)" }} />
         </div>
       ) : fees.length === 0 ? (
-        <div className="text-center py-12" style={{ color: "var(--color-text-muted)" }}>
-          No fee records found.
+        <div className="text-center py-12 text-sm font-medium" style={{ color: "var(--color-text-muted)" }}>
+          {t("fees.noRecords") || "No fee records found."}
         </div>
       ) : (
         <div className="rounded-2xl overflow-hidden"
@@ -113,11 +116,11 @@ export default function ParentFeesPage() {
                     {MONTH_NAMES[f.month]} {f.year}
                   </p>
                   <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
-                    {f.batchName}
+                    {f.batchName || (t("common.class") || "Class")}
                   </p>
                   {f.paidAt && (
                     <p className="text-[11px]" style={{ color: "var(--color-text-muted)" }}>
-                      Paid {new Date(f.paidAt).toLocaleDateString("en-BD", { month: "short", day: "numeric" })}
+                      {t("fees.paidOn") || "Paid"} {new Date(f.paidAt).toLocaleDateString(isBn ? "bn-BD" : "en-BD", { month: "short", day: "numeric" })}
                     </p>
                   )}
                 </div>
@@ -133,7 +136,7 @@ export default function ParentFeesPage() {
                     className="text-[11px] font-bold px-2 py-0.5 rounded-full"
                     style={{ background: sc.bg, color: sc.color }}
                   >
-                    {sc.label}
+                    {f.status === "paid" ? (t("fees.paid") || "Paid ✓") : f.status === "unpaid" ? (t("fees.unpaid") || "Unpaid") : (t("fees.partial") || "Partial")}
                   </span>
                 </div>
               </div>

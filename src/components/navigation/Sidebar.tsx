@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   tutorNavCategories,
   studentNavCategories,
@@ -54,10 +54,19 @@ const dashboardByRole: Record<string, string> = {
 
 export function Sidebar({ role }: SidebarProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const { t } = useLanguage();
   const categories = navCategoriesByRole[role] ?? tutorNavCategories;
   const badgeStyle = roleBadgeStyles[role] ?? roleBadgeStyles.tutor;
   const dashboardHref = dashboardByRole[role] ?? "/";
+
+  const handlePrefetch = (href: string) => {
+    try {
+      router.prefetch(href);
+    } catch {
+      // ignore
+    }
+  };
 
   return (
     <aside
@@ -70,7 +79,12 @@ export function Sidebar({ role }: SidebarProps) {
       <div className="space-y-6">
         {/* Brand Header */}
         <div className="px-2 py-1">
-          <Link href={dashboardHref} className="flex items-center justify-between">
+          <Link
+            href={dashboardHref}
+            prefetch={true}
+            onMouseEnter={() => handlePrefetch(dashboardHref)}
+            className="flex items-center justify-between"
+          >
             <span
               className="text-xl font-extrabold tracking-tight"
               style={{ color: "var(--color-primary)" }}
@@ -114,7 +128,10 @@ export function Sidebar({ role }: SidebarProps) {
                   <Link
                     key={item.href}
                     href={item.href}
-                    className="flex items-center justify-between px-3 py-2 text-xs font-semibold rounded-xl transition-all duration-150 group"
+                    prefetch={true}
+                    onMouseEnter={() => handlePrefetch(item.href)}
+                    onFocus={() => handlePrefetch(item.href)}
+                    className="flex items-center justify-between px-3 py-2 text-xs font-semibold rounded-xl transition-all duration-150 group active:scale-[0.98]"
                     style={{
                       background: isActive ? "var(--color-primary-50)" : "transparent",
                       color: isActive

@@ -62,6 +62,9 @@ export const metadata: Metadata = {
 
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { LanguageProvider } from "@/context/LanguageContext";
+import { AcademicYearProvider } from "@/context/AcademicYearContext";
+import { SWRProvider } from "@/components/SWRProvider";
+import { TopProgressBar } from "@/components/navigation/TopProgressBar";
 
 export default function RootLayout({
   children,
@@ -76,6 +79,7 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col relative" suppressHydrationWarning>
+        <TopProgressBar />
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
@@ -83,12 +87,16 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <LanguageProvider>
-            <AuthProvider>
-              <NetworkStatus />
-              <PwaRegister />
-              <PwaInstallPrompt />
-              {children}
-            </AuthProvider>
+            <AcademicYearProvider>
+              <SWRProvider>
+                <AuthProvider>
+                  <NetworkStatus />
+                  <PwaRegister />
+                  <PwaInstallPrompt />
+                  {children}
+                </AuthProvider>
+              </SWRProvider>
+            </AcademicYearProvider>
           </LanguageProvider>
         </ThemeProvider>
       </body>

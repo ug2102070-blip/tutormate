@@ -36,8 +36,8 @@ export default function StudentChatPage() {
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const supabase = createClient();
 
-  const fetchConvs = async () => {
-    setLoadingConvs(true);
+  const fetchConvs = async (silent = false) => {
+    if (!silent) setLoadingConvs(true);
     const res = await getConversations();
     if (res.success && res.conversations) {
       setConversations(res.conversations);
@@ -45,16 +45,23 @@ export default function StudentChatPage() {
         setActiveConv(res.conversations[0]);
       }
     }
-    setLoadingConvs(false);
+    if (!silent) setLoadingConvs(false);
   };
 
-  const fetchMessagesForConv = async (convId: string) => {
-    setLoadingMsgs(true);
+  const fetchMessagesForConv = async (convId: string, silent = false) => {
+    if (!silent) setLoadingMsgs(true);
     const res = await getChatMessages(convId);
     if (res.success && res.messages) {
-      setMessages(res.messages);
+      setMessages((prev) => {
+        const optimisticOnes = prev.filter((m) => m.id.startsWith("temp-"));
+        const confirmedMsgs = res.messages!;
+        const remainingOptimistic = optimisticOnes.filter(
+          (opt) => !confirmedMsgs.some((c) => c.text === opt.text && c.senderUid === opt.senderUid)
+        );
+        return [...confirmedMsgs, ...remainingOptimistic];
+      });
     }
-    setLoadingMsgs(false);
+    if (!silent) setLoadingMsgs(false);
   };
 
   useEffect(() => {
@@ -67,7 +74,38 @@ export default function StudentChatPage() {
     }
   }, [activeConv?.id]);
 
-  // Realtime Subscription
+  // Global Realtime listener for sidebar updates across all conversations
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const globalChannel = supabase
+      .channel("student_chat_global_sidebar")
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "chat_messages",
+        },
+        (payload) => {
+          const newMsg = payload.new as any;
+          setConversations((prev) =>
+            prev.map((c) =>
+              c.id === newMsg.conversation_id
+                ? { ...c, lastMessage: newMsg.text, lastMessageAt: newMsg.created_at }
+                : c
+            )
+          );
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(globalChannel);
+    };
+  }, [user?.id]);
+
+  // Realtime Subscription with Deduplication & Polling Fallback
   useEffect(() => {
     if (!activeConv) return;
 
@@ -83,24 +121,62 @@ export default function StudentChatPage() {
         },
         (payload) => {
           const newMsg = payload.new as any;
-          setMessages((prev) => [
-            ...prev,
-            {
-              id: newMsg.id,
-              conversationId: newMsg.conversation_id,
-              senderUid: newMsg.sender_uid,
-              senderRole: newMsg.sender_role,
-              text: newMsg.text,
-              attachmentPath: newMsg.attachment_path,
-              createdAt: newMsg.created_at,
-              senderName: newMsg.sender_uid === user?.id ? "You" : "Tutor/Participant",
-            },
-          ]);
+          setMessages((prev) => {
+            const exists = prev.some((m) => m.id === newMsg.id);
+            if (exists) return prev;
+
+            const tempMatch = prev.find(
+              (m) =>
+                m.id.startsWith("temp-") &&
+                m.text === newMsg.text &&
+                m.senderUid === newMsg.sender_uid
+            );
+
+            if (tempMatch) {
+              return prev.map((m) =>
+                m.id === tempMatch.id
+                  ? {
+                      ...m,
+                      id: newMsg.id,
+                      createdAt: newMsg.created_at,
+                    }
+                  : m
+              );
+            }
+
+            return [
+              ...prev,
+              {
+                id: newMsg.id,
+                conversationId: newMsg.conversation_id,
+                senderUid: newMsg.sender_uid,
+                senderRole: newMsg.sender_role,
+                text: newMsg.text,
+                attachmentPath: newMsg.attachment_path,
+                createdAt: newMsg.created_at,
+                senderName: newMsg.sender_uid === user?.id ? "You" : "Tutor/Participant",
+              },
+            ];
+          });
+
+          setConversations((prev) =>
+            prev.map((c) =>
+              c.id === newMsg.conversation_id
+                ? { ...c, lastMessage: newMsg.text, lastMessageAt: newMsg.created_at }
+                : c
+            )
+          );
         }
       )
       .subscribe();
 
+    // 4s polling fallback to guarantee 100% sync
+    const pollInterval = setInterval(() => {
+      fetchMessagesForConv(activeConv.id, true);
+    }, 4000);
+
     return () => {
+      clearInterval(pollInterval);
       supabase.removeChannel(channel);
     };
   }, [activeConv?.id, user?.id]);
@@ -119,20 +195,59 @@ export default function StudentChatPage() {
     setTimeout(() => setToastMessage(null), 4000);
   };
 
-  const handleSendMessage = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSendMessage = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     if (!activeConv || !inputText.trim() || sending) return;
 
-    setSending(true);
-    const textToSend = inputText;
+    const textToSend = inputText.trim();
     setInputText("");
 
+    const tempId = `temp-${Date.now()}`;
+    const optimisticMsg: ChatMessageDoc = {
+      id: tempId,
+      conversationId: activeConv.id,
+      senderUid: user?.id || "",
+      senderRole: "student",
+      text: textToSend,
+      attachmentPath: null,
+      createdAt: new Date().toISOString(),
+      senderName: "You",
+    };
+
+    // 1. Instant optimistic update in active thread
+    setMessages((prev) => [...prev, optimisticMsg]);
+
+    // 2. Instant optimistic update in conversation sidebar
+    setConversations((prev) =>
+      prev.map((c) =>
+        c.id === activeConv.id
+          ? { ...c, lastMessage: textToSend, lastMessageAt: optimisticMsg.createdAt }
+          : c
+      )
+    );
+
+    setSending(true);
     const res = await sendChatMessage(activeConv.id, textToSend);
-    if (!res.success) {
+    setSending(false);
+
+    if (res.success && res.message) {
+      const saved = res.message;
+      setMessages((prev) =>
+        prev.map((m) => (m.id === tempId ? saved : m))
+      );
+      setConversations((prev) =>
+        prev.map((c) =>
+          c.id === activeConv.id
+            ? { ...c, lastMessage: saved.text, lastMessageAt: saved.createdAt }
+            : c
+        )
+      );
+    } else if (!res.success) {
+      // Rollback optimistic message if failed
+      setMessages((prev) => prev.filter((m) => m.id !== tempId));
       showToast(res.error || "Failed to send message", "error");
       setInputText(textToSend);
     }
-    setSending(false);
   };
 
   const filteredConvs = conversations.filter((c) =>

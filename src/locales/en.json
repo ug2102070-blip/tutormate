@@ -70,7 +70,11 @@
     "parentFees": "Fee Status",
     "parentAssignments": "Assignments",
     "parentResults": "Results",
-    "parentSettings": "Settings"
+    "parentSettings": "Settings",
+    "reports": "Reports Center",
+    "documents": "Documents Vault",
+    "financialManagement": "Financial ERP",
+    "timetable": "Routine & Schedule"
   },
   "header": {
     "portal": "Portal",

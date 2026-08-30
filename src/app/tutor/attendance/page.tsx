@@ -91,7 +91,15 @@ export default function DailyAttendanceCenterPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <Link
+            href="/tutor/attendance/export"
+            className="px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold text-xs transition-all shadow-xs flex items-center gap-1.5"
+          >
+            <CalendarCheck className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+            <span>Monthly Export / PDF</span>
+          </Link>
+
           <button
             onClick={() => mutate()}
             disabled={isLoading}

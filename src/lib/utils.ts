@@ -6,15 +6,18 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
- * Format a number as Bangladeshi Taka currency
+ * Format a number as Bangladeshi Taka currency (e.g. ৳1,000 or ১,০০০৳ in Bengali)
  */
-export function formatBDT(amount: number): string {
-  return new Intl.NumberFormat("bn-BD", {
-    style: "currency",
-    currency: "BDT",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount);
+export function formatBDT(amount: number, lang: "en" | "bn" = "en"): string {
+  if (lang === "bn") {
+    return new Intl.NumberFormat("bn-BD", {
+      style: "currency",
+      currency: "BDT",
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(amount);
+  }
+  return `৳${Number(amount || 0).toLocaleString("en-US")}`;
 }
 
 /**
@@ -96,16 +99,19 @@ export function formatAuthError(err: unknown): string {
   if (msg.includes("Unable to validate email address")) {
     return "Please enter a valid email address.";
   }
-  if (msg.includes("Token has expired") || msg.includes("token is expired")) {
-    return "Your session has expired. Please sign in again.";
+  if (msg.includes("Error sending confirmation") || msg.includes("Error sending sms") || msg.includes("sms provider") || msg.includes("SMS")) {
+    return "SMS delivery failed. Please check Twilio configuration or SMS permissions.";
   }
-  if (msg.includes("Phone number") || msg.includes("phone_number")) {
+  if (msg.includes("Phone number") || msg.includes("phone_number") || msg.includes("invalid phone")) {
     return "Please enter a valid phone number.";
   }
-  if (msg.includes("OTP") || msg.includes("otp") || msg.includes("Token")) {
-    return "Invalid or expired verification code. Please try again.";
+  if (msg.includes("Token has expired") || msg.includes("token is expired") || msg.includes("token_expired") || msg.includes("otp_expired")) {
+    return "Verification code has expired. Please request a new code.";
   }
-  if (msg.includes("over_email_send_rate_limit") || msg.includes("too many requests") || msg.includes("rate limit")) {
+  if (msg.includes("invalid token") || msg.includes("Token is invalid") || msg.includes("otp") || msg.includes("Token")) {
+    return "Invalid verification code. Please check the code and try again.";
+  }
+  if (msg.includes("over_email_send_rate_limit") || msg.includes("over_sms_send_rate_limit") || msg.includes("too many requests") || msg.includes("rate limit")) {
     return "Too many attempts. Please wait a moment and try again.";
   }
   if (msg.includes("network") || msg.includes("fetch") || msg.includes("Failed to fetch")) {

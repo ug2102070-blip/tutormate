@@ -1,71 +1,70 @@
 "use client";
 
 import { useState } from "react";
-import { UserCheck, Plus, ShieldCheck, Mail, Phone, Trash2, KeyRound } from "lucide-react";
+import useSWR from "swr";
+import { UserCheck, Plus, ShieldCheck, Mail, Phone, Trash2, KeyRound, Loader2 } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
+import { getCenterStaff, createCenterStaff, deleteCenterStaff } from "@/actions/ownerActions";
+import { EmptyState } from "@/components/EmptyState";
 
 interface StaffMember {
   id: string;
   name: string;
   email: string;
   phone: string;
-  role: "Accountant" | "Receptionist" | "Manager";
+  role: "Accountant" | "Receptionist" | "Manager" | "Other";
   status: "active" | "inactive";
   joinedDate: string;
 }
 
 export default function OwnerStaffPage() {
   const { t } = useLanguage();
-  const [staff, setStaff] = useState<StaffMember[]>([
-    {
-      id: "1",
-      name: "Tariqul Islam",
-      email: "tariqul@coaching.com",
-      phone: "+8801711223344",
-      role: "Accountant",
-      status: "active",
-      joinedDate: "2026-01-10",
-    },
-    {
-      id: "2",
-      name: "Nusrat Jahan",
-      email: "nusrat@coaching.com",
-      phone: "+8801822334455",
-      role: "Receptionist",
-      status: "active",
-      joinedDate: "2026-03-01",
-    },
-  ]);
+  const { data: staff = [], isLoading, mutate } = useSWR<StaffMember[]>(
+    "owner-center-staff-list",
+    () => getCenterStaff()
+  );
 
   const [showModal, setShowModal] = useState(false);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
-  const [role, setRole] = useState<"Accountant" | "Receptionist" | "Manager">("Accountant");
+  const [role, setRole] = useState<"Accountant" | "Receptionist" | "Manager" | "Other">("Accountant");
+  const [submitting, setSubmitting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
 
-  function handleAddStaff(e: React.FormEvent) {
+  async function handleAddStaff(e: React.FormEvent) {
     e.preventDefault();
     if (!name.trim() || !email.trim()) return;
 
-    const newStaff: StaffMember = {
-      id: Date.now().toString(),
-      name,
-      email,
-      phone: phone || "N/A",
-      role,
-      status: "active",
-      joinedDate: new Date().toISOString().split("T")[0],
-    };
-
-    setStaff([...staff, newStaff]);
-    setName("");
-    setEmail("");
-    setPhone("");
-    setShowModal(false);
+    setSubmitting(true);
+    setErrorMsg("");
+    try {
+      await createCenterStaff({
+        name,
+        email,
+        phone: phone || undefined,
+        role,
+      });
+      await mutate();
+      setName("");
+      setEmail("");
+      setPhone("");
+      setShowModal(false);
+    } catch (err: any) {
+      setErrorMsg(err.message || "Failed to add staff account.");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
-  function handleDelete(id: string) {
-    setStaff(staff.filter((s) => s.id !== id));
+  async function handleDelete(id: string) {
+    if (!confirm(t("owner.confirmDeleteStaff") || "Are you sure you want to remove this staff account?")) return;
+    try {
+      await deleteCenterStaff(id);
+      await mutate();
+    } catch (err: any) {
+      alert(err.message || "Failed to remove staff account.");
+    }
   }
 
   return (
@@ -82,7 +81,10 @@ export default function OwnerStaffPage() {
         </div>
 
         <button
-          onClick={() => setShowModal(true)}
+          onClick={() => {
+            setErrorMsg("");
+            setShowModal(true);
+          }}
           className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold text-white shadow-sm transition-all active:scale-95 shrink-0"
           style={{ background: "linear-gradient(135deg, rgb(217, 119, 6) 0%, rgb(180, 83, 9) 100%)" }}
         >
@@ -90,77 +92,96 @@ export default function OwnerStaffPage() {
         </button>
       </div>
 
-      {/* Staff Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {staff.map((member) => (
-          <div
-            key={member.id}
-            className="p-5 rounded-2xl border space-y-4 transition-all hover:shadow-xs"
-            style={{
-              background: "var(--color-surface)",
-              borderColor: "var(--color-border)",
-            }}
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <div
-                  className="w-10 h-10 rounded-full flex items-center justify-center font-extrabold text-sm border shrink-0"
-                  style={{
-                    background: "rgba(245, 158, 11, 0.12)",
-                    color: "rgb(217, 119, 6)",
-                    borderColor: "rgba(245, 158, 11, 0.3)",
-                  }}
-                >
-                  {member.name.charAt(0)}
-                </div>
-                <div>
-                  <h3 className="text-sm font-extrabold" style={{ color: "var(--color-text)" }}>
-                    {member.name}
-                  </h3>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 border border-amber-500/20">
-                      {member.role}
-                    </span>
-                    <span className="text-[10px] text-emerald-600 font-semibold flex items-center gap-0.5">
-                      <ShieldCheck className="w-3 h-3" /> {t("owner.activeStatus") || "Active"}
-                    </span>
+      {/* Staff Content */}
+      {isLoading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="h-44 rounded-2xl animate-shimmer border border-slate-200 dark:border-white/10 bg-white dark:bg-[#131b2e]" />
+          <div className="h-44 rounded-2xl animate-shimmer border border-slate-200 dark:border-white/10 bg-white dark:bg-[#131b2e]" />
+        </div>
+      ) : staff.length === 0 ? (
+        <EmptyState
+          variant="generic"
+          title={t("owner.noStaffTitle") || "No Staff Members Yet"}
+          description={t("owner.noStaffDesc") || "Add accountants or receptionists to help manage fees, admissions, and student records."}
+          action={{
+            label: t("owner.addStaffBtn") || "Add Staff Member",
+            onClick: () => setShowModal(true),
+          }}
+        />
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {staff.map((member) => (
+            <div
+              key={member.id}
+              className="p-5 rounded-2xl border space-y-4 transition-all hover:shadow-xs"
+              style={{
+                background: "var(--color-surface)",
+                borderColor: "var(--color-border)",
+              }}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div
+                    className="w-10 h-10 rounded-full flex items-center justify-center font-extrabold text-sm border shrink-0"
+                    style={{
+                      background: "rgba(245, 158, 11, 0.12)",
+                      color: "rgb(217, 119, 6)",
+                      borderColor: "rgba(245, 158, 11, 0.3)",
+                    }}
+                  >
+                    {member.name.charAt(0).toUpperCase()}
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-extrabold" style={{ color: "var(--color-text)" }}>
+                      {member.name}
+                    </h3>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 border border-amber-500/20">
+                        {member.role}
+                      </span>
+                      <span className="text-[10px] text-emerald-600 font-semibold flex items-center gap-0.5">
+                        <ShieldCheck className="w-3 h-3" /> {t("owner.activeStatus") || "Active"}
+                      </span>
+                    </div>
                   </div>
                 </div>
+
+                <button
+                  onClick={() => handleDelete(member.id)}
+                  className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-500/10 transition-colors"
+                  title={t("owner.removeStaff") || "Remove staff"}
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
               </div>
 
-              <button
-                onClick={() => handleDelete(member.id)}
-                className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-500/10 transition-colors"
-                title={t("owner.removeStaff") || "Remove staff"}
+              <div
+                className="p-3 rounded-xl space-y-1.5 text-xs"
+                style={{ background: "var(--color-bg-secondary)", color: "var(--color-text-secondary)" }}
               >
-                <Trash2 className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div
-              className="p-3 rounded-xl space-y-1.5 text-xs"
-              style={{ background: "var(--color-bg-secondary)", color: "var(--color-text-secondary)" }}
-            >
-              <div className="flex items-center gap-2">
-                <Mail className="w-3.5 h-3.5 opacity-60" /> {member.email}
+                <div className="flex items-center gap-2 truncate">
+                  <Mail className="w-3.5 h-3.5 opacity-60 shrink-0" /> <span className="truncate">{member.email}</span>
+                </div>
+                {member.phone && (
+                  <div className="flex items-center gap-2">
+                    <Phone className="w-3.5 h-3.5 opacity-60 shrink-0" /> {member.phone}
+                  </div>
+                )}
               </div>
-              <div className="flex items-center gap-2">
-                <Phone className="w-3.5 h-3.5 opacity-60" /> {member.phone}
+
+              <div
+                className="pt-2 border-t flex items-center justify-between text-[11px]"
+                style={{ borderColor: "var(--color-border)", color: "var(--color-text-muted)" }}
+              >
+                <span>{t("owner.joinedOn") || "Joined:"} {member.joinedDate}</span>
+                <span className="flex items-center gap-1 font-semibold text-amber-600">
+                  <KeyRound className="w-3 h-3" /> {member.role}
+                </span>
               </div>
             </div>
-
-            <div
-              className="pt-2 border-t flex items-center justify-between text-[11px]"
-              style={{ borderColor: "var(--color-border)", color: "var(--color-text-muted)" }}
-            >
-              <span>{t("owner.joinedOn") || "Joined:"} {member.joinedDate}</span>
-              <span className="flex items-center gap-1 font-semibold hover:underline cursor-pointer text-amber-600">
-                <KeyRound className="w-3 h-3" /> {t("owner.editPermissions") || "Edit Permissions"}
-              </span>
-            </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
       {/* Modal */}
       {showModal && (
@@ -172,6 +193,12 @@ export default function OwnerStaffPage() {
             <h2 className="text-base font-extrabold" style={{ color: "var(--color-text)" }}>
               {t("owner.addStaffTitle") || "Add Staff Member"}
             </h2>
+
+            {errorMsg && (
+              <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-600 text-xs font-semibold">
+                {errorMsg}
+              </div>
+            )}
 
             <form onSubmit={handleAddStaff} className="space-y-4">
               <div>
@@ -247,6 +274,7 @@ export default function OwnerStaffPage() {
                   <option value="Accountant">{t("owner.roleAccountant") || "Accountant (Fees & Financials)"}</option>
                   <option value="Receptionist">{t("owner.roleReceptionist") || "Receptionist (Student Enrollments)"}</option>
                   <option value="Manager">{t("owner.roleManager") || "Coaching Manager (Full Ops)"}</option>
+                  <option value="Other">{t("owner.roleOther") || "General Assistant / Staff"}</option>
                 </select>
               </div>
 
@@ -254,6 +282,7 @@ export default function OwnerStaffPage() {
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
+                  disabled={submitting}
                   className="px-4 py-2 text-xs font-bold rounded-xl border"
                   style={{ borderColor: "var(--color-border)", color: "var(--color-text-muted)" }}
                 >
@@ -261,9 +290,11 @@ export default function OwnerStaffPage() {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 text-xs font-bold text-white rounded-xl"
+                  disabled={submitting}
+                  className="px-4 py-2 text-xs font-bold text-white rounded-xl flex items-center gap-1.5"
                   style={{ background: "rgb(217, 119, 6)" }}
                 >
+                  {submitting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                   {t("owner.addStaffBtn") || "Add Staff Account"}
                 </button>
               </div>

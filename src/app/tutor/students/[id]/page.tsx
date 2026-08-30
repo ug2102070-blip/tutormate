@@ -22,7 +22,9 @@ import {
   X,
   Send,
   Download,
+  Share2,
 } from "lucide-react";
+import ParentInviteSheet from "@/components/ui/ParentInviteSheet";
 
 export default function Student360ProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -33,6 +35,7 @@ export default function Student360ProfilePage({ params }: { params: Promise<{ id
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showRemarkModal, setShowRemarkModal] = useState(false);
   const [showBehaviorModal, setShowBehaviorModal] = useState(false);
+  const [showParentInvite, setShowParentInvite] = useState(false);
 
   // Student Mock State
   const student = {
@@ -107,6 +110,15 @@ export default function Student360ProfilePage({ params }: { params: Promise<{ id
         <span className="text-slate-600 dark:text-slate-300 font-semibold">{student.name}</span>
       </div>
 
+      {/* Parent Invite Sheet */}
+      {showParentInvite && (
+        <ParentInviteSheet
+          studentId={id}
+          studentName={student.name}
+          onClose={() => setShowParentInvite(false)}
+        />
+      )}
+
       {/* Student 360 Top Profile Banner */}
       <div
         className="p-5 sm:p-6 rounded-2xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
@@ -143,6 +155,19 @@ export default function Student360ProfilePage({ params }: { params: Promise<{ id
           <button className="px-3 py-2 rounded-xl border text-xs font-bold hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 transition-all flex items-center gap-1.5 shadow-xs">
             <Edit2 className="w-3.5 h-3.5 text-slate-400" />
             <span>Edit Profile</span>
+          </button>
+          {/* Add Parent button */}
+          <button
+            onClick={() => setShowParentInvite(true)}
+            className="px-3 py-2 rounded-xl border text-xs font-bold transition-all flex items-center gap-1.5 shadow-xs"
+            style={{
+              borderColor: "rgba(99,102,241,0.3)",
+              background: "rgba(99,102,241,0.08)",
+              color: "rgb(99,102,241)",
+            }}
+          >
+            <Share2 className="w-3.5 h-3.5" />
+            <span>Parent Invite</span>
           </button>
           <button className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition-all shadow-md shadow-blue-500/20">
             Promote / Enroll

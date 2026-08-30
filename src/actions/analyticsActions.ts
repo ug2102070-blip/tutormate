@@ -383,3 +383,258 @@ export async function getGradeDistribution(): Promise<GradeDistributionData[]> {
 
   return Object.entries(gradeCounts).map(([grade, count]) => ({ grade, count }));
 }
+
+// ─── DASHBOARD LIVE DATA ──────────────────────────────────────────────────────
+// Replaces all hardcoded fake arrays in DashboardClientUI.tsx
+
+export interface DashboardScheduleClass {
+  id: string;
+  batchName: string;
+  subject: string;
+  gradeClass: string;
+  scheduleDays: string[];
+  studentsCount: number;
+  batchId: string;
+}
+
+export interface DashboardUpcomingExam {
+  id: string;
+  title: string;
+  batchName: string;
+  examDate: string;
+  totalMarks: number;
+  passMarks: number | null;
+  daysUntil: number;
+}
+
+export interface DashboardActiveAssignment {
+  id: string;
+  title: string;
+  batchName: string;
+  deadline: string;
+  submittedCount: number;
+  totalStudents: number;
+  batchId: string;
+}
+
+export interface DashboardRecentMaterial {
+  id: string;
+  title: string;
+  batchName: string;
+  fileType: string;
+  fileSize: number | null;
+  createdAt: string;
+}
+
+export interface DashboardRecentDoubt {
+  id: string;
+  studentName: string;
+  batchName: string;
+  title: string;
+  timeAgo: string;
+  status: string;
+}
+
+export interface DashboardLiveData {
+  todayBatches: DashboardScheduleClass[];
+  upcomingExams: DashboardUpcomingExam[];
+  activeAssignments: DashboardActiveAssignment[];
+  recentMaterials: DashboardRecentMaterial[];
+  recentDoubts: DashboardRecentDoubt[];
+}
+
+const DAYS_OF_WEEK = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+function formatTimeAgo(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  return `${Math.floor(hrs / 24)}d ago`;
+}
+
+/**
+ * Fetches real dashboard live data for the authenticated tutor.
+ * Replaces all hardcoded fake data in DashboardClientUI.tsx.
+ *
+ * Returns empty arrays gracefully for new tutors with no data.
+ */
+export async function getDashboardLiveData(): Promise<DashboardLiveData> {
+  const empty: DashboardLiveData = {
+    todayBatches: [],
+    upcomingExams: [],
+    activeAssignments: [],
+    recentMaterials: [],
+    recentDoubts: [],
+  };
+
+  try {
+    const authState = await verifyUserAuth();
+    if (authState.role !== "tutor" && authState.role !== "owner" && authState.role !== "admin") {
+      return empty;
+    }
+
+    const tutorId = authState.tutorId || authState.uid;
+    const supabase = createAdminClient();
+    const todayName = DAYS_OF_WEEK[new Date().getDay()];
+    const now = new Date();
+    const todayISO = now.toISOString().split("T")[0];
+    const in14Days = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000)
+      .toISOString()
+      .split("T")[0];
+
+    // Fetch all data in parallel — single round trip with Promise.all
+    const [batchesRes, examsRes, assignmentsRes, materialsRes, doubtsRes] = await Promise.all([
+      // Active batches with schedule
+      supabase
+        .from("batches")
+        .select("id, name, subject, grade_class, schedule, student_count")
+        .eq("tutor_id", tutorId)
+        .eq("is_archived", false)
+        .order("created_at", { ascending: false }),
+
+      // Upcoming exams in next 14 days
+      supabase
+        .from("exams")
+        .select("id, title, exam_date, total_marks, pass_marks, batches(name)")
+        .eq("tutor_id", tutorId)
+        .gte("exam_date", todayISO)
+        .lte("exam_date", in14Days)
+        .order("exam_date", { ascending: true })
+        .limit(5),
+
+      // Active assignments (published, deadline not expired)
+      supabase
+        .from("assignments")
+        .select(`
+          id, title, deadline, batch_id,
+          batches(name, student_count),
+          assignment_submissions(id, status)
+        `)
+        .eq("tutor_id", tutorId)
+        .eq("is_published", true)
+        .gte("deadline", now.toISOString())
+        .order("deadline", { ascending: true })
+        .limit(5),
+
+      // Recent study materials
+      supabase
+        .from("materials")
+        .select("id, title, file_type, file_size, created_at, batches(name)")
+        .eq("tutor_id", tutorId)
+        .eq("is_published", true)
+        .order("created_at", { ascending: false })
+        .limit(4),
+
+      // Recent pending doubts
+      supabase
+        .from("doubts")
+        .select("id, student_name, title, status, last_message_at, batches(name)")
+        .eq("tutor_id", tutorId)
+        .in("status", ["pending", "answered"])
+        .order("last_message_at", { ascending: false })
+        .limit(3),
+    ]);
+
+    // ── Today's batches: filter by schedule days ──────────────────────────────
+    const todayBatches: DashboardScheduleClass[] = [];
+    for (const b of batchesRes.data ?? []) {
+      const schedule: Array<{ day?: string; days?: string[] }> = b.schedule ?? [];
+      const scheduleDays = schedule.flatMap((s) =>
+        s.day ? [s.day] : Array.isArray(s.days) ? s.days : []
+      );
+      if (
+        scheduleDays.length === 0 ||
+        scheduleDays.some(
+          (d: string) => d.toLowerCase() === todayName.toLowerCase()
+        )
+      ) {
+        todayBatches.push({
+          id: b.id,
+          batchName: b.name,
+          subject: b.subject,
+          gradeClass: b.grade_class,
+          scheduleDays,
+          studentsCount: b.student_count ?? 0,
+          batchId: b.id,
+        });
+      }
+    }
+
+    // ── Upcoming exams ────────────────────────────────────────────────────────
+    const upcomingExams: DashboardUpcomingExam[] = (examsRes.data ?? []).map((e: any) => {
+      const batchInfo = Array.isArray(e.batches) ? e.batches[0] : e.batches;
+      const examDate = new Date(e.exam_date);
+      const daysUntil = Math.ceil(
+        (examDate.getTime() - now.setHours(0, 0, 0, 0)) / (1000 * 60 * 60 * 24)
+      );
+      return {
+        id: e.id,
+        title: e.title,
+        batchName: batchInfo?.name ?? "General",
+        examDate: e.exam_date,
+        totalMarks: Number(e.total_marks),
+        passMarks: e.pass_marks !== null ? Number(e.pass_marks) : null,
+        daysUntil: Math.max(0, daysUntil),
+      };
+    });
+
+    // ── Active assignments ────────────────────────────────────────────────────
+    const activeAssignments: DashboardActiveAssignment[] = (assignmentsRes.data ?? []).map(
+      (a: any) => {
+        const batchInfo = Array.isArray(a.batches) ? a.batches[0] : a.batches;
+        const subs: any[] = a.assignment_submissions ?? [];
+        const submittedCount = subs.filter(
+          (s) => s.status === "submitted" || s.status === "graded"
+        ).length;
+        return {
+          id: a.id,
+          title: a.title,
+          batchName: batchInfo?.name ?? "General",
+          deadline: a.deadline,
+          submittedCount,
+          totalStudents: batchInfo?.student_count ?? 0,
+          batchId: a.batch_id,
+        };
+      }
+    );
+
+    // ── Recent materials ──────────────────────────────────────────────────────
+    const recentMaterials: DashboardRecentMaterial[] = (materialsRes.data ?? []).map((m: any) => {
+      const batchInfo = Array.isArray(m.batches) ? m.batches[0] : m.batches;
+      return {
+        id: m.id,
+        title: m.title,
+        batchName: batchInfo?.name ?? "All Batches",
+        fileType: m.file_type,
+        fileSize: m.file_size,
+        createdAt: m.created_at,
+      };
+    });
+
+    // ── Recent doubts ─────────────────────────────────────────────────────────
+    const recentDoubts: DashboardRecentDoubt[] = (doubtsRes.data ?? []).map((d: any) => {
+      const batchInfo = Array.isArray(d.batches) ? d.batches[0] : d.batches;
+      return {
+        id: d.id,
+        studentName: d.student_name,
+        batchName: batchInfo?.name ?? "General",
+        title: d.title,
+        timeAgo: formatTimeAgo(d.last_message_at || d.created_at),
+        status: d.status,
+      };
+    });
+
+    return {
+      todayBatches,
+      upcomingExams,
+      activeAssignments,
+      recentMaterials,
+      recentDoubts,
+    };
+  } catch (err) {
+    console.error("[getDashboardLiveData] Error:", err);
+    return empty;
+  }
+}

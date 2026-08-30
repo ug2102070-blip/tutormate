@@ -48,63 +48,61 @@ export interface TimetableResponse {
   tableExists: boolean;
 }
 
-const DEFAULT_DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday"];
+// Bangladesh school week: Saturday–Thursday (Friday = weekly holiday)
+const DEFAULT_DAYS = ["Saturday", "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday"];
+
+// Typical Bangladeshi private tuition time slots
 const DEFAULT_PERIODS = [
-  "08:00 - 08:45 AM",
-  "08:45 - 09:30 AM",
-  "09:45 - 10:30 AM",
-  "10:30 - 11:15 AM",
-  "11:30 - 12:15 PM",
+  "07:00 - 08:30 AM",  // Morning batch
+  "02:00 - 03:30 PM",  // Afternoon batch
+  "05:00 - 07:00 PM",  // Evening batch
 ];
 
+// Seed schedule using Bangladeshi standard subjects and names
 const DEFAULT_SEED_SCHEDULE: Record<
   string,
   { subject: string; teacher: string; room: string; color: string }[]
 > = {
+  Saturday: [
+    { subject: "গণিত (Mathematics)", teacher: "রহিম স্যার", room: "রুম ১", color: "blue" },
+    { subject: "বাংলা (Bangla)", teacher: "করিম স্যার", room: "রুম ১", color: "emerald" },
+    { subject: "ইংরেজি (English)", teacher: "সালমা ম্যাডাম", room: "রুম ২", color: "purple" },
+  ],
   Sunday: [
-    { subject: "Mathematics", teacher: "Fatima Noor", room: "Room A-101", color: "blue" },
-    { subject: "English", teacher: "Ahmed Raza", room: "Room A-101", color: "purple" },
-    { subject: "Science", teacher: "Sana Malik", room: "Room A-101", color: "emerald" },
-    { subject: "Computer Science", teacher: "Tariq Ali", room: "Lab-1", color: "cyan" },
-    { subject: "Islamic Studies", teacher: "Hafiz Usman", room: "Room A-101", color: "amber" },
+    { subject: "বিজ্ঞান (Science)", teacher: "রহিম স্যার", room: "রুম ১", color: "cyan" },
+    { subject: "গণিত (Mathematics)", teacher: "রহিম স্যার", room: "রুম ১", color: "blue" },
+    { subject: "বাংলা (Bangla)", teacher: "করিম স্যার", room: "রুম ১", color: "emerald" },
   ],
   Monday: [
-    { subject: "English", teacher: "Ahmed Raza", room: "Room A-101", color: "purple" },
-    { subject: "Mathematics", teacher: "Fatima Noor", room: "Room A-101", color: "blue" },
-    { subject: "Social Studies", teacher: "Bilal Khan", room: "Room A-101", color: "rose" },
-    { subject: "Science", teacher: "Sana Malik", room: "Room A-101", color: "emerald" },
-    { subject: "Urdu", teacher: "Ayesha Bibi", room: "Room A-101", color: "indigo" },
+    { subject: "ইংরেজি (English)", teacher: "সালমা ম্যাডাম", room: "রুম ২", color: "purple" },
+    { subject: "গণিত (Mathematics)", teacher: "রহিম স্যার", room: "রুম ১", color: "blue" },
+    { subject: "সাধারণ জ্ঞান (GK)", teacher: "করিম স্যার", room: "রুম ১", color: "amber" },
   ],
   Tuesday: [
-    { subject: "Science", teacher: "Sana Malik", room: "Room A-101", color: "emerald" },
-    { subject: "Mathematics", teacher: "Fatima Noor", room: "Room A-101", color: "blue" },
-    { subject: "Computer Science", teacher: "Tariq Ali", room: "Lab-1", color: "cyan" },
-    { subject: "English", teacher: "Ahmed Raza", room: "Room A-101", color: "purple" },
-    { subject: "Library / Activity", teacher: "Staff", room: "Library", color: "teal" },
+    { subject: "বিজ্ঞান (Science)", teacher: "রহিম স্যার", room: "রুম ১", color: "cyan" },
+    { subject: "ইংরেজি (English)", teacher: "সালমা ম্যাডাম", room: "রুম ২", color: "purple" },
+    { subject: "গণিত (Mathematics)", teacher: "রহিম স্যার", room: "রুম ১", color: "blue" },
   ],
   Wednesday: [
-    { subject: "Mathematics", teacher: "Fatima Noor", room: "Room A-101", color: "blue" },
-    { subject: "English", teacher: "Ahmed Raza", room: "Room A-101", color: "purple" },
-    { subject: "Science", teacher: "Sana Malik", room: "Room A-101", color: "emerald" },
-    { subject: "Islamic Studies", teacher: "Hafiz Usman", room: "Room A-101", color: "amber" },
-    { subject: "Urdu", teacher: "Ayesha Bibi", room: "Room A-101", color: "indigo" },
+    { subject: "বাংলা (Bangla)", teacher: "করিম স্যার", room: "রুম ১", color: "emerald" },
+    { subject: "বিজ্ঞান (Science)", teacher: "রহিম স্যার", room: "রুম ১", color: "cyan" },
+    { subject: "গণিত (Mathematics)", teacher: "রহিম স্যার", room: "রুম ১", color: "blue" },
   ],
   Thursday: [
-    { subject: "English", teacher: "Ahmed Raza", room: "Room A-101", color: "purple" },
-    { subject: "Mathematics", teacher: "Fatima Noor", room: "Room A-101", color: "blue" },
-    { subject: "Science", teacher: "Sana Malik", room: "Room A-101", color: "emerald" },
-    { subject: "Weekly Assessment", teacher: "Fatima Noor", room: "Room A-101", color: "amber" },
-    { subject: "Physical Education", teacher: "Coach Asif", room: "Ground", color: "rose" },
+    { subject: "ইংরেজি (English)", teacher: "সালমা ম্যাডাম", room: "রুম ২", color: "purple" },
+    { subject: "সাপ্তাহিক পরীক্ষা (Weekly Test)", teacher: "রহিম স্যার", room: "রুম ১", color: "rose" },
+    { subject: "গণিত (Mathematics)", teacher: "রহিম স্যার", room: "রুম ১", color: "blue" },
   ],
 };
 
+// Typical Bangladeshi private tuition batch names
 const STANDARD_CLASSES = [
-  { id: "class-1-a", name: "Class 1-A (Room A-101)", type: "class" as const },
-  { id: "class-2-a", name: "Class 2-A (Room A-102)", type: "class" as const },
-  { id: "class-3-a", name: "Class 3-A (Room A-103)", type: "class" as const },
-  { id: "class-4-a", name: "Class 4-A (Room B-201)", type: "class" as const },
-  { id: "class-5-a", name: "Class 5-A (Room B-202)", type: "class" as const },
-  { id: "class-6-a", name: "Class 6-A (Room B-203)", type: "class" as const },
+  { id: "batch-morning-6",   name: "ক্লাস ৬ - মর্নিং ব্যাচ (7:00-8:30 AM)", type: "batch" as const },
+  { id: "batch-morning-7",   name: "ক্লাস ৭ - মর্নিং ব্যাচ (7:00-8:30 AM)", type: "batch" as const },
+  { id: "batch-morning-8",   name: "ক্লাস ৮ - মর্নিং ব্যাচ (7:00-8:30 AM)", type: "batch" as const },
+  { id: "batch-afternoon-9", name: "ক্লাস ৯ - আফটারনুন ব্যাচ (2:00-3:30 PM)", type: "batch" as const },
+  { id: "batch-afternoon-10",name: "ক্লাস ১০ - আফটারনুন ব্যাচ (2:00-3:30 PM)", type: "batch" as const },
+  { id: "batch-evening-ssc", name: "SSC প্রস্তুতি - ইভনিং ব্যাচ (5:00-7:00 PM)", type: "batch" as const },
 ];
 
 /**

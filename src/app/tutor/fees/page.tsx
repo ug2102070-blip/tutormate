@@ -1,15 +1,18 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import useSWR from "swr";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/context/LanguageContext";
 import { generateMonthlyFees, updateFeeStatus } from "@/actions/feeActions";
+import { generateMonthlyFeesForAllBatches } from "@/actions/feeAutoGenerateActions";
 import { formatBDT } from "@/lib/utils";
 import type { BatchDoc, StudentDoc, FeeDoc } from "@/types";
-import { CreditCard, Sparkles, Check, DollarSign } from "lucide-react";
+import { CreditCard, Sparkles, Check, DollarSign, MessageCircle, Printer, Layers } from "lucide-react";
 import { EmptyState } from "@/components/EmptyState";
+import { FeeReminderPanel } from "@/components/fees/FeeReminderPanel";
 
 const supabase = createClient();
 
@@ -28,6 +31,7 @@ export default function FeesPage() {
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
+  const [reminderOpen, setReminderOpen] = useState(false);
 
   const tutorId = (claims && "tutorId" in claims ? (claims as any).tutorId : null) || user?.id;
 
@@ -151,6 +155,27 @@ export default function FeesPage() {
     }
   }
 
+  async function handleGenerateAllBatches() {
+    setGenerating(true);
+    setError("");
+    setSuccessMsg("");
+
+    try {
+      const res = await generateMonthlyFeesForAllBatches({
+        year: selectedYear,
+        month: selectedMonth,
+      });
+
+      setSuccessMsg(res.message);
+      mutateFees();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to auto-generate fees across batches.";
+      setError(msg);
+    } finally {
+      setGenerating(false);
+    }
+  }
+
   async function handleTogglePaid(
     fee: FeeDoc,
     newStatus: "paid" | "unpaid",
@@ -191,14 +216,38 @@ export default function FeesPage() {
           </p>
         </div>
 
-        <button
-          onClick={handleGenerateFees}
-          disabled={generating || !activeBatchId}
-          className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-xs transition-all disabled:opacity-50"
-        >
-          <Sparkles className="w-4 h-4" />
-          {generating ? t("fees.generating") : t("fees.generateInvoices")}
-        </button>
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* WhatsApp Reminder button */}
+          {activeBatchId && feesList.filter((f) => f.status !== "paid").length > 0 && (
+            <button
+              onClick={() => setReminderOpen(true)}
+              className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-xs transition-all"
+            >
+              <MessageCircle className="w-4 h-4" />
+              Send Reminders
+            </button>
+          )}
+
+          {/* Generate All Batches One-Click Button */}
+          <button
+            onClick={handleGenerateAllBatches}
+            disabled={generating || batches.length === 0}
+            className="inline-flex items-center gap-2 px-3.5 py-2 text-xs font-semibold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 border border-indigo-200 dark:border-indigo-800 rounded-lg shadow-xs transition-all disabled:opacity-50"
+            title="Auto-generate monthly fee invoices for all active batches"
+          >
+            <Layers className="w-4 h-4" />
+            Generate All Batches
+          </button>
+
+          <button
+            onClick={handleGenerateFees}
+            disabled={generating || !activeBatchId}
+            className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-xs transition-all disabled:opacity-50"
+          >
+            <Sparkles className="w-4 h-4" />
+            {generating ? t("fees.generating") : t("fees.generateInvoices")}
+          </button>
+        </div>
       </div>
 
       {successMsg && (
@@ -361,12 +410,21 @@ export default function FeesPage() {
                     </span>
 
                     {fee.status === "paid" ? (
-                      <button
-                        onClick={() => handleTogglePaid(fee, "unpaid")}
-                        className="px-3 py-1.5 text-[11px] font-bold rounded-lg border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#0b0f19] hover:bg-slate-100 transition-colors"
-                      >
-                        {t("fees.markUnpaid")}
-                      </button>
+                      <div className="flex items-center gap-1.5">
+                        <Link
+                          href={`/tutor/fees/receipt/${fee.id}`}
+                          className="px-2.5 py-1.5 text-[11px] font-bold rounded-lg border border-indigo-200 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 flex items-center gap-1 transition-colors"
+                          title="View and print payment receipt"
+                        >
+                          <Printer className="w-3 h-3" /> Receipt
+                        </Link>
+                        <button
+                          onClick={() => handleTogglePaid(fee, "unpaid")}
+                          className="px-3 py-1.5 text-[11px] font-bold rounded-lg border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#0b0f19] hover:bg-slate-100 transition-colors"
+                        >
+                          {t("fees.markUnpaid")}
+                        </button>
+                      </div>
                     ) : (
                       <div className="flex items-center gap-2">
                         <button
@@ -439,12 +497,21 @@ export default function FeesPage() {
                       </td>
                       <td className="px-4 py-2 text-right">
                         {fee.status === "paid" ? (
-                          <button
-                            onClick={() => handleTogglePaid(fee, "unpaid")}
-                            className="px-2.5 py-1 text-[11px] font-bold rounded-lg border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#0b0f19] hover:bg-slate-100 transition-colors"
-                          >
-                            {t("fees.markUnpaid")}
-                          </button>
+                          <div className="flex items-center justify-end gap-1.5">
+                            <Link
+                              href={`/tutor/fees/receipt/${fee.id}`}
+                              className="px-2.5 py-1 text-[11px] font-bold rounded-lg border border-indigo-200 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 flex items-center gap-1 transition-colors"
+                              title="Print receipt"
+                            >
+                              <Printer className="w-3 h-3" /> Receipt
+                            </Link>
+                            <button
+                              onClick={() => handleTogglePaid(fee, "unpaid")}
+                              className="px-2.5 py-1 text-[11px] font-bold rounded-lg border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#0b0f19] hover:bg-slate-100 transition-colors"
+                            >
+                              {t("fees.markUnpaid")}
+                            </button>
+                          </div>
                         ) : (
                           <div className="flex items-center justify-end gap-1.5">
                             <button
@@ -469,6 +536,16 @@ export default function FeesPage() {
             </table>
           </div>
         </div>
+      )}
+
+      {/* WhatsApp Reminder Panel */}
+      {reminderOpen && activeBatchId && (
+        <FeeReminderPanel
+          batchId={activeBatchId}
+          year={selectedYear}
+          month={selectedMonth}
+          onClose={() => setReminderOpen(false)}
+        />
       )}
     </div>
   );

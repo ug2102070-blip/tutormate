@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { getOnboardingStatus } from "@/actions/dashboardActions";
+import { getOnboardingStatus, saveOnboardingDismissed, getOnboardingDismissed } from "@/actions/dashboardActions";
 import Link from "next/link";
 import {
   CheckCircle2,
@@ -87,16 +87,28 @@ export function OnboardingChecklist({ tutorName }: OnboardingChecklistProps) {
 
     async function fetchStatus() {
       try {
+        // 1. Check DB dismissal first (cross-device persistence)
+        const dbDismissed = await getOnboardingDismissed();
+        if (dbDismissed && isSubscribed) {
+          setIsDismissed(true);
+          // Also set localStorage so subsequent loads are instant
+          localStorage.setItem(DISMISSED_KEY, "true");
+          return;
+        }
+
+        // 2. Fallback: check localStorage for instant dismissal
         const savedDismissed = localStorage.getItem(DISMISSED_KEY);
         if (savedDismissed === "true" && isSubscribed) {
           setIsDismissed(true);
+          return;
         }
 
+        // 3. Fetch completion status from DB
         const status = await getOnboardingStatus();
         if (status && isSubscribed) {
           const savedState = localStorage.getItem(STORAGE_KEY);
           const currentSteps = savedState ? JSON.parse(savedState) : {};
-          
+
           const mergedSteps = {
             ...currentSteps,
             profile: status.profile || currentSteps.profile,
@@ -114,6 +126,9 @@ export function OnboardingChecklist({ tutorName }: OnboardingChecklistProps) {
         }
       } catch {
         if (isSubscribed) {
+          // Fallback to localStorage on any network error
+          const savedDismissed = localStorage.getItem(DISMISSED_KEY);
+          if (savedDismissed === "true") { setIsDismissed(true); return; }
           const savedState = localStorage.getItem(STORAGE_KEY);
           if (savedState) setCompletedSteps(JSON.parse(savedState));
         }
@@ -137,9 +152,12 @@ export function OnboardingChecklist({ tutorName }: OnboardingChecklistProps) {
 
   const dismiss = () => {
     setIsDismissed(true);
-    try {
-      localStorage.setItem(DISMISSED_KEY, "true");
-    } catch {}
+    // Instant local dismissal so the UI responds immediately
+    try { localStorage.setItem(DISMISSED_KEY, "true"); } catch {}
+    // Persist to DB so it's cross-device
+    saveOnboardingDismissed().catch(() => {
+      // Non-blocking — localStorage already saved it
+    });
   };
 
   if (!isMounted || isDismissed) return null;
@@ -148,7 +166,7 @@ export function OnboardingChecklist({ tutorName }: OnboardingChecklistProps) {
   const progressPercent = Math.round((completedCount / STEPS.length) * 100);
 
   return (
-    <div className="bg-gradient-to-br from-indigo-900 via-indigo-800 to-slate-900 rounded-2xl p-5 text-white shadow-xl relative overflow-hidden border border-indigo-700/50 my-6">
+    <div className="bg-gradient-to-br from-indigo-900 via-indigo-800 to-slate-900 rounded-2xl p-5 text-white shadow-xl relative overflow-hidden border border-indigo-700/50">
       {/* Background Accent Blur */}
       <div className="absolute -top-12 -right-12 w-48 h-48 bg-indigo-500/20 rounded-full blur-2xl pointer-events-none" />
 

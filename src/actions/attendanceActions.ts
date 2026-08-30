@@ -645,3 +645,142 @@ export async function scanQRAttendance(tokenOrPin: string) {
   };
 }
 
+// ─── MONTHLY ATTENDANCE EXPORT ────────────────────────────────────────────────
+
+export interface AttendanceExportStudent {
+  id: string;
+  fullName: string;
+  phone: string;
+  presentCount: number;
+  absentCount: number;
+  lateCount: number;
+  totalClasses: number;
+  rate: number;
+  dailyStatus: Record<string, "present" | "absent" | "late" | null>;
+}
+
+export interface AttendanceExportData {
+  batch: {
+    id: string;
+    name: string;
+    gradeClass: string;
+    subject: string;
+  };
+  year: number;
+  month: number;
+  monthName: string;
+  dates: string[];
+  students: AttendanceExportStudent[];
+}
+
+export async function getMonthlyAttendanceExportData(
+  batchId: string,
+  year: number,
+  month: number
+): Promise<AttendanceExportData | null> {
+  const authState = await verifyUserAuth();
+  if (!hasRoleAtLeast(authState.role, "tutor")) {
+    throw new Error("Unauthorized");
+  }
+
+  const tutorId = authState.tutorId || authState.uid;
+  const supabase = createAdminClient();
+
+  // 1. Fetch batch
+  const { data: batch } = await supabase
+    .from("batches")
+    .select("id, name, grade_class, subject")
+    .eq("id", batchId)
+    .eq("tutor_id", tutorId)
+    .single();
+
+  if (!batch) return null;
+
+  // 2. Fetch enrolled students
+  const { data: students } = await supabase
+    .from("students")
+    .select("id, full_name, phone")
+    .eq("tutor_id", tutorId)
+    .eq("status", "active")
+    .contains("enrolled_batch_ids", [batchId]);
+
+  const studentList = students || [];
+
+  // 3. Fetch attendance records from attendance_records table for this batch & month
+  const startDate = `${year}-${String(month).padStart(2, "0")}-01`;
+  const nextMonth = month === 12 ? 1 : month + 1;
+  const nextYear = month === 12 ? year + 1 : year;
+  const endDate = `${nextYear}-${String(nextMonth).padStart(2, "0")}-01`;
+
+  // Fetch from normalized attendance_records table
+  const { data: normRecords } = await supabase
+    .from("attendance_records")
+    .select("student_id, date, status")
+    .eq("batch_id", batchId)
+    .eq("tutor_id", tutorId)
+    .gte("date", startDate)
+    .lt("date", endDate)
+    .order("date", { ascending: true });
+
+  const monthNames = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"
+  ];
+
+  // Group by distinct dates
+  const distinctDates = Array.from(
+    new Set((normRecords || []).map((r) => r.date))
+  ).sort();
+
+  // Build matrix per student
+  const studentMap: Record<string, AttendanceExportStudent> = {};
+  for (const s of studentList) {
+    studentMap[s.id] = {
+      id: s.id,
+      fullName: s.full_name,
+      phone: s.phone,
+      presentCount: 0,
+      absentCount: 0,
+      lateCount: 0,
+      totalClasses: distinctDates.length,
+      rate: 100,
+      dailyStatus: {},
+    };
+    for (const d of distinctDates) {
+      studentMap[s.id].dailyStatus[d] = null;
+    }
+  }
+
+  for (const rec of normRecords || []) {
+    if (studentMap[rec.student_id]) {
+      const st = studentMap[rec.student_id];
+      const status = rec.status as "present" | "absent" | "late";
+      st.dailyStatus[rec.date] = status;
+      if (status === "present") st.presentCount++;
+      else if (status === "absent") st.absentCount++;
+      else if (status === "late") st.lateCount++;
+    }
+  }
+
+  const exportStudents = Object.values(studentMap).map((s) => {
+    const attended = s.presentCount + s.lateCount;
+    const rate = s.totalClasses > 0 ? Math.round((attended / s.totalClasses) * 100) : 100;
+    return { ...s, rate };
+  });
+
+  return {
+    batch: {
+      id: batch.id,
+      name: batch.name,
+      gradeClass: batch.grade_class || "",
+      subject: batch.subject || "",
+    },
+    year,
+    month,
+    monthName: monthNames[month - 1] || `Month ${month}`,
+    dates: distinctDates,
+    students: exportStudents,
+  };
+}
+
+

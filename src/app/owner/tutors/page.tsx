@@ -11,6 +11,7 @@ import {
   AlertCircle,
   Crown,
   UserX,
+  UserPlus,
 } from "lucide-react";
 import {
   getOwnerTutors,
@@ -18,6 +19,7 @@ import {
   type OwnerTutorRow,
 } from "@/actions/ownerActions";
 import { useAuth } from "@/hooks/useAuth";
+import AddTutorByPhoneModal from "@/components/ui/AddTutorByPhoneModal";
 
 export default function OwnerTutorsPage() {
   const { user } = useAuth();
@@ -27,6 +29,7 @@ export default function OwnerTutorsPage() {
   const [error, setError] = useState<string | null>(null);
   const [removing, setRemoving] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [showAddModal, setShowAddModal] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -64,6 +67,14 @@ export default function OwnerTutorsPage() {
 
   return (
     <div className="space-y-5">
+      {/* Add Tutor by Phone Modal */}
+      {showAddModal && (
+        <AddTutorByPhoneModal
+          onClose={() => setShowAddModal(false)}
+          onAdded={() => { load(); setSuccessMsg("Teacher সফলভাবে center-এ যোগ হয়েছেন!"); setTimeout(() => setSuccessMsg(null), 4000); }}
+        />
+      )}
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center gap-3 justify-between">
         <div>
@@ -74,20 +85,35 @@ export default function OwnerTutorsPage() {
             {tutors.length} tutor{tutors.length !== 1 ? "s" : ""} in your center
           </p>
         </div>
-        {/* Search */}
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: "var(--color-text-muted)" }} />
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search tutors..."
-            className="pl-9 pr-4 py-2 text-xs rounded-xl outline-none w-full sm:w-56"
+        <div className="flex items-center gap-2">
+          {/* Add by Phone button */}
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-xl transition-all"
             style={{
-              background: "var(--color-bg)",
-              border: "1px solid var(--color-border)",
-              color: "var(--color-text)",
+              background: "rgba(245,158,11,0.12)",
+              border: "1px solid rgba(245,158,11,0.25)",
+              color: "rgb(217,119,6)",
             }}
-          />
+          >
+            <UserPlus className="w-3.5 h-3.5" />
+            মোবাইলে Teacher যোগ করুন
+          </button>
+          {/* Search */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: "var(--color-text-muted)" }} />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search tutors..."
+              className="pl-9 pr-4 py-2 text-xs rounded-xl outline-none w-full sm:w-44"
+              style={{
+                background: "var(--color-bg)",
+                border: "1px solid var(--color-border)",
+                color: "var(--color-text)",
+              }}
+            />
+          </div>
         </div>
       </div>
 

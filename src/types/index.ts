@@ -128,6 +128,7 @@ export interface StudentDoc {
   enrolledBatchIds: string[];
   status: "active" | "archived";
   createdAt: string;
+  updatedAt?: string;
 }
 
 export interface AttendanceRecord {
@@ -439,3 +440,49 @@ export interface CenterInviteStats {
   tutorCount: number;
   recentTutors: Array<{ id: string; name: string; joinedAt: string }>;
 }
+
+// ============================================
+// FEATURE 30: SUBSCRIPTION PLAN HISTORY & OWNER ERP
+// ============================================
+
+export interface SubscriptionPlanHistoryDoc {
+  id: string;
+  tutorId: string;
+  plan: "free_trial" | "starter" | "pro";
+  status: "active" | "canceled" | "expired" | "trial" | "past_due";
+  billingCycle: "monthly" | "yearly" | null;
+  amountPaid: number;
+  validFrom: string;
+  validUntil: string | null;
+  paymentMethod: string | null;
+  paymentRef: string | null;
+  createdAt: string;
+}
+
+export interface CoachingStaffDoc {
+  id: string;
+  centerId: string;
+  name: string;
+  email: string;
+  phone: string;
+  role: "Accountant" | "Receptionist" | "Manager" | "Other";
+  status: "active" | "inactive";
+  joinedDate: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface CoachingExpenseDoc {
+  id: string;
+  centerId: string;
+  title: string;
+  category: "Rent" | "Utilities" | "Payroll" | "Marketing" | "Maintenance" | "Other";
+  amount: number;
+  date: string;
+  paidTo?: string | null;
+  notes?: string | null;
+  createdBy?: string | null;
+  createdAt: string;
+  updatedAt?: string;
+}
+

@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { onboardTutorUser } from "@/actions/authActions";
+import { onboardTutorUser, onboardStudentOrParentUser } from "@/actions/authActions";
 import { claimStudentInvite } from "@/actions/studentActions";
 import { linkParentToStudent } from "@/actions/parentActions";
 import { formatAuthError } from "@/lib/utils";
@@ -27,8 +27,8 @@ function LoginContent() {
 
   // Phone Auth State
   const [phoneNumber, setPhoneNumber] = useState("");
-  const [otpCode, setOtpCode] = useState("");
-  const [otpSent, setOtpSent] = useState(false);
+  const [phonePassword, setPhonePassword] = useState("");
+  const [showPhonePassword, setShowPhonePassword] = useState(false);
 
   // Common UX States
   const [error, setError] = useState("");
@@ -155,6 +155,47 @@ function LoginContent() {
     }
   }
 
+  async function handlePhoneLogin(e: React.FormEvent) {
+    e.preventDefault();
+    setError("");
+
+    if (!phoneNumber || phoneNumber.trim().length < 10) {
+      setError("Please enter a valid mobile phone number.");
+      return;
+    }
+
+    if (!phonePassword) {
+      setError("Please enter your password.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const formatted = formatPhoneNumber(phoneNumber.trim());
+      const { data, error: signErr } = await supabase.auth.signInWithPassword({
+        phone: formatted,
+        password: phonePassword,
+      });
+
+      if (signErr) throw signErr;
+      if (data.user) {
+        await handlePostSignIn(data.user);
+      }
+    } catch (err: unknown) {
+      setError(formatAuthError(err));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function formatPhoneNumber(phone: string): string {
+    const cleaned = phone.replace(/\D/g, "");
+    if (cleaned.startsWith("880")) return `+${cleaned}`;
+    if (cleaned.startsWith("0")) return `+88${cleaned}`;
+    if (cleaned.length === 10) return `+880${cleaned}`;
+    return `+${cleaned}`;
+  }
+
   async function handleGoogleLogin() {
     setError("");
     setGoogleLoading(true);
@@ -170,67 +211,6 @@ function LoginContent() {
     } catch (err: unknown) {
       setError(formatAuthError(err));
       setGoogleLoading(false);
-    }
-  }
-
-  function formatPhoneNumber(phone: string): string {
-    const cleaned = phone.replace(/\D/g, "");
-    if (cleaned.startsWith("880")) return `+${cleaned}`;
-    if (cleaned.startsWith("0")) return `+88${cleaned}`;
-    if (cleaned.length === 10) return `+880${cleaned}`;
-    return `+${cleaned}`;
-  }
-
-  async function handleSendOtp(e: React.FormEvent) {
-    e.preventDefault();
-    setError("");
-
-    if (!phoneNumber || phoneNumber.trim().length < 10) {
-      setError("Please enter a valid phone number.");
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const formatted = formatPhoneNumber(phoneNumber.trim());
-      const { error: otpErr } = await supabase.auth.signInWithOtp({
-        phone: formatted,
-      });
-      if (otpErr) throw otpErr;
-      setOtpSent(true);
-    } catch (err: unknown) {
-      setError(formatAuthError(err));
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function handleVerifyOtp(e: React.FormEvent) {
-    e.preventDefault();
-    setError("");
-
-    if (!otpCode) {
-      setError("Please enter the 6-digit verification code.");
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const formatted = formatPhoneNumber(phoneNumber.trim());
-      const { data, error: verifyErr } = await supabase.auth.verifyOtp({
-        phone: formatted,
-        token: otpCode.trim(),
-        type: "sms",
-      });
-
-      if (verifyErr) throw verifyErr;
-      if (data.user) {
-        await handlePostSignIn(data.user);
-      }
-    } catch (err: unknown) {
-      setError(formatAuthError(err));
-    } finally {
-      setLoading(false);
     }
   }
 
@@ -259,28 +239,55 @@ function LoginContent() {
           return;
         }
       } else if (onboardRole === "parent") {
-        if (!onboardInviteCode) {
-          setError("Invite code is required for parent registration.");
-          setLoading(false);
-          return;
-        }
-        const linkRes = await linkParentToStudent(onboardInviteCode);
-        if (!linkRes.success && linkRes.message) {
-          setError(linkRes.message);
-          setLoading(false);
-          return;
+        const cleanInvite = onboardInviteCode ? onboardInviteCode.trim().toUpperCase() : "";
+        if (cleanInvite) {
+          const linkRes = await linkParentToStudent(cleanInvite);
+          if (!linkRes.success && linkRes.message) {
+            setError(linkRes.message);
+            setLoading(false);
+            return;
+          }
+        } else {
+          const res = await onboardStudentOrParentUser({
+            data: {
+              email: pendingUser.email || null,
+              displayName: onboardName || "Parent",
+              phoneNumber: pendingUser.phone || undefined,
+              role: "parent",
+            },
+            uidOrToken: pendingUser.id,
+          });
+          if (res && !res.success && (res as any).error) {
+            setError((res as any).error);
+            setLoading(false);
+            return;
+          }
         }
       } else {
-        if (!onboardInviteCode) {
-          setError("Invite code is required for student registration.");
-          setLoading(false);
-          return;
-        }
-        const claimRes = await claimStudentInvite({ inviteCode: onboardInviteCode, uidOrToken: pendingUser.id });
-        if (claimRes && !claimRes.success && claimRes.error) {
-          setError(claimRes.error);
-          setLoading(false);
-          return;
+        // student
+        const cleanInvite = onboardInviteCode ? onboardInviteCode.trim().toUpperCase() : "";
+        if (cleanInvite) {
+          const claimRes = await claimStudentInvite({ inviteCode: cleanInvite, uidOrToken: pendingUser.id });
+          if (claimRes && !claimRes.success && claimRes.error) {
+            setError(claimRes.error);
+            setLoading(false);
+            return;
+          }
+        } else {
+          const res = await onboardStudentOrParentUser({
+            data: {
+              email: pendingUser.email || null,
+              displayName: onboardName || "Student",
+              phoneNumber: pendingUser.phone || undefined,
+              role: "student",
+            },
+            uidOrToken: pendingUser.id,
+          });
+          if (res && !res.success && (res as any).error) {
+            setError((res as any).error);
+            setLoading(false);
+            return;
+          }
         }
       }
 
@@ -476,103 +483,90 @@ function LoginContent() {
               </button>
             </form>
           ) : (
-            /* Phone OTP Login Form */
-            <div className="mt-6 space-y-4">
-              {!otpSent ? (
-                <form onSubmit={handleSendOtp} className="space-y-4">
-                  <div>
-                    <label
-                      htmlFor="login-phone"
-                      className="block text-sm font-medium mb-1.5"
-                      style={{ color: "var(--color-text-secondary)" }}
-                    >
-                      Mobile Phone Number
-                    </label>
-                    <input
-                      id="login-phone"
-                      type="tel"
-                      required
-                      value={phoneNumber}
-                      onChange={(e) => setPhoneNumber(e.target.value)}
-                      placeholder="e.g. 01712345678"
-                      className="w-full px-3.5 py-2.5 text-sm rounded-lg outline-none transition-all duration-200"
-                      style={{
-                        backgroundColor: "var(--color-bg-secondary)",
-                        border: "1px solid var(--color-border)",
-                        color: "var(--color-text)",
-                      }}
-                    />
-                    <p className="mt-1 text-xs text-slate-400">
-                      We will send a 6-digit OTP code to verify your phone number.
-                    </p>
-                  </div>
+            /* Phone & Password Login Form (No SMS OTP required) */
+            <form onSubmit={handlePhoneLogin} className="mt-6 space-y-4">
+              <div>
+                <label
+                  htmlFor="login-phone"
+                  className="block text-sm font-medium mb-1.5"
+                  style={{ color: "var(--color-text-secondary)" }}
+                >
+                  Mobile Phone Number
+                </label>
+                <input
+                  id="login-phone"
+                  type="tel"
+                  required
+                  value={phoneNumber}
+                  onChange={(e) => setPhoneNumber(e.target.value)}
+                  placeholder="e.g. 01712345678"
+                  className="w-full px-3.5 py-2.5 text-sm rounded-lg outline-none transition-all duration-200"
+                  style={{
+                    backgroundColor: "var(--color-bg-secondary)",
+                    border: "1px solid var(--color-border)",
+                    color: "var(--color-text)",
+                  }}
+                />
+              </div>
 
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className="w-full py-2.5 px-4 text-sm font-semibold text-white rounded-lg transition-all duration-200 hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2"
-                    style={{
-                      background:
-                        "linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%)",
-                      boxShadow: "var(--shadow-md)",
-                    }}
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label
+                    htmlFor="login-phone-password"
+                    className="block text-sm font-medium"
+                    style={{ color: "var(--color-text-secondary)" }}
                   >
-                    {loading ? "Sending OTP..." : "Send Verification Code"}
-                  </button>
-                </form>
-              ) : (
-                <form onSubmit={handleVerifyOtp} className="space-y-4">
-                  <div className="p-3 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-100 text-xs text-indigo-700 flex justify-between items-center">
-                    <span>Code sent to: <strong>{formatPhoneNumber(phoneNumber)}</strong></span>
-                    <button
-                      type="button"
-                      onClick={() => setOtpSent(false)}
-                      className="underline font-semibold"
-                    >
-                      Change
-                    </button>
-                  </div>
-
-                  <div>
-                    <label
-                      htmlFor="login-otp"
-                      className="block text-sm font-medium mb-1.5"
-                      style={{ color: "var(--color-text-secondary)" }}
-                    >
-                      Enter 6-Digit OTP Code
-                    </label>
-                    <input
-                      id="login-otp"
-                      type="text"
-                      required
-                      maxLength={6}
-                      value={otpCode}
-                      onChange={(e) => setOtpCode(e.target.value)}
-                      placeholder="123456"
-                      className="w-full px-3.5 py-2.5 text-center text-lg tracking-widest font-mono rounded-lg outline-none transition-all duration-200"
-                      style={{
-                        backgroundColor: "var(--color-bg-secondary)",
-                        border: "1px solid var(--color-border)",
-                        color: "var(--color-text)",
-                      }}
-                    />
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className="w-full py-2.5 px-4 text-sm font-semibold text-white rounded-lg transition-all duration-200 hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2"
-                    style={{
-                      background:
-                        "linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%)",
-                      boxShadow: "var(--shadow-md)",
-                    }}
+                    Password
+                  </label>
+                  <Link
+                    href="/reset-password"
+                    className="text-xs transition-colors hover:underline"
+                    style={{ color: "var(--color-primary)" }}
                   >
-                    {loading ? "Verifying..." : "Verify & Sign In"}
+                    Forgot password?
+                  </Link>
+                </div>
+                <div className="relative">
+                  <input
+                    id="login-phone-password"
+                    type={showPhonePassword ? "text" : "password"}
+                    required
+                    value={phonePassword}
+                    onChange={(e) => setPhonePassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="w-full px-3.5 py-2.5 pr-10 text-sm rounded-lg outline-none transition-all duration-200"
+                    style={{
+                      backgroundColor: "var(--color-bg-secondary)",
+                      border: "1px solid var(--color-border)",
+                      color: "var(--color-text)",
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPhonePassword(!showPhonePassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 opacity-50 hover:opacity-100 transition-opacity"
+                    style={{ color: "var(--color-text-muted)" }}
+                    tabIndex={-1}
+                    aria-label={showPhonePassword ? "Hide password" : "Show password"}
+                  >
+                    {showPhonePassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
-                </form>
-              )}
-            </div>
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full py-2.5 px-4 text-sm font-semibold text-white rounded-lg transition-all duration-200 hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                style={{
+                  background:
+                    "linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%)",
+                  boxShadow: "var(--shadow-md)",
+                }}
+              >
+                {loading ? "Signing in..." : "Sign in with Phone"}
+              </button>
+            </form>
           )}
 
           {/* Social Sign In Divider */}
@@ -755,16 +749,18 @@ function LoginContent() {
             ) : (
               <div>
                 <label className="block text-sm font-medium mb-1.5 text-slate-700 dark:text-slate-300">
-                  Invite Code {onboardRole === "parent" ? "(from your child)" : "(from your tutor)"}
+                  Invite Code <span className="text-xs text-slate-400 font-normal">(Optional — from your {onboardRole === "parent" ? "child" : "tutor"})</span>
                 </label>
                 <input
                   type="text"
-                  required
                   value={onboardInviteCode}
                   onChange={(e) => setOnboardInviteCode(e.target.value.toUpperCase())}
-                  placeholder="e.g. AB12CD34"
+                  placeholder="e.g. AB12CD34 (Optional)"
                   className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-slate-200 dark:border-white/10 outline-none uppercase font-mono tracking-wider focus:border-indigo-600"
                 />
+                <p className="text-xs text-slate-400 mt-1 font-medium">
+                  Leave blank if your tutor hasn't given you a code yet. Your tutor can add you later by your phone number.
+                </p>
               </div>
             )}
 

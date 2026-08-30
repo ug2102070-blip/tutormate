@@ -13,7 +13,7 @@ import { EmptyState } from "@/components/EmptyState";
 
 export default function BatchesPage() {
   const { user } = useAuth();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [tab, setTab] = useState<"active" | "archived">("active");
 
   // SWR: caches batches for 30s — instant on tab switch / back navigation
@@ -131,7 +131,7 @@ export default function BatchesPage() {
                     </div>
                   </div>
                   <span className="text-sm font-extrabold text-emerald-600 shrink-0">
-                    {formatBDT(batch.monthlyFee)}/{t("batches.perMonth")}
+                    {formatBDT(batch.monthlyFee, language)}/{t("batches.perMonth")}
                   </span>
                 </div>
 

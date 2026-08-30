@@ -24,8 +24,18 @@ import {
   FolderDown,
   X,
   Megaphone,
+  BookOpenCheck,
 } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
+import { OnboardingChecklist } from "@/components/tutor/OnboardingChecklist";
+import type {
+  DashboardLiveData,
+  DashboardScheduleClass,
+  DashboardUpcomingExam,
+  DashboardActiveAssignment,
+  DashboardRecentMaterial,
+  DashboardRecentDoubt,
+} from "@/actions/analyticsActions";
 
 export interface DashboardClientUIProps {
   tutorName: string;
@@ -37,6 +47,8 @@ export interface DashboardClientUIProps {
     attendancePercentage: number;
     pendingDoubts: number;
   };
+  /** Real live data fetched from DB — replaces all hardcoded fake arrays */
+  liveData: DashboardLiveData;
 }
 
 interface PinnedNote {
@@ -46,7 +58,7 @@ interface PinnedNote {
   createdAt: string;
 }
 
-export function DashboardClientUI({ tutorName, metrics }: DashboardClientUIProps) {
+export function DashboardClientUI({ tutorName, metrics, liveData }: DashboardClientUIProps) {
   const { t } = useLanguage();
   const [scheduleTab, setScheduleTab] = useState<"today" | "tomorrow">("today");
   const [academicTab, setAcademicTab] = useState<"exams" | "assignments" | "materials">("exams");
@@ -114,127 +126,12 @@ export function DashboardClientUI({ tutorName, metrics }: DashboardClientUIProps
     return "Good evening";
   };
 
-  const todayClasses = [
-    {
-      id: "cls-1",
-      batchName: "Physics — HSC 2026 Batch Alpha",
-      subject: "Physics",
-      classLevel: "Class 11-12",
-      time: "04:00 PM – 05:30 PM",
-      mode: "Room 101 • Offline",
-      studentsCount: 12,
-      isLiveNext: true,
-    },
-    {
-      id: "cls-2",
-      batchName: "Higher Math — Special Calculus",
-      subject: "Mathematics",
-      classLevel: "Class 10",
-      time: "06:00 PM – 07:30 PM",
-      mode: "Online Live Stream",
-      studentsCount: 8,
-      isLiveNext: false,
-    },
-  ];
-
-  const tomorrowClasses = [
-    {
-      id: "cls-3",
-      batchName: "General Science — Foundation Batch",
-      subject: "General Science",
-      classLevel: "Class 9",
-      time: "04:30 PM – 06:00 PM",
-      mode: "Room 102 • Offline",
-      studentsCount: 15,
-      isLiveNext: false,
-    },
-    {
-      id: "cls-4",
-      batchName: "Chemistry — Organic Mastery",
-      subject: "Chemistry",
-      classLevel: "Class 12",
-      time: "06:30 PM – 08:00 PM",
-      mode: "Online Live Class",
-      studentsCount: 10,
-      isLiveNext: false,
-    },
-  ];
-
-  const upcomingExams = [
-    {
-      id: "ex-1",
-      title: "Physics Chapter 4 Class Test",
-      batch: "HSC 2026 Physics Alpha",
-      date: "Friday, Aug 29",
-      totalMarks: 50,
-      passMarks: 25,
-      status: "In 3 days",
-    },
-    {
-      id: "ex-2",
-      title: "Mathematics Calculus Quiz",
-      batch: "Class 10 Higher Math",
-      date: "Tuesday, Sep 02",
-      totalMarks: 25,
-      passMarks: 12,
-      status: "Scheduled",
-    },
-  ];
-
-  const activeAssignments = [
-    {
-      id: "as-1",
-      title: "Vector & Kinematics Problem Set",
-      batch: "HSC 2026 Physics Alpha",
-      dueDate: "Due Tomorrow, 11:59 PM",
-      submitted: "10 / 12",
-      status: "Active",
-    },
-    {
-      id: "as-2",
-      title: "Calculus Differentiation Sheet #2",
-      batch: "Class 10 Higher Math",
-      dueDate: "Due in 3 days",
-      submitted: "8 / 8",
-      status: "Submitted",
-    },
-  ];
-
-  const studyMaterials = [
-    {
-      id: "mat-1",
-      title: "Physics_HSC_Chapter_4_Lecture_Notes.pdf",
-      batch: "Physics Alpha",
-      size: "2.4 MB",
-      downloads: 18,
-    },
-    {
-      id: "mat-2",
-      title: "Calculus_Formula_Handbook_2026.pdf",
-      batch: "Math Special",
-      size: "1.8 MB",
-      downloads: 24,
-    },
-  ];
-
-  const recentDoubts = [
-    {
-      id: "dbt-1",
-      studentName: "Ali Khan",
-      avatarInitials: "AK",
-      batch: "Physics HSC 2026",
-      question: "Sir, how to calculate projectile velocity when angle is 45°?",
-      timeAgo: "25m ago",
-    },
-    {
-      id: "dbt-2",
-      studentName: "Sara Ahmed",
-      avatarInitials: "SA",
-      batch: "Math Class 10",
-      question: "Need clarification on Exercise 3.2 Question 5 calculus limits.",
-      timeAgo: "2h ago",
-    },
-  ];
+  // ── Real data from DB (via server action getDashboardLiveData) ──────────────
+  const todayBatches: DashboardScheduleClass[] = liveData.todayBatches;
+  const upcomingExams: DashboardUpcomingExam[] = liveData.upcomingExams;
+  const activeAssignments: DashboardActiveAssignment[] = liveData.activeAssignments;
+  const recentMaterials: DashboardRecentMaterial[] = liveData.recentMaterials;
+  const recentDoubts: DashboardRecentDoubt[] = liveData.recentDoubts;
 
   const gradientCards = [
     {
@@ -284,7 +181,7 @@ export function DashboardClientUI({ tutorName, metrics }: DashboardClientUIProps
     },
     {
       title: "Upcoming Exams",
-      subtitle: "Scheduled tests",
+      subtitle: "Next 14 days",
       value: upcomingExams.length,
       gradient: "linear-gradient(135deg, #e11d48 0%, #f43f5e 100%)",
       icon: Award,
@@ -329,6 +226,9 @@ export function DashboardClientUI({ tutorName, metrics }: DashboardClientUIProps
           </Link>
         </div>
       </div>
+
+      {/* Pilot Onboarding Guide (Positioned at top for immediate first-time tutor visibility) */}
+      <OnboardingChecklist tutorName={tutorName} />
 
       {/* Pinned Multi-Notes Banner (if any pinned notes exist) */}
       {pinnedNotes.length > 0 && (
@@ -435,7 +335,7 @@ export function DashboardClientUI({ tutorName, metrics }: DashboardClientUIProps
                         : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
                     }`}
                   >
-                    Today ({todayClasses.length})
+                    Today ({todayBatches.length})
                   </button>
                   <button
                     type="button"
@@ -461,54 +361,78 @@ export function DashboardClientUI({ tutorName, metrics }: DashboardClientUIProps
 
             {/* List */}
             <div className="space-y-2.5 mt-3">
-              {(scheduleTab === "today" ? todayClasses : tomorrowClasses).map((cls) => (
-                <div
-                  key={cls.id}
-                  className="p-3 rounded-xl border border-slate-100 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-900/40 flex items-center justify-between gap-3 hover:border-blue-300 dark:hover:border-blue-700/60 transition-all group"
-                >
-                  <div className="space-y-0.5 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="text-[11px] font-black text-rose-600 dark:text-rose-400 flex items-center gap-1">
-                        <Clock className="w-3 h-3" /> {cls.time}
-                      </span>
-                      {cls.isLiveNext && (
-                        <span className="text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-rose-100 text-rose-700 dark:bg-rose-950/80 dark:text-rose-300 animate-pulse">
-                          Live Next
-                        </span>
-                      )}
-                    </div>
-                    <h3 className="font-extrabold text-xs text-slate-800 dark:text-slate-100 group-hover:text-blue-600 transition-colors truncate">
-                      {cls.batchName}
-                    </h3>
-                    <div className="text-[10px] text-slate-400">
-                      {cls.subject} • {cls.classLevel} • {cls.mode}
-                    </div>
+              {todayBatches.length === 0 ? (
+                <div className="py-8 flex flex-col items-center gap-3 text-center">
+                  <div className="w-10 h-10 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+                    <BookOpenCheck className="w-5 h-5 text-slate-400" />
                   </div>
-
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <Link
-                      href="/tutor/attendance"
-                      className="px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[10px] transition-all shadow-xs flex items-center gap-1"
-                    >
-                      <Check className="w-3 h-3" />
-                      <span>Attendance</span>
-                    </Link>
-                    <Link
-                      href="/tutor/batches"
-                      className="px-2 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-800 font-bold text-[10px] transition-all"
-                    >
-                      Batch
-                    </Link>
+                  <div>
+                    <p className="text-xs font-bold text-slate-500 dark:text-slate-400">
+                      No batches scheduled today
+                    </p>
+                    <p className="text-[10px] text-slate-400 mt-0.5">
+                      Create a batch with a weekly schedule to see it here.
+                    </p>
                   </div>
+                  <Link
+                    href="/tutor/batches/new"
+                    className="text-[10px] font-bold text-blue-600 hover:underline"
+                  >
+                    + Create Batch
+                  </Link>
                 </div>
-              ))}
+              ) : (
+                todayBatches.map((cls) => (
+                  <div
+                    key={cls.id}
+                    className="p-3 rounded-xl border border-slate-100 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-900/40 flex items-center justify-between gap-3 hover:border-blue-300 dark:hover:border-blue-700/60 transition-all group"
+                  >
+                    <div className="space-y-0.5 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[11px] font-black text-rose-600 dark:text-rose-400 flex items-center gap-1">
+                          <Clock className="w-3 h-3" />
+                          {cls.scheduleDays.length > 0
+                            ? cls.scheduleDays.join(", ")
+                            : "Flexible schedule"}
+                        </span>
+                      </div>
+                      <h3 className="font-extrabold text-xs text-slate-800 dark:text-slate-100 group-hover:text-blue-600 transition-colors truncate">
+                        {cls.batchName}
+                      </h3>
+                      <div className="text-[10px] text-slate-400">
+                        {cls.subject} • {cls.gradeClass} • {cls.studentsCount} students
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <Link
+                        href="/tutor/attendance"
+                        className="px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[10px] transition-all shadow-xs flex items-center gap-1"
+                      >
+                        <Check className="w-3 h-3" />
+                        <span>Attendance</span>
+                      </Link>
+                      <Link
+                        href={`/tutor/batches`}
+                        className="px-2 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-800 font-bold text-[10px] transition-all"
+                      >
+                        Batch
+                      </Link>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
 
           <div className="pt-2 border-t border-slate-100 dark:border-slate-800 text-[10px] text-slate-400 flex items-center justify-between">
-            <span>{scheduleTab === "today" ? "2 Classes scheduled today" : "2 Classes tomorrow"}</span>
-            <Link href="/tutor/timetable" className="text-blue-600 font-semibold hover:underline">
-              View Routine →
+            <span>
+              {todayBatches.length === 0
+                ? "No batches today"
+                : `${todayBatches.length} ${todayBatches.length === 1 ? "batch" : "batches"} scheduled today`}
+            </span>
+            <Link href="/tutor/batches" className="text-blue-600 font-semibold hover:underline">
+              All Batches →
             </Link>
           </div>
         </div>
@@ -538,18 +462,40 @@ export function DashboardClientUI({ tutorName, metrics }: DashboardClientUIProps
               </Link>
             </div>
 
+            {upcomingExams.length === 0 ? (
+              <div className="py-6 flex flex-col items-center gap-2 text-center">
+                <Award className="w-8 h-8 text-amber-300" />
+                <p className="text-xs font-bold text-slate-500 dark:text-slate-400">
+                  No exams in the next 14 days
+                </p>
+                <Link href="/tutor/exams" className="text-[10px] font-bold text-amber-600 hover:underline">
+                  + Schedule an Exam
+                </Link>
+              </div>
+            ) : (
             <div className="p-3 rounded-xl bg-amber-50/60 dark:bg-amber-950/20 border border-amber-200/80 dark:border-amber-900/40 flex items-center justify-between gap-3">
               <div className="min-w-0 space-y-0.5">
                 <div className="flex items-center gap-1.5">
-                  <span className="text-[9px] font-black px-1.5 py-0.2 rounded-md bg-amber-200/80 text-amber-800 dark:bg-amber-900 dark:text-amber-200">
-                    {upcomingExams[0]?.status}
+                  <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-amber-200/80 text-amber-800 dark:bg-amber-900 dark:text-amber-200">
+                    {upcomingExams[0].daysUntil === 0
+                      ? "Today"
+                      : upcomingExams[0].daysUntil === 1
+                      ? "Tomorrow"
+                      : `In ${upcomingExams[0].daysUntil} days`}
                   </span>
                   <h3 className="font-extrabold text-xs text-slate-800 dark:text-slate-100 truncate">
-                    {upcomingExams[0]?.title}
+                    {upcomingExams[0].title}
                   </h3>
                 </div>
                 <div className="text-[10px] text-slate-400">
-                  {upcomingExams[0]?.batch} • <span className="font-semibold text-slate-600 dark:text-slate-300">{upcomingExams[0]?.date}</span>
+                  {upcomingExams[0].batchName} •{" "}
+                  <span className="font-semibold text-slate-600 dark:text-slate-300">
+                    {new Date(upcomingExams[0].examDate).toLocaleDateString("en-BD", {
+                      weekday: "short",
+                      month: "short",
+                      day: "numeric",
+                    })}
+                  </span>
                 </div>
               </div>
 
@@ -560,9 +506,11 @@ export function DashboardClientUI({ tutorName, metrics }: DashboardClientUIProps
                 Marksheet →
               </Link>
             </div>
+            )}
           </div>
 
           {/* Card 2: Compact Student Doubts Box */}
+
           <div
             className="p-4 rounded-2xl border transition-all space-y-2.5"
             style={{
@@ -592,12 +540,12 @@ export function DashboardClientUI({ tutorName, metrics }: DashboardClientUIProps
               <div className="min-w-0 space-y-0.5">
                 <div className="flex items-center gap-1.5">
                   <span className="font-extrabold text-[11px] text-slate-800 dark:text-slate-100 truncate">
-                    {recentDoubts[0]?.studentName} ({recentDoubts[0]?.batch})
+                    {recentDoubts[0]?.studentName} ({recentDoubts[0]?.batchName})
                   </span>
                   <span className="text-[9px] text-slate-400">{recentDoubts[0]?.timeAgo}</span>
                 </div>
                 <p className="text-[11px] text-slate-600 dark:text-slate-300 line-clamp-1 italic">
-                  "{recentDoubts[0]?.question}"
+                  "{recentDoubts[0]?.title}"
                 </p>
               </div>
 
@@ -671,7 +619,7 @@ export function DashboardClientUI({ tutorName, metrics }: DashboardClientUIProps
                   : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
               }`}
             >
-              📖 Study Materials ({studyMaterials.length})
+              📖 Study Materials ({recentMaterials.length})
             </button>
           </div>
         </div>
@@ -686,15 +634,15 @@ export function DashboardClientUI({ tutorName, metrics }: DashboardClientUIProps
               >
                 <div className="space-y-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className="text-[9px] font-bold px-1.5 py-0.2 rounded-md bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300">
-                      {ex.status}
+                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300">
+                      {ex.daysUntil === 0 ? "Today" : ex.daysUntil === 1 ? "Tomorrow" : `In ${ex.daysUntil}d`}
                     </span>
                     <h3 className="font-extrabold text-xs text-slate-800 dark:text-slate-100 group-hover:text-blue-600 transition-colors truncate">
                       {ex.title}
                     </h3>
                   </div>
                   <div className="text-[11px] text-slate-400">
-                    {ex.batch} • <span className="font-semibold text-slate-600 dark:text-slate-300">{ex.date}</span> • Total: {ex.totalMarks} marks
+                    {ex.batchName} • <span className="font-semibold text-slate-600 dark:text-slate-300">{new Date(ex.examDate).toLocaleDateString("en-BD", { month: "short", day: "numeric" })}</span> • Total: {ex.totalMarks} marks
                   </div>
                 </div>
 
@@ -725,13 +673,13 @@ export function DashboardClientUI({ tutorName, metrics }: DashboardClientUIProps
                     </h3>
                   </div>
                   <div className="text-[11px] text-slate-400">
-                    {as.batch} • <span className="font-semibold text-rose-500">{as.dueDate}</span>
+                    {as.batchName} • <span className="font-semibold text-rose-500">{new Date(as.deadline).toLocaleDateString("en-BD", { month: "short", day: "numeric" })}</span>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-2 shrink-0">
                   <span className="text-[11px] font-bold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded-lg">
-                    {as.submitted} Submitted
+                  {as.submittedCount}/{as.totalStudents} Submitted
                   </span>
                   <Link
                     href="/tutor/assignments"
@@ -748,7 +696,7 @@ export function DashboardClientUI({ tutorName, metrics }: DashboardClientUIProps
         {/* Content for STUDY MATERIALS */}
         {academicTab === "materials" && (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {studyMaterials.map((mat) => (
+            {recentMaterials.map((mat) => (
               <div
                 key={mat.id}
                 className="p-3.5 rounded-xl border border-slate-100 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-900/40 flex items-center justify-between gap-3 hover:border-emerald-300 dark:hover:border-emerald-700/60 transition-all group"
@@ -761,7 +709,7 @@ export function DashboardClientUI({ tutorName, metrics }: DashboardClientUIProps
                     </h3>
                   </div>
                   <div className="text-[11px] text-slate-400">
-                    {mat.batch} • {mat.size} • <span className="font-semibold text-slate-600 dark:text-slate-300">{mat.downloads} Downloads</span>
+                    {mat.batchName} • {mat.fileType.toUpperCase()}{mat.fileSize ? ` • ${(mat.fileSize / 1024 / 1024).toFixed(1)} MB` : ""} • <span className="font-semibold text-slate-600 dark:text-slate-300">{new Date(mat.createdAt).toLocaleDateString("en-BD", { month: "short", day: "numeric" })}</span>
                   </div>
                 </div>
 

@@ -13,6 +13,18 @@ import type { CoachingCenterDoc, CenterTutorDoc, CenterAnalyticsDoc } from "@/ty
  */
 async function requireOwner() {
   const auth = await verifyUserAuth();
+
+  // FIX (Phase 0): Explicit role check BEFORE any center lookup.
+  // Previously this function only checked if a coaching_center row
+  // existed — allowing a non-owner who was somehow linked to a center
+  // to gain full owner-level access. Now we enforce the role at the
+  // auth layer first.
+  if (auth.role !== "owner" && auth.role !== "admin") {
+    throw new Error(
+      "Unauthorized: Only coaching center owners can access this resource."
+    );
+  }
+
   const adminSupabase = createAdminClient();
 
   // 1. Check if coaching center already exists for this owner
@@ -625,4 +637,288 @@ export async function getCenterInviteStats(): Promise<CenterInviteStats> {
       joinedAt: (t.joined_at as string) || (t.created_at as string) || new Date().toISOString(),
     })),
   };
+}
+
+// ─── Coaching Center Staff Management ──────────────────────────────────────────
+
+export async function getCenterStaff(): Promise<any[]> {
+  const { centerId } = await requireOwner();
+  const adminSupabase = createAdminClient();
+
+  const { data, error } = await adminSupabase
+    .from("coaching_staff")
+    .select("*")
+    .eq("center_id", centerId)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("[getCenterStaff] Error:", error);
+    return [];
+  }
+
+  return (data || []).map((row) => ({
+    id: row.id,
+    centerId: row.center_id,
+    name: row.name,
+    email: row.email,
+    phone: row.phone || "",
+    role: row.role,
+    status: row.status,
+    joinedDate: row.joined_date || row.created_at?.slice(0, 10),
+    createdAt: row.created_at,
+  }));
+}
+
+export async function createCenterStaff(payload: {
+  name: string;
+  email: string;
+  phone?: string;
+  role: "Accountant" | "Receptionist" | "Manager" | "Other";
+}) {
+  const { centerId } = await requireOwner();
+  const adminSupabase = createAdminClient();
+
+  if (!payload.name?.trim() || !payload.email?.trim()) {
+    throw new Error("Staff name and email are required.");
+  }
+
+  const { data, error } = await adminSupabase
+    .from("coaching_staff")
+    .insert({
+      center_id: centerId,
+      name: payload.name.trim(),
+      email: payload.email.trim().toLowerCase(),
+      phone: payload.phone?.trim() || null,
+      role: payload.role || "Accountant",
+      status: "active",
+      joined_date: new Date().toISOString().slice(0, 10),
+    })
+    .select()
+    .single();
+
+  if (error) {
+    throw new Error(`Failed to create staff member: ${error.message}`);
+  }
+
+  return { success: true, data };
+}
+
+export async function deleteCenterStaff(staffId: string) {
+  const { centerId } = await requireOwner();
+  const adminSupabase = createAdminClient();
+
+  const { error } = await adminSupabase
+    .from("coaching_staff")
+    .delete()
+    .eq("id", staffId)
+    .eq("center_id", centerId);
+
+  if (error) {
+    throw new Error(`Failed to delete staff member: ${error.message}`);
+  }
+
+  return { success: true };
+}
+
+// ─── Coaching Center Expenses & Payroll Management ─────────────────────────────
+
+export async function getCenterExpenses(): Promise<any[]> {
+  const { centerId } = await requireOwner();
+  const adminSupabase = createAdminClient();
+
+  const { data, error } = await adminSupabase
+    .from("coaching_expenses")
+    .select("*")
+    .eq("center_id", centerId)
+    .order("date", { ascending: false });
+
+  if (error) {
+    console.error("[getCenterExpenses] Error:", error);
+    return [];
+  }
+
+  return (data || []).map((row) => ({
+    id: row.id,
+    centerId: row.center_id,
+    title: row.title,
+    category: row.category,
+    amount: Number(row.amount || 0),
+    date: row.date,
+    paidTo: row.paid_to || "",
+    notes: row.notes || "",
+    createdAt: row.created_at,
+  }));
+}
+
+export async function createCenterExpense(payload: {
+  title: string;
+  category: "Rent" | "Utilities" | "Payroll" | "Marketing" | "Maintenance" | "Other";
+  amount: number;
+  date?: string;
+  paidTo?: string;
+  notes?: string;
+}) {
+  const { uid, centerId } = await requireOwner();
+  const adminSupabase = createAdminClient();
+
+  if (!payload.title?.trim()) {
+    throw new Error("Expense title is required.");
+  }
+  if (!payload.amount || payload.amount <= 0) {
+    throw new Error("Valid expense amount is required.");
+  }
+
+  const { data, error } = await adminSupabase
+    .from("coaching_expenses")
+    .insert({
+      center_id: centerId,
+      title: payload.title.trim(),
+      category: payload.category || "Other",
+      amount: payload.amount,
+      date: payload.date || new Date().toISOString().slice(0, 10),
+      paid_to: payload.paidTo?.trim() || null,
+      notes: payload.notes?.trim() || null,
+      created_by: uid,
+    })
+    .select()
+    .single();
+
+  if (error) {
+    throw new Error(`Failed to record expense: ${error.message}`);
+  }
+
+  return { success: true, data };
+}
+
+export async function deleteCenterExpense(expenseId: string) {
+  const { centerId } = await requireOwner();
+  const adminSupabase = createAdminClient();
+
+  const { error } = await adminSupabase
+    .from("coaching_expenses")
+    .delete()
+    .eq("id", expenseId)
+    .eq("center_id", centerId);
+
+  if (error) {
+    throw new Error(`Failed to delete expense: ${error.message}`);
+  }
+
+  return { success: true };
+}
+
+// ─── ADD TUTOR BY PHONE ────────────────────────────────────────────────────────
+
+/**
+ * Looks up a registered tutor by contact phone number.
+ * Returns their info so the owner can review before adding to the center.
+ */
+export async function lookupTutorByPhone(phone: string): Promise<{
+  found: boolean;
+  tutor?: {
+    tutorId: string;
+    fullName: string;
+    institution: string;
+    contactPhone: string;
+    alreadyInCenter: boolean;
+  };
+  message?: string;
+}> {
+  const { centerId } = await requireOwner();
+  const adminSupabase = createAdminClient();
+
+  const normalized = phone.replace(/[\s\-()]/g, "");
+  const localForm = normalized.replace(/^\+?880?/, "0");
+
+  // Search by contact_phone in tutors table
+  const { data: tutors } = await adminSupabase
+    .from("tutors")
+    .select("id, full_name, institution, contact_phone, coaching_center_id")
+    .or(`contact_phone.eq.${normalized},contact_phone.eq.${localForm}`)
+    .limit(1);
+
+  const tutor = tutors?.[0];
+
+  if (!tutor) {
+    // Try searching profiles table for matching phone
+    const { data: profiles } = await adminSupabase
+      .from("profiles")
+      .select("id, display_name, phone_number, role")
+      .or(`phone_number.eq.${normalized},phone_number.eq.${localForm}`)
+      .eq("role", "tutor")
+      .limit(1);
+
+    const profile = profiles?.[0];
+    if (!profile) {
+      return { found: false, message: "এই নম্বরে কোনো tutor পাওয়া যায়নি। তাকে আগে TutorMate-এ register করতে হবে।" };
+    }
+
+    // Find tutor record by user_id matching profile id
+    const { data: tutorByProfile } = await adminSupabase
+      .from("tutors")
+      .select("id, full_name, institution, contact_phone, coaching_center_id")
+      .eq("user_id", profile.id)
+      .maybeSingle();
+
+    if (!tutorByProfile) {
+      return { found: false, message: "এই নম্বরে কোনো tutor পাওয়া যায়নি।" };
+    }
+
+    return {
+      found: true,
+      tutor: {
+        tutorId: tutorByProfile.id,
+        fullName: tutorByProfile.full_name,
+        institution: tutorByProfile.institution,
+        contactPhone: tutorByProfile.contact_phone || normalized,
+        alreadyInCenter: tutorByProfile.coaching_center_id === centerId,
+      },
+    };
+  }
+
+  return {
+    found: true,
+    tutor: {
+      tutorId: tutor.id,
+      fullName: tutor.full_name,
+      institution: tutor.institution,
+      contactPhone: tutor.contact_phone,
+      alreadyInCenter: tutor.coaching_center_id === centerId,
+    },
+  };
+}
+
+/**
+ * Adds a tutor to the owner's coaching center directly (no approval required).
+ * Owner has full authority to assign tutors to their center.
+ */
+export async function addTutorToCenterByPhone(tutorId: string): Promise<{ success: boolean }> {
+  const { centerId } = await requireOwner();
+  const adminSupabase = createAdminClient();
+
+  // Verify tutor exists
+  const { data: tutor, error: fetchErr } = await adminSupabase
+    .from("tutors")
+    .select("id, coaching_center_id")
+    .eq("id", tutorId)
+    .single();
+
+  if (fetchErr || !tutor) {
+    throw new Error("Tutor not found.");
+  }
+
+  if (tutor.coaching_center_id === centerId) {
+    throw new Error("এই tutor ইতিমধ্যেই আপনার center-এ আছেন।");
+  }
+
+  const { error: updateErr } = await adminSupabase
+    .from("tutors")
+    .update({ coaching_center_id: centerId })
+    .eq("id", tutorId);
+
+  if (updateErr) {
+    throw new Error(`Failed to add tutor: ${updateErr.message}`);
+  }
+
+  return { success: true };
 }

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createAdminClient } from "@/lib/supabase/server";
+import { initiateBkashPayment } from "@/lib/paymentGateway";
 
 export async function POST(request: Request) {
   try {
@@ -8,20 +8,25 @@ export async function POST(request: Request) {
 
     if (!feeId || !amount) {
       return NextResponse.json(
-        { success: false, error: "Missing required fee parameters." },
+        { success: false, error: "Missing required fee parameters (feeId, amount)." },
         { status: 400 }
       );
     }
 
-    const invoiceNo = `INV-BKASH-${feeId.slice(0, 8)}-${Date.now()}`;
-    const paymentUrl = `/api/payment/bkash/callback?paymentID=${invoiceNo}&status=success&feeId=${feeId}&amount=${amount}`;
+    const res = await initiateBkashPayment({
+      feeId,
+      studentId,
+      amount: Number(amount),
+      provider: "bkash",
+    });
 
     return NextResponse.json({
-      success: true,
-      paymentID: invoiceNo,
-      bkashURL: paymentUrl,
-      amount,
+      success: res.success,
+      paymentID: res.paymentId,
+      bkashURL: res.redirectUrl,
+      amount: res.amount,
       currency: "BDT",
+      isMock: res.isMock,
     });
   } catch (err: any) {
     return NextResponse.json(

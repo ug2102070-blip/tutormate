@@ -70,7 +70,11 @@
     "parentFees": "ফি স্ট্যাটাস",
     "parentAssignments": "অ্যাসাইনমেন্ট",
     "parentResults": "পরীক্ষার ফলাফল",
-    "parentSettings": "সেটিংস"
+    "parentSettings": "সেটিংস",
+    "reports": "রিপোর্ট সেন্টার",
+    "documents": "ডকুমেন্ট ভল্ট",
+    "financialManagement": "ফিনান্সিয়াল ইআরপি",
+    "timetable": "রুটিন ও সময়সূচি"
   },
   "header": {
     "portal": "পোর্টাল",

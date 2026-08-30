@@ -1,14 +1,13 @@
 // Server Component — no "use client" needed
 // Data is fetched on the server before the page is sent to the browser.
-// Metrics render instantly (via RPC), charts stream in via Suspense.
+// Metrics render instantly (via RPC), charts + live data stream via Suspense.
 
 import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { DashboardClientUI } from "./DashboardClientUI";
-import { OnboardingChecklist } from "@/components/tutor/OnboardingChecklist";
 import { FeedbackWidget } from "@/components/FeedbackWidget";
-import { getDashboardMetrics } from "@/actions/analyticsActions";
+import { getDashboardMetrics, getDashboardLiveData } from "@/actions/analyticsActions";
 import { DashboardChartsLoader } from "@/components/tutor/dashboard/DashboardChartsLoader";
 import { SkeletonBlock, PageLoadingSkeleton } from "@/components/ui/PageSkeleton";
 
@@ -32,15 +31,14 @@ export default async function TutorDashboardPage() {
   return (
     <div className="space-y-6 max-w-5xl mx-auto pb-12">
       {/*
-          Production optimization: Fetch metrics within a Suspense boundary
-          so the layout shell (sidebar/nav) renders immediately.
+          Production optimization: Fetch metrics + live data within a single
+          Suspense boundary so the layout shell (sidebar/nav) renders immediately.
+          Both getDashboardMetrics and getDashboardLiveData run in parallel
+          inside DashboardMetricsWrapper via Promise.all.
       */}
       <Suspense fallback={<PageLoadingSkeleton cards={4} rows={0} />}>
         <DashboardMetricsWrapper tutorName={tutorName} userId={user.id} />
       </Suspense>
-
-      {/* Onboarding Checklist — uses localStorage */}
-      <OnboardingChecklist tutorName={tutorName} />
 
       {/* Analytics Charts — stream in after page shell via Suspense */}
       <Suspense
@@ -57,13 +55,22 @@ export default async function TutorDashboardPage() {
   );
 }
 
-async function DashboardMetricsWrapper({ tutorName, userId }: { tutorName: string, userId: string }) {
-  // RPC-backed metrics fetch (Fast: <100ms)
-  const metrics = await getDashboardMetrics();
+async function DashboardMetricsWrapper({
+  tutorName,
+  userId,
+}: {
+  tutorName: string;
+  userId: string;
+}) {
+  // Run both in parallel — single Suspense boundary, two concurrent DB calls
+  const [metrics, liveData] = await Promise.all([
+    getDashboardMetrics(),
+    getDashboardLiveData(),
+  ]);
 
   return (
     <>
-      <DashboardClientUI tutorName={tutorName} metrics={metrics} />
+      <DashboardClientUI tutorName={tutorName} metrics={metrics} liveData={liveData} />
       <FeedbackWidget userId={userId} userRole="tutor" />
     </>
   );

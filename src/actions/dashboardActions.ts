@@ -127,3 +127,52 @@ export async function getStudentDashboardStats() {
     return null;
   }
 }
+
+// ─── ONBOARDING DISMISSAL ──────────────────────────────────────────────────────
+
+/**
+ * Marks the onboarding checklist as dismissed in the DB.
+ * Persists across devices and browser sessions.
+ */
+export async function saveOnboardingDismissed(): Promise<{ success: boolean }> {
+  try {
+    const authState = await verifyUserAuth();
+    if (!hasRoleAtLeast(authState.role, "tutor")) return { success: false };
+
+    const tutorId = authState.tutorId || authState.uid;
+    const adminSupabase = createAdminClient();
+
+    await adminSupabase
+      .from("tutors")
+      .update({ onboarding_dismissed_at: new Date().toISOString() })
+      .eq("id", tutorId);
+
+    return { success: true };
+  } catch (err) {
+    console.error("[saveOnboardingDismissed]", err);
+    return { success: false };
+  }
+}
+
+/**
+ * Returns true if the tutor has previously dismissed the onboarding checklist.
+ */
+export async function getOnboardingDismissed(): Promise<boolean> {
+  try {
+    const authState = await verifyUserAuth();
+    if (!hasRoleAtLeast(authState.role, "tutor")) return true;
+
+    const tutorId = authState.tutorId || authState.uid;
+    const adminSupabase = createAdminClient();
+
+    const { data } = await adminSupabase
+      .from("tutors")
+      .select("onboarding_dismissed_at")
+      .eq("id", tutorId)
+      .single();
+
+    return data?.onboarding_dismissed_at != null;
+  } catch {
+    return false;
+  }
+}

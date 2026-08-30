@@ -42,7 +42,7 @@ async function handleCronJob(request: NextRequest) {
       });
     }
 
-    // 3. Fetch all active students
+    // 3. Fetch all active students with their enrollments
     const { data: students, error: studentErr } = await supabase
       .from("students")
       .select("id, tutor_id, full_name, enrolled_batch_ids")
@@ -56,10 +56,31 @@ async function handleCronJob(request: NextRequest) {
       });
     }
 
-    let generatedCount = 0;
     const batchMap = new Map(batches.map((b) => [b.id, b]));
 
-    // 4. Loop over students and generate pending fees for enrolled batches
+    // 4. Bulk Query: Fetch all existing fees for this year & month in a single O(1) query
+    const { data: existingFees } = await supabase
+      .from("fees")
+      .select("student_id, batch_id")
+      .eq("year", currentYear)
+      .eq("month", currentMonth);
+
+    const existingFeeSet = new Set(
+      (existingFees || []).map((f) => `${f.student_id}:${f.batch_id}`)
+    );
+
+    // 5. Build bulk records payload
+    const recordsToInsert: Array<{
+      tutor_id: string;
+      student_id: string;
+      batch_id: string;
+      year: number;
+      month: number;
+      amount_due: number;
+      amount_paid: number;
+      status: "unpaid";
+    }> = [];
+
     for (const student of students) {
       const enrolledBatchIds: string[] = student.enrolled_batch_ids || [];
 
@@ -67,39 +88,46 @@ async function handleCronJob(request: NextRequest) {
         const batch = batchMap.get(batchId);
         if (!batch) continue;
 
-        // Check if fee record already exists for this (student_id, batch_id, year, month)
-        const { data: existingFee } = await supabase
-          .from("fees")
-          .select("id")
-          .eq("student_id", student.id)
-          .eq("batch_id", batch.id)
-          .eq("year", currentYear)
-          .eq("month", currentMonth)
-          .maybeSingle();
-
-        if (!existingFee) {
-          const { error: insertErr } = await supabase.from("fees").insert({
+        const key = `${student.id}:${batch.id}`;
+        if (!existingFeeSet.has(key)) {
+          recordsToInsert.push({
             tutor_id: batch.tutor_id,
             student_id: student.id,
             batch_id: batch.id,
             year: currentYear,
             month: currentMonth,
-            amount_due: batch.monthly_fee,
+            amount_due: Number(batch.monthly_fee) || 0,
             amount_paid: 0,
             status: "unpaid",
           });
-
-          if (!insertErr) {
-            generatedCount++;
-          }
+          // Prevent duplicates if students have duplicate batch IDs in their array
+          existingFeeSet.add(key);
         }
+      }
+    }
+
+    // 6. Bulk Insert in chunks of 500
+    let insertedCount = 0;
+    const CHUNK_SIZE = 500;
+    for (let i = 0; i < recordsToInsert.length; i += CHUNK_SIZE) {
+      const chunk = recordsToInsert.slice(i, i + CHUNK_SIZE);
+      const { data: inserted, error: insertErr } = await supabase
+        .from("fees")
+        .insert(chunk)
+        .select("id");
+
+      if (!insertErr) {
+        insertedCount += inserted?.length ?? chunk.length;
+      } else {
+        console.error("[CRON BULK INSERT ERROR]", insertErr);
       }
     }
 
     return NextResponse.json({
       success: true,
       message: `Monthly fee generation complete for ${currentYear}-${currentMonth}`,
-      feesGenerated: generatedCount,
+      feesGenerated: insertedCount,
+      totalPendingRecords: recordsToInsert.length,
       year: currentYear,
       month: currentMonth,
     });

@@ -1,26 +1,32 @@
 import { NextResponse } from "next/server";
+import { initiateNagadPayment } from "@/lib/paymentGateway";
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { feeId, amount } = body;
+    const { feeId, amount, studentId } = body;
 
     if (!feeId || !amount) {
       return NextResponse.json(
-        { success: false, error: "Missing required fee parameters." },
+        { success: false, error: "Missing required fee parameters (feeId, amount)." },
         { status: 400 }
       );
     }
 
-    const orderId = `INV-NAGAD-${feeId.slice(0, 8)}-${Date.now()}`;
-    const paymentUrl = `/api/payment/nagad/callback?order_id=${orderId}&status=success&feeId=${feeId}&amount=${amount}`;
+    const res = await initiateNagadPayment({
+      feeId,
+      studentId,
+      amount: Number(amount),
+      provider: "nagad",
+    });
 
     return NextResponse.json({
-      success: true,
-      orderID: orderId,
-      callBackUrl: paymentUrl,
-      amount,
+      success: res.success,
+      orderID: res.paymentId,
+      callBackUrl: res.redirectUrl,
+      amount: res.amount,
       currency: "BDT",
+      isMock: res.isMock,
     });
   } catch (err: any) {
     return NextResponse.json(

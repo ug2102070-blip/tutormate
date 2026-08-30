@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { onboardTutorUser } from "@/actions/authActions";
+import { onboardTutorUser, onboardStudentOrParentUser, registerWithPhoneAndPassword } from "@/actions/authActions";
 import { claimStudentInvite, validateInviteCode } from "@/actions/studentActions";
 import { linkParentToStudent } from "@/actions/parentActions";
 import { formatAuthError } from "@/lib/utils";
@@ -31,9 +31,11 @@ export default function RegisterPage() {
   const [contactPhone, setContactPhone] = useState("");
   const [inviteCode, setInviteCode] = useState("");
 
-  // Phone Auth State
-  const [otpCode, setOtpCode] = useState("");
-  const [otpSent, setOtpSent] = useState(false);
+  // Phone Form specific password
+  const [phonePassword, setPhonePassword] = useState("");
+  const [phoneConfirmPassword, setPhoneConfirmPassword] = useState("");
+  const [showPhonePassword, setShowPhonePassword] = useState(false);
+  const [showPhoneConfirmPassword, setShowPhoneConfirmPassword] = useState(false);
 
   // Common UI State
   const [error, setError] = useState("");
@@ -60,20 +62,14 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
-      if (role === "student" || role === "parent") {
-        if (!inviteCode) {
-          setError(`Invite code is required for ${role} registration.`);
+      const cleanInvite = inviteCode ? inviteCode.trim().toUpperCase() : "";
+
+      if (cleanInvite && role === "student") {
+        const valRes = await validateInviteCode({ inviteCode: cleanInvite });
+        if (valRes && !valRes.success && valRes.error) {
+          setError(valRes.error);
           setLoading(false);
           return;
-        }
-
-        if (role === "student") {
-          const valRes = await validateInviteCode({ inviteCode });
-          if (valRes && !valRes.success && valRes.error) {
-            setError(valRes.error);
-            setLoading(false);
-            return;
-          }
         }
       }
 
@@ -83,6 +79,7 @@ export default function RegisterPage() {
         options: {
           data: {
             full_name: fullName,
+            phone: contactPhone || undefined,
           },
         },
       });
@@ -106,18 +103,43 @@ export default function RegisterPage() {
           uidOrToken: user.id,
         }).catch(() => {});
       } else if (role === "parent") {
-        const linkRes = await linkParentToStudent(inviteCode);
-        if (!linkRes.success && linkRes.message) {
-          setError(linkRes.message);
-          setLoading(false);
-          return;
+        if (cleanInvite) {
+          const linkRes = await linkParentToStudent(cleanInvite);
+          if (!linkRes.success && linkRes.message) {
+            setError(linkRes.message);
+            setLoading(false);
+            return;
+          }
+        } else {
+          await onboardStudentOrParentUser({
+            data: {
+              email: user.email || email,
+              displayName: fullName,
+              phoneNumber: contactPhone || undefined,
+              role: "parent",
+            },
+            uidOrToken: user.id,
+          }).catch(() => {});
         }
       } else {
-        const claimRes = await claimStudentInvite({ inviteCode, uidOrToken: user.id });
-        if (claimRes && !claimRes.success && claimRes.error) {
-          setError(claimRes.error);
-          setLoading(false);
-          return;
+        // student
+        if (cleanInvite) {
+          const claimRes = await claimStudentInvite({ inviteCode: cleanInvite, uidOrToken: user.id });
+          if (claimRes && !claimRes.success && claimRes.error) {
+            setError(claimRes.error);
+            setLoading(false);
+            return;
+          }
+        } else {
+          await onboardStudentOrParentUser({
+            data: {
+              email: user.email || email,
+              displayName: fullName,
+              phoneNumber: contactPhone || undefined,
+              role: "student",
+            },
+            uidOrToken: user.id,
+          }).catch(() => {});
         }
       }
 
@@ -137,18 +159,13 @@ export default function RegisterPage() {
 
   async function handleGoogleRegister() {
     setError("");
+    const cleanInvite = inviteCode ? inviteCode.trim().toUpperCase() : "";
 
-    if (role === "student" || role === "parent") {
-      if (!inviteCode) {
-        setError(`Please enter your Invite Code before signing up with Google.`);
+    if (cleanInvite && role === "student") {
+      const valRes = await validateInviteCode({ inviteCode: cleanInvite });
+      if (valRes && !valRes.success && valRes.error) {
+        setError(valRes.error);
         return;
-      }
-      if (role === "student") {
-        const valRes = await validateInviteCode({ inviteCode });
-        if (valRes && !valRes.success && valRes.error) {
-          setError(valRes.error);
-          return;
-        }
       }
     }
 
@@ -158,7 +175,7 @@ export default function RegisterPage() {
       localStorage.setItem("tm_onboard_data", JSON.stringify({
         role,
         institution,
-        inviteCode
+        inviteCode: cleanInvite
       }));
 
       const { error: oauthErr } = await supabase.auth.signInWithOAuth({
@@ -174,12 +191,12 @@ export default function RegisterPage() {
     }
   }
 
-  async function handleSendPhoneOtp(e: React.FormEvent) {
+  async function handlePhoneRegister(e: React.FormEvent) {
     e.preventDefault();
     setError("");
 
     if (!contactPhone || contactPhone.trim().length < 10) {
-      setError("Please enter a valid contact phone number.");
+      setError("Please enter a valid mobile phone number.");
       return;
     }
 
@@ -188,93 +205,61 @@ export default function RegisterPage() {
       return;
     }
 
-    if (role === "student" || role === "parent") {
-      if (!inviteCode) {
-        setError(`Invite code is required for ${role} registration.`);
-        return;
-      }
-      if (role === "student") {
-        const valRes = await validateInviteCode({ inviteCode });
-        if (valRes && !valRes.success && valRes.error) {
-          setError(valRes.error);
-          return;
-        }
-      }
-    }
-
-    setLoading(true);
-
-    try {
-      const formatted = formatPhoneNumber(contactPhone.trim());
-      const { error: otpErr } = await supabase.auth.signInWithOtp({
-        phone: formatted,
-        options: {
-          data: {
-            full_name: fullName,
-          },
-        },
-      });
-      if (otpErr) throw otpErr;
-      setOtpSent(true);
-    } catch (err: unknown) {
-      setError(formatAuthError(err));
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function handleVerifyPhoneOtp(e: React.FormEvent) {
-    e.preventDefault();
-    setError("");
-
-    if (!otpCode) {
-      setError("Please enter the 6-digit OTP code.");
+    if (phonePassword !== phoneConfirmPassword) {
+      setError("Passwords do not match. Please check and try again.");
       return;
     }
 
+    if (phonePassword.length < 6) {
+      setError("Password must be at least 6 characters.");
+      return;
+    }
+
+    const cleanInvite = inviteCode ? inviteCode.trim().toUpperCase() : "";
+    if (cleanInvite && role === "student") {
+      const valRes = await validateInviteCode({ inviteCode: cleanInvite });
+      if (valRes && !valRes.success && valRes.error) {
+        setError(valRes.error);
+        return;
+      }
+    }
+
     setLoading(true);
 
     try {
-      const formatted = formatPhoneNumber(contactPhone.trim());
-      const { data, error: verifyErr } = await supabase.auth.verifyOtp({
-        phone: formatted,
-        token: otpCode.trim(),
-        type: "sms",
+      const regRes = await registerWithPhoneAndPassword({
+        fullName,
+        phone: contactPhone.trim(),
+        password: phonePassword,
+        role: role as "tutor" | "student" | "owner" | "parent",
+        institution: institution || undefined,
+        inviteCode: cleanInvite || undefined,
       });
 
-      if (verifyErr) throw verifyErr;
-      const user = data.user;
-      if (!user) throw new Error("Verification failed.");
-
-      if (role === "tutor" || role === "owner") {
-        await onboardTutorUser({
-          data: {
-            email: user.email || null,
-            displayName: fullName,
-            phoneNumber: contactPhone,
-            institution: institution || "Independent",
-            role: role as "tutor" | "owner",
-          },
-          uidOrToken: user.id,
-        }).catch(() => {});
-      } else if (role === "parent") {
-        const linkRes = await linkParentToStudent(inviteCode);
-        if (!linkRes.success && linkRes.message) {
-          setError(linkRes.message);
-          setLoading(false);
-          return;
-        }
-      } else {
-        const claimRes = await claimStudentInvite({ inviteCode, uidOrToken: user.id });
-        if (claimRes && !claimRes.success && claimRes.error) {
-          setError(claimRes.error);
-          setLoading(false);
-          return;
-        }
+      if (!regRes.success || (regRes as any).error) {
+        setError((regRes as any).error || "Failed to create account.");
+        setLoading(false);
+        return;
       }
 
-      await refreshClaims(user).catch(() => {});
-      router.push(role === "student" ? "/student/dashboard" : role === "parent" ? "/parent/dashboard" : role === "owner" ? "/owner/dashboard" : "/tutor/dashboard");
+      // Automatically sign in with the new phone & password
+      const formatted = regRes.data?.formattedPhone || formatPhoneNumber(contactPhone.trim());
+      const { data: signData, error: signErr } = await supabase.auth.signInWithPassword({
+        phone: formatted,
+        password: phonePassword,
+      });
+
+      if (signErr) {
+        throw signErr;
+      }
+
+      await refreshClaims(signData.user).catch(() => {});
+      router.push(
+        role === "student" ? "/student/dashboard" :
+        role === "parent" ? "/parent/dashboard" :
+        role === "owner" ? "/owner/dashboard" :
+        "/tutor/dashboard"
+      );
     } catch (err: unknown) {
       setError(formatAuthError(err));
     } finally {
@@ -539,55 +524,54 @@ export default function RegisterPage() {
             )}
           </div>
 
-          {role === "tutor" || role === "owner" ? (
-            <>
-              <div>
-                <label
-                  htmlFor="reg-institution"
-                  className="block text-sm font-medium mb-1.5"
-                  style={{ color: "var(--color-text-secondary)" }}
-                >
-                  Institution / Coaching Name
-                </label>
-                <input
-                  id="reg-institution"
-                  type="text"
-                  value={institution}
-                  onChange={(e) => setInstitution(e.target.value)}
-                  placeholder="e.g. BUET / Excellence Coaching"
-                  className="w-full px-3.5 py-2.5 text-sm rounded-lg outline-none transition-all duration-200"
-                  style={{
-                    backgroundColor: "var(--color-bg-secondary)",
-                    border: "1px solid var(--color-border)",
-                    color: "var(--color-text)",
-                  }}
-                />
-              </div>
+          {/* Contact Phone (for all roles) */}
+          <div>
+            <label
+              htmlFor="reg-phone"
+              className="block text-sm font-medium mb-1.5"
+              style={{ color: "var(--color-text-secondary)" }}
+            >
+              Contact Phone
+            </label>
+            <input
+              id="reg-phone"
+              type="tel"
+              required
+              value={contactPhone}
+              onChange={(e) => setContactPhone(e.target.value)}
+              placeholder="01712345678"
+              className="w-full px-3.5 py-2.5 text-sm rounded-lg outline-none transition-all duration-200"
+              style={{
+                backgroundColor: "var(--color-bg-secondary)",
+                border: "1px solid var(--color-border)",
+                color: "var(--color-text)",
+              }}
+            />
+          </div>
 
-              <div>
-                <label
-                  htmlFor="reg-phone"
-                  className="block text-sm font-medium mb-1.5"
-                  style={{ color: "var(--color-text-secondary)" }}
-                >
-                  Contact Phone
-                </label>
-                <input
-                  id="reg-phone"
-                  type="tel"
-                  required
-                  value={contactPhone}
-                  onChange={(e) => setContactPhone(e.target.value)}
-                  placeholder="01712345678"
-                  className="w-full px-3.5 py-2.5 text-sm rounded-lg outline-none transition-all duration-200"
-                  style={{
-                    backgroundColor: "var(--color-bg-secondary)",
-                    border: "1px solid var(--color-border)",
-                    color: "var(--color-text)",
-                  }}
-                />
-              </div>
-            </>
+          {role === "tutor" || role === "owner" ? (
+            <div>
+              <label
+                htmlFor="reg-institution"
+                className="block text-sm font-medium mb-1.5"
+                style={{ color: "var(--color-text-secondary)" }}
+              >
+                Institution / Coaching Name
+              </label>
+              <input
+                id="reg-institution"
+                type="text"
+                value={institution}
+                onChange={(e) => setInstitution(e.target.value)}
+                placeholder="e.g. BUET / Excellence Coaching"
+                className="w-full px-3.5 py-2.5 text-sm rounded-lg outline-none transition-all duration-200"
+                style={{
+                  backgroundColor: "var(--color-bg-secondary)",
+                  border: "1px solid var(--color-border)",
+                  color: "var(--color-text)",
+                }}
+              />
+            </div>
           ) : (
             <div>
               <label
@@ -595,15 +579,14 @@ export default function RegisterPage() {
                 className="block text-sm font-medium mb-1.5"
                 style={{ color: "var(--color-text-secondary)" }}
               >
-                Invite Code {role === "parent" ? "(from your child)" : "(from your tutor)"}
+                Invite Code <span className="text-xs text-slate-400 font-normal">(Optional — from your {role === "parent" ? "child" : "tutor"})</span>
               </label>
               <input
                 id="reg-invite"
                 type="text"
-                required
                 value={inviteCode}
                 onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
-                placeholder="e.g. AB12CD34"
+                placeholder="e.g. AB12CD34 (Optional)"
                 className="w-full px-3.5 py-2.5 text-sm rounded-lg outline-none tracking-wider uppercase font-mono transition-all duration-200"
                 style={{
                   backgroundColor: "var(--color-bg-secondary)",
@@ -611,6 +594,9 @@ export default function RegisterPage() {
                   color: "var(--color-text)",
                 }}
               />
+              <p className="text-xs text-slate-400 mt-1 font-medium">
+                Leave blank if your tutor hasn't given you a code yet. Your tutor can add you later by your phone number.
+              </p>
             </div>
           )}
 
@@ -628,112 +614,135 @@ export default function RegisterPage() {
           </button>
         </form>
       ) : (
-        /* Phone OTP Registration Form */
+        /* Phone & Password Registration Form (Instant - No SMS OTP required) */
         <div className="mt-6 space-y-4">
-          {!otpSent ? (
-            <form onSubmit={handleSendPhoneOtp} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-1.5 text-slate-700 dark:text-slate-300">
-                  Full Name
-                </label>
+          <form onSubmit={handlePhoneRegister} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-1.5 text-slate-700 dark:text-slate-300">
+                Full Name
+              </label>
+              <input
+                type="text"
+                required
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                placeholder="e.g. Tanvir Hossain"
+                className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-slate-200 dark:border-white/10 outline-none focus:border-indigo-600"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1.5 text-slate-700 dark:text-slate-300">
+                Mobile Phone Number
+              </label>
+              <input
+                type="tel"
+                required
+                value={contactPhone}
+                onChange={(e) => setContactPhone(e.target.value)}
+                placeholder="01712345678"
+                className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-slate-200 dark:border-white/10 outline-none focus:border-indigo-600"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1.5 text-slate-700 dark:text-slate-300">
+                Password
+              </label>
+              <div className="relative">
                 <input
-                  type="text"
+                  type={showPhonePassword ? "text" : "password"}
                   required
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  placeholder="e.g. Tanvir Hossain"
-                  className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-slate-200 dark:border-white/10 outline-none focus:border-indigo-600"
+                  minLength={6}
+                  value={phonePassword}
+                  onChange={(e) => setPhonePassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full px-3.5 py-2.5 pr-10 text-sm rounded-lg border border-slate-200 dark:border-white/10 outline-none focus:border-indigo-600"
                 />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-1.5 text-slate-700 dark:text-slate-300">
-                  Mobile Phone Number
-                </label>
-                <input
-                  type="tel"
-                  required
-                  value={contactPhone}
-                  onChange={(e) => setContactPhone(e.target.value)}
-                  placeholder="01712345678"
-                  className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-slate-200 dark:border-white/10 outline-none focus:border-indigo-600"
-                />
-              </div>
-
-              {role === "tutor" || role === "owner" ? (
-                <div>
-                  <label className="block text-sm font-medium mb-1.5 text-slate-700 dark:text-slate-300">
-                    Institution / Coaching Name
-                  </label>
-                  <input
-                    type="text"
-                    value={institution}
-                    onChange={(e) => setInstitution(e.target.value)}
-                    placeholder="e.g. BUET / Excellence Academy"
-                    className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-slate-200 dark:border-white/10 outline-none focus:border-indigo-600"
-                  />
-                </div>
-              ) : (
-                <div>
-                  <label className="block text-sm font-medium mb-1.5 text-slate-700 dark:text-slate-300">
-                    Invite Code {role === "parent" ? "(from your child)" : "(from your tutor)"}
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={inviteCode}
-                    onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
-                    placeholder="e.g. AB12CD34"
-                    className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-slate-200 dark:border-white/10 outline-none uppercase font-mono tracking-wider focus:border-indigo-600"
-                  />
-                </div>
-              )}
-
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full py-2.5 px-4 text-sm font-semibold text-white rounded-lg bg-indigo-600 hover:bg-indigo-700 transition-all flex items-center justify-center gap-2"
-              >
-                {loading ? "Sending OTP..." : "Send Verification Code"}
-              </button>
-            </form>
-          ) : (
-            <form onSubmit={handleVerifyPhoneOtp} className="space-y-4">
-              <div className="p-3 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-100 text-xs text-indigo-700 flex justify-between items-center">
-                <span>Code sent to: <strong>{formatPhoneNumber(contactPhone)}</strong></span>
                 <button
                   type="button"
-                  onClick={() => setOtpSent(false)}
-                  className="underline font-semibold"
+                  onClick={() => setShowPhonePassword(!showPhonePassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 opacity-50 hover:opacity-100 transition-opacity"
+                  tabIndex={-1}
                 >
-                  Change
+                  {showPhonePassword ? <EyeOff className="w-4 h-4 text-slate-500" /> : <Eye className="w-4 h-4 text-slate-500" />}
                 </button>
               </div>
+            </div>
 
+            <div>
+              <label className="block text-sm font-medium mb-1.5 text-slate-700 dark:text-slate-300">
+                Confirm Password
+              </label>
+              <div className="relative">
+                <input
+                  type={showPhoneConfirmPassword ? "text" : "password"}
+                  required
+                  minLength={6}
+                  value={phoneConfirmPassword}
+                  onChange={(e) => setPhoneConfirmPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className={`w-full px-3.5 py-2.5 pr-10 text-sm rounded-lg border outline-none focus:border-indigo-600 ${
+                    phoneConfirmPassword && phoneConfirmPassword !== phonePassword
+                      ? "border-rose-500"
+                      : "border-slate-200 dark:border-white/10"
+                  }`}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPhoneConfirmPassword(!showPhoneConfirmPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 opacity-50 hover:opacity-100 transition-opacity"
+                  tabIndex={-1}
+                >
+                  {showPhoneConfirmPassword ? <EyeOff className="w-4 h-4 text-slate-500" /> : <Eye className="w-4 h-4 text-slate-500" />}
+                </button>
+              </div>
+              {phoneConfirmPassword && phoneConfirmPassword !== phonePassword && (
+                <p className="mt-1 text-xs text-rose-500 font-medium">
+                  Passwords do not match.
+                </p>
+              )}
+            </div>
+
+            {role === "tutor" || role === "owner" ? (
               <div>
                 <label className="block text-sm font-medium mb-1.5 text-slate-700 dark:text-slate-300">
-                  Enter 6-Digit OTP Code
+                  Institution / Coaching Name
                 </label>
                 <input
                   type="text"
-                  required
-                  maxLength={6}
-                  value={otpCode}
-                  onChange={(e) => setOtpCode(e.target.value)}
-                  placeholder="123456"
-                  className="w-full px-3.5 py-2.5 text-center text-lg tracking-widest font-mono rounded-lg border border-slate-200 dark:border-white/10 outline-none focus:border-indigo-600"
+                  value={institution}
+                  onChange={(e) => setInstitution(e.target.value)}
+                  placeholder="e.g. BUET / Excellence Academy"
+                  className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-slate-200 dark:border-white/10 outline-none focus:border-indigo-600"
                 />
               </div>
+            ) : (
+              <div>
+                <label className="block text-sm font-medium mb-1.5 text-slate-700 dark:text-slate-300">
+                  Invite Code <span className="text-xs text-slate-400 font-normal">(Optional — from your {role === "parent" ? "child" : "tutor"})</span>
+                </label>
+                <input
+                  type="text"
+                  value={inviteCode}
+                  onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
+                  placeholder="e.g. AB12CD34 (Optional)"
+                  className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-slate-200 dark:border-white/10 outline-none uppercase font-mono tracking-wider focus:border-indigo-600"
+                />
+                <p className="text-xs text-slate-400 mt-1 font-medium">
+                  Leave blank if your tutor hasn't given you a code yet. Your tutor can add you later by your phone number.
+                </p>
+              </div>
+            )}
 
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full py-2.5 px-4 text-sm font-semibold text-white rounded-lg bg-indigo-600 hover:bg-indigo-700 transition-all flex items-center justify-center gap-2"
-              >
-                {loading ? "Registering..." : `Register as ${role === "tutor" ? "Tutor" : "Student"}`}
-              </button>
-            </form>
-          )}
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-2.5 px-4 text-sm font-semibold text-white rounded-lg bg-indigo-600 hover:bg-indigo-700 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+            >
+              {loading ? "Creating account..." : `Register as ${role === "student" ? "Student" : role === "owner" ? "Owner" : role === "parent" ? "Parent" : "Tutor"}`}
+            </button>
+          </form>
         </div>
       )}
 

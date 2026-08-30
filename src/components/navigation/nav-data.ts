@@ -39,6 +39,8 @@ export interface NavItem {
   icon: LucideIcon;
   badge?: string;
   badgeColor?: "primary" | "amber" | "emerald";
+  /** If true, always visible in sidebar. If false, hidden under "More" section. */
+  isPrimary?: boolean;
 }
 
 export interface NavCategory {
@@ -52,38 +54,41 @@ export const tutorNavCategories: NavCategory[] = [
     category: "Overview",
     key: "overview",
     items: [
-      { href: "/tutor/dashboard", label: "Dashboard", key: "dashboard", icon: LayoutDashboard },
-      { href: "/tutor/notices", label: "Notice Board", key: "notices", icon: Megaphone },
-      { href: "/tutor/chat", label: "Internal Chat", key: "chat", icon: MessageSquare },
+      { href: "/tutor/dashboard",  label: "Dashboard",     key: "dashboard", icon: LayoutDashboard, isPrimary: true },
+      { href: "/tutor/notices",    label: "Notice Board",  key: "notices",   icon: Megaphone,        isPrimary: false },
+      { href: "/tutor/chat",       label: "Internal Chat", key: "chat",      icon: MessageSquare,    isPrimary: false },
     ],
   },
   {
     category: "Batches & Students",
     key: "batchesStudents",
     items: [
-      { href: "/tutor/batches", label: "My Batches", key: "batches", icon: BookOpen },
-      { href: "/tutor/students", label: "Students Directory", key: "students", icon: GraduationCap },
-      { href: "/tutor/attendance", label: "Daily Attendance", key: "attendance", icon: CalendarCheck },
-      { href: "/tutor/timetable", label: "Routine & Schedule", key: "timetable", icon: Clock },
+      { href: "/tutor/batches",    label: "My Batches",          key: "batches",    icon: BookOpen,     isPrimary: true },
+      { href: "/tutor/students",   label: "Students Directory",  key: "students",   icon: GraduationCap,isPrimary: true },
+      { href: "/tutor/attendance", label: "Daily Attendance",    key: "attendance", icon: CalendarCheck, isPrimary: true },
+      { href: "/tutor/timetable",  label: "Routine & Schedule",  key: "timetable",  icon: Clock,         isPrimary: false },
     ],
   },
   {
     category: "Teaching & Exams",
     key: "teachingExams",
     items: [
-      { href: "/tutor/exams", label: "Exams & Results", key: "exams", icon: Award },
-      { href: "/tutor/assignments", label: "Assignments", key: "assignments", icon: FileText },
-      { href: "/tutor/materials", label: "Study Materials", key: "materials", icon: BookOpen },
-      { href: "/tutor/recorded-classes", label: "Recorded Classes", key: "recordedClasses", icon: Video },
-      { href: "/tutor/doubts", label: "Student Doubts", key: "doubts", icon: HelpCircle },
+      { href: "/tutor/exams",            label: "Exams & Results",  key: "exams",          icon: Award,      isPrimary: true },
+      { href: "/tutor/assignments",       label: "Assignments",      key: "assignments",     icon: FileText,   isPrimary: true },
+      { href: "/tutor/materials",         label: "Study Materials",  key: "materials",       icon: BookOpen,   isPrimary: true },
+      { href: "/tutor/recorded-classes",  label: "Recorded Classes", key: "recordedClasses", icon: Video,      isPrimary: false },
+      { href: "/tutor/doubts",            label: "Student Doubts",   key: "doubts",          icon: HelpCircle, isPrimary: true },
     ],
   },
   {
     category: "Finance & Account",
     key: "financeAccount",
     items: [
-      { href: "/tutor/fees", label: "Fee Ledger", key: "fees", icon: CreditCard },
-      { href: "/tutor/settings", label: "Profile & Settings", key: "settings", icon: Settings },
+      { href: "/tutor/fees",     label: "Fee Ledger",        key: "fees",     icon: CreditCard, isPrimary: true },
+      { href: "/tutor/reports",  label: "Reports Center",    key: "reports",  icon: BarChart3,  isPrimary: false },
+      { href: "/tutor/financial-management", label: "Financial ERP", key: "financialManagement", icon: CircleDollarSign, isPrimary: false, badge: "ERP", badgeColor: "emerald" },
+      { href: "/tutor/documents",label: "Documents Vault",   key: "documents",icon: FolderArchive, isPrimary: false },
+      { href: "/tutor/settings", label: "Profile & Settings",key: "settings", icon: Settings,   isPrimary: true },
     ],
   },
 ];

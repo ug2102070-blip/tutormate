@@ -152,6 +152,22 @@ export async function upgradeSubscription(
       }
     }
 
+    // Insert normalized audit history record into subscription_plans table
+    try {
+      await supabase.from("subscription_plans").insert({
+        tutor_id: tutorId,
+        plan: newPlan,
+        status: "active",
+        billing_cycle: billingCycle,
+        amount_paid: planSpecs.priceBDT,
+        valid_from: now.toISOString(),
+        valid_until: validUntilDate.toISOString(),
+        payment_method: "online",
+      });
+    } catch (auditErr) {
+      console.warn("[upgradeSubscription] Subscription plan audit insert skipped:", auditErr);
+    }
+
     revalidatePath("/tutor/subscription");
     revalidatePath("/tutor/settings");
     revalidatePath("/tutor/dashboard");
@@ -172,15 +188,16 @@ export async function cancelSubscription(): Promise<{ success: boolean; error?: 
     const tutorId = auth.tutorId || auth.uid;
 
     const freeSpecs = SUBSCRIPTION_PLANS.free_trial;
+    const now = new Date();
     const canceledSubJson = {
       plan: "free_trial",
       status: "canceled",
-      validUntil: new Date().toISOString(),
+      validUntil: now.toISOString(),
       maxStudents: freeSpecs.maxStudents,
       maxBatches: freeSpecs.maxBatches,
       allowAiFeatures: freeSpecs.allowAiFeatures,
       priceBDT: 0,
-      updatedAt: new Date().toISOString(),
+      updatedAt: now.toISOString(),
     };
 
     const supabase = createAdminClient();
@@ -193,6 +210,22 @@ export async function cancelSubscription(): Promise<{ success: boolean; error?: 
       return { success: false, error: updateErr.message };
     }
 
+    // Insert cancellation audit record
+    try {
+      await supabase.from("subscription_plans").insert({
+        tutor_id: tutorId,
+        plan: "free_trial",
+        status: "canceled",
+        billing_cycle: null,
+        amount_paid: 0,
+        valid_from: now.toISOString(),
+        valid_until: now.toISOString(),
+        payment_method: null,
+      });
+    } catch (auditErr) {
+      console.warn("[cancelSubscription] Subscription plan audit insert skipped:", auditErr);
+    }
+
     revalidatePath("/tutor/subscription");
     revalidatePath("/tutor/settings");
     return { success: true };
@@ -200,3 +233,54 @@ export async function cancelSubscription(): Promise<{ success: boolean; error?: 
     return { success: false, error: err.message || "Failed to cancel subscription." };
   }
 }
+
+/**
+ * Retrieves normalized subscription audit history for the authenticated tutor.
+ */
+export async function getSubscriptionHistory(): Promise<{
+  success: boolean;
+  history?: Array<{
+    id: string;
+    plan: string;
+    status: string;
+    billingCycle: string | null;
+    amountPaid: number;
+    validFrom: string;
+    validUntil: string | null;
+    createdAt: string;
+  }>;
+  error?: string;
+}> {
+  try {
+    const auth = await verifyUserAuth();
+    const tutorId = auth.tutorId || auth.uid;
+
+    const supabase = createAdminClient();
+    const { data, error } = await supabase
+      .from("subscription_plans")
+      .select("id, plan, status, billing_cycle, amount_paid, valid_from, valid_until, created_at")
+      .eq("tutor_id", tutorId)
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+
+    return {
+      success: true,
+      history: (data || []).map((row) => ({
+        id: row.id,
+        plan: row.plan,
+        status: row.status,
+        billingCycle: row.billing_cycle,
+        amountPaid: Number(row.amount_paid || 0),
+        validFrom: row.valid_from,
+        validUntil: row.valid_until,
+        createdAt: row.created_at,
+      })),
+    };
+  } catch (err: any) {
+    return { success: false, error: err.message || "Failed to load subscription history." };
+  }
+}
+

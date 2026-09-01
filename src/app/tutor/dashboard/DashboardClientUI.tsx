@@ -264,14 +264,14 @@ export function DashboardClientUI({ tutorName, metrics, liveData }: DashboardCli
       )}
 
       {/* 6 Vibrant Gradient Hero KPI Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
+      <div className="flex overflow-x-auto pb-4 -mx-4 px-4 sm:mx-0 sm:px-0 sm:pb-0 sm:grid sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4 snap-x snap-mandatory [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
         {gradientCards.map((card) => {
           const Icon = card.icon;
           return (
             <Link
               key={card.title}
               href={card.href}
-              className="relative p-4 sm:p-5 rounded-2xl text-white overflow-hidden transition-all duration-200 hover:-translate-y-1 active:scale-95 group block"
+              className="relative p-4 sm:p-5 rounded-2xl text-white overflow-hidden transition-all duration-200 hover:-translate-y-1 active:scale-95 group block shrink-0 w-[45vw] min-w-[160px] max-w-[200px] sm:w-auto sm:min-w-0 sm:max-w-none snap-start"
               style={{
                 background: card.gradient,
                 boxShadow: card.shadow,

@@ -9,7 +9,6 @@ import { createClient } from "@/lib/supabase/client";
 import { LogOut, Settings, ChevronDown, User, Menu, Gem, Building2, GraduationCap } from "lucide-react";
 import { HeaderCalendar } from "@/components/HeaderCalendar";
 import { CommandBar } from "@/components/CommandBar";
-import { AcademicYearSelector } from "@/components/navigation/AcademicYearSelector";
 import { NotificationBell } from "@/components/NotificationBell";
 import { HeaderPersonalNote } from "@/components/navigation/HeaderPersonalNote";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -156,16 +155,13 @@ export function Header() {
           )}
         </div>
 
-      {/* Right: Academic Year (Owner only) + Command Bar + Calendar + Notifications + User */}
+      {/* Right: Command Bar + Calendar + Notifications + User */}
       <div className="flex items-center gap-2 relative">
-        {/* Academic Session Selector — for institution owners */}
-        {role === "owner" && <AcademicYearSelector />}
-
         {/* Global Command Bar (Ctrl+K) */}
         <CommandBar />
 
-        {/* Calendar Widget — available everywhere */}
-        {role && <HeaderCalendar role={role as "tutor" | "student"} />}
+        {/* Calendar Widget (now includes Academic Year for owners) */}
+        {role && <HeaderCalendar role={role} />}
 
         {/* Personal Sticky Note Widget */}
         <HeaderPersonalNote />

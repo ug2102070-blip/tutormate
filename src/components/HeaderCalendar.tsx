@@ -7,8 +7,9 @@ import { getCalendarEvents, createEvent, deleteEvent } from "@/actions/calendarA
 import { CalendarEvent } from "@/types";
 import { format, startOfMonth, getDaysInMonth, getDay, addMonths, subMonths, isSameDay } from "date-fns";
 import { useRouter } from "next/navigation";
+import { AcademicYearSelector } from "@/components/navigation/AcademicYearSelector";
 
-export function HeaderCalendar({ role }: { role: "tutor" | "student" }) {
+export function HeaderCalendar({ role }: { role: string }) {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -107,12 +108,19 @@ export function HeaderCalendar({ role }: { role: "tutor" | "student" }) {
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 sm:right-0 top-12 w-[88vw] sm:w-96 max-w-sm bg-white dark:bg-[#131b2e] rounded-2xl border border-slate-200 dark:border-white/10 shadow-xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2">
+        <div className="absolute right-0 sm:right-0 top-12 w-[88vw] sm:w-96 max-w-sm bg-white dark:bg-[#131b2e] rounded-2xl border border-slate-200 dark:border-white/10 shadow-xl z-50 animate-in fade-in slide-in-from-top-2">
           {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 dark:border-white/5 bg-slate-50/50 dark:bg-[#0b0f19]/50">
-            <h3 className="font-bold text-slate-800 dark:text-slate-200">
-              {format(currentDate, "MMMM yyyy")}
-            </h3>
+          <div className="rounded-t-2xl flex flex-col gap-2 px-4 py-3 border-b border-slate-100 dark:border-white/5 bg-slate-50/50 dark:bg-[#0b0f19]/50">
+            {role === "owner" && (
+              <div className="flex items-center justify-between mb-1 pb-2 border-b border-slate-200/50 dark:border-white/5">
+                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Academic Session</span>
+                <AcademicYearSelector />
+              </div>
+            )}
+            <div className="flex items-center justify-between">
+              <h3 className="font-bold text-slate-800 dark:text-slate-200">
+                {format(currentDate, "MMMM yyyy")}
+              </h3>
             <div className="flex items-center gap-1">
               {loading && <Loader2 className="w-4 h-4 text-indigo-500 animate-spin mr-2" />}
               <button onClick={handlePrevMonth} className="p-1 hover:bg-slate-200 rounded-md transition-colors text-slate-600 dark:text-slate-400">
@@ -121,6 +129,7 @@ export function HeaderCalendar({ role }: { role: "tutor" | "student" }) {
               <button onClick={handleNextMonth} className="p-1 hover:bg-slate-200 rounded-md transition-colors text-slate-600 dark:text-slate-400">
                 <ChevronRight className="w-4 h-4" />
               </button>
+            </div>
             </div>
           </div>
 
@@ -208,7 +217,7 @@ export function HeaderCalendar({ role }: { role: "tutor" | "student" }) {
           </div>
 
           {/* Footer Link to Full Calendar Page */}
-          <div className="px-4 py-2.5 border-t border-slate-100 dark:border-white/5 bg-slate-50/80 dark:bg-[#0b0f19]/80 flex items-center justify-between text-xs">
+          <div className="rounded-b-2xl px-4 py-2.5 border-t border-slate-100 dark:border-white/5 bg-slate-50/80 dark:bg-[#0b0f19]/80 flex items-center justify-between text-xs">
             <span className="text-slate-500 dark:text-slate-400 font-medium">Need full month view?</span>
             <Link
               href={role === "tutor" ? "/tutor/calendar" : "/student/calendar"}

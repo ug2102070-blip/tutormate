@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronDown, ChevronUp, Sparkles } from "lucide-react";
 import {
   tutorNavCategories,
   studentNavCategories,
@@ -19,24 +19,24 @@ interface SidebarProps {
 
 const roleBadgeStyles: Record<string, { bg: string; text: string; border: string }> = {
   tutor: {
-    bg: "var(--color-primary-50)",
-    text: "var(--color-primary)",
-    border: "var(--color-primary-100)",
+    bg: "bg-blue-100 dark:bg-blue-900/60",
+    text: "text-blue-700 dark:text-blue-300",
+    border: "border-blue-200 dark:border-blue-800/60",
   },
   owner: {
-    bg: "rgba(245, 158, 11, 0.12)",
-    text: "rgb(217, 119, 6)",
-    border: "rgba(245, 158, 11, 0.3)",
+    bg: "bg-amber-100 dark:bg-amber-900/60",
+    text: "text-amber-700 dark:text-amber-300",
+    border: "border-amber-200 dark:border-amber-800/60",
   },
   student: {
-    bg: "rgba(16, 185, 129, 0.12)",
-    text: "rgb(5, 150, 105)",
-    border: "rgba(16, 185, 129, 0.3)",
+    bg: "bg-emerald-100 dark:bg-emerald-900/60",
+    text: "text-emerald-700 dark:text-emerald-300",
+    border: "border-emerald-200 dark:border-emerald-800/60",
   },
   parent: {
-    bg: "rgba(139, 92, 246, 0.12)",
-    text: "rgb(109, 40, 217)",
-    border: "rgba(139, 92, 246, 0.3)",
+    bg: "bg-purple-100 dark:bg-purple-900/60",
+    text: "text-purple-700 dark:text-purple-300",
+    border: "border-purple-200 dark:border-purple-800/60",
   },
 };
 
@@ -121,43 +121,35 @@ export function Sidebar({ role }: SidebarProps) {
         prefetch={true}
         onMouseEnter={() => handlePrefetch(item.href)}
         onFocus={() => handlePrefetch(item.href)}
-        className="flex items-center justify-between px-3 py-2 text-xs font-semibold rounded-xl transition-all duration-150 group active:scale-[0.98]"
-        style={{
-          background: isActive ? "var(--color-primary-50)" : "transparent",
-          color: isActive ? "var(--color-primary)" : "var(--color-text-secondary)",
-        }}
+        className={`flex items-center justify-between px-3.5 py-2.5 text-xs font-bold rounded-xl transition-all duration-200 group active:scale-[0.98] ${
+          isActive
+            ? "bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 shadow-sm border border-blue-100/50 dark:border-blue-900/50"
+            : "text-slate-600 dark:text-slate-400 hover:bg-slate-100/80 dark:hover:bg-slate-800/80 hover:text-slate-900 dark:hover:text-slate-100 border border-transparent"
+        }`}
       >
-        <div className="flex items-center gap-2.5 min-w-0">
+        <div className="flex items-center gap-3 min-w-0 relative">
+          {isActive && (
+            <div className="absolute -left-3.5 top-1/2 -translate-y-1/2 w-1 h-5 bg-blue-600 dark:bg-blue-500 rounded-r-full" />
+          )}
           <Icon
-            className="w-4 h-4 shrink-0 transition-transform duration-150 group-hover:scale-110"
-            style={{ color: isActive ? "var(--color-primary)" : "var(--color-text-muted)" }}
+            className={`w-4 h-4 shrink-0 transition-all duration-200 ${
+              isActive
+                ? "text-blue-600 dark:text-blue-400 scale-110"
+                : "text-slate-400 group-hover:text-slate-700 dark:group-hover:text-slate-300 group-hover:scale-110"
+            }`}
           />
-          <span className="truncate">{translatedLabel}</span>
+          <span className="truncate tracking-wide">{translatedLabel}</span>
         </div>
 
         {item.badge && (
           <span
-            className="text-[9px] font-extrabold px-1.5 py-0.5 rounded-md border shrink-0"
-            style={{
-              background:
-                item.badgeColor === "amber"
-                  ? "rgba(245, 158, 11, 0.1)"
-                  : item.badgeColor === "emerald"
-                  ? "rgba(16, 185, 129, 0.1)"
-                  : "var(--color-primary-50)",
-              color:
-                item.badgeColor === "amber"
-                  ? "rgb(217, 119, 6)"
-                  : item.badgeColor === "emerald"
-                  ? "rgb(5, 150, 105)"
-                  : "var(--color-primary)",
-              borderColor:
-                item.badgeColor === "amber"
-                  ? "rgba(245, 158, 11, 0.3)"
-                  : item.badgeColor === "emerald"
-                  ? "rgba(16, 185, 129, 0.3)"
-                  : "var(--color-primary-100)",
-            }}
+            className={`text-[9px] font-black px-1.5 py-0.5 rounded-md border shrink-0 transition-colors ${
+              item.badgeColor === "amber"
+                ? "bg-amber-100 dark:bg-amber-900/60 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800/60"
+                : item.badgeColor === "emerald"
+                ? "bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800/60"
+                : "bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800/60"
+            }`}
           >
             {item.badge}
           </span>
@@ -167,58 +159,47 @@ export function Sidebar({ role }: SidebarProps) {
   };
 
   return (
-    <aside
-      style={{
-        background: "var(--color-sidebar-bg)",
-        borderRight: "1px solid var(--color-sidebar-border)",
-      }}
-      className="hidden md:flex w-64 flex-col justify-between p-4 shrink-0 h-screen sticky top-0 overflow-y-auto"
-    >
-      <div className="space-y-4">
+    <aside className="hidden md:flex w-64 flex-col justify-between p-4 shrink-0 h-screen sticky top-0 overflow-y-auto bg-white/80 dark:bg-slate-950/80 backdrop-blur-xl border-r border-slate-200/60 dark:border-slate-800/60 shadow-[4px_0_24px_rgba(0,0,0,0.01)] dark:shadow-[4px_0_24px_rgba(0,0,0,0.2)] transition-all z-20">
+      <div className="space-y-6">
         {/* Brand Header */}
-        <div className="px-2 py-1">
+        <div className="px-3 py-2">
           <Link
             href={dashboardHref}
             prefetch={true}
             onMouseEnter={() => handlePrefetch(dashboardHref)}
-            className="flex items-center justify-between"
+            className="flex items-center justify-between group"
           >
+            <div className="flex items-center gap-1.5">
+              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center shadow-md shadow-blue-500/20 group-hover:shadow-blue-500/40 transition-shadow shrink-0">
+                <span className="text-white font-black text-lg">T</span>
+              </div>
+              <span className="text-lg font-black tracking-tight text-slate-900 dark:text-white truncate">
+                Tutor<span className="text-blue-600 dark:text-blue-400">Mate</span>
+              </span>
+            </div>
             <span
-              className="text-xl font-extrabold tracking-tight"
-              style={{ color: "var(--color-primary)" }}
-            >
-              TutorMate
-            </span>
-            <span
-              className="text-[10px] uppercase font-bold px-2 py-0.5 rounded-full border"
-              style={{
-                background: badgeStyle.bg,
-                color: badgeStyle.text,
-                borderColor: badgeStyle.border,
-              }}
+              className={`text-[8px] sm:text-[9px] uppercase font-black px-1.5 py-0.5 rounded-full border ${badgeStyle.bg} ${badgeStyle.text} ${badgeStyle.border} shadow-sm shrink-0 ml-1`}
             >
               {role === "owner" ? "Center" : t(`roles.${role}`)}
             </span>
           </Link>
         </div>
 
-        {/* Primary Navigation (always visible) */}
-        <nav className="space-y-1">
+        {/* Navigation */}
+        <nav className="space-y-1.5 px-1">
           {hasPrimaryFlag ? (
             // Flat list for tutor (primary items only)
             primaryItems.map(renderNavItem)
           ) : (
             // Categorized list for other roles
             categories.map((catGroup) => (
-              <div key={catGroup.category} className="space-y-1">
-                <div
-                  className="px-3 text-[10px] font-bold uppercase tracking-wider mb-1 mt-3"
-                  style={{ color: "var(--color-text-muted)" }}
-                >
+              <div key={catGroup.category} className="space-y-1 mb-6">
+                <div className="px-3 text-[10px] font-black uppercase tracking-widest mb-2 mt-4 text-slate-400 dark:text-slate-500 flex items-center gap-2">
                   {(() => {
                     const rawCategoryName = catGroup.key ? t(`navCategory.${catGroup.key}`) : catGroup.category;
                     return rawCategoryName && rawCategoryName !== `navCategory.${catGroup.key}` ? rawCategoryName : catGroup.category;
                   })()}
+                  <div className="h-px bg-slate-200 dark:bg-slate-800 flex-1" />
                 </div>
                 {catGroup.items.map(renderNavItem)}
               </div>
@@ -228,28 +209,24 @@ export function Sidebar({ role }: SidebarProps) {
 
         {/* "More" Collapsible Section (secondary items, tutor only) */}
         {secondaryItems.length > 0 && (
-          <div className="space-y-1">
-            <div
-              className="h-px mx-3"
-              style={{ background: "var(--color-border)" }}
-            />
+          <div className="space-y-1.5 px-1">
+            <div className="h-px mx-3 my-4 bg-slate-200/60 dark:bg-slate-800/60" />
 
             <button
               type="button"
               onClick={toggleMore}
-              className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold transition-all hover:bg-slate-50 dark:hover:bg-slate-800/60 cursor-pointer"
-              style={{ color: "var(--color-text-muted)" }}
+              className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all hover:bg-slate-100 dark:hover:bg-slate-800/60 cursor-pointer text-slate-500 dark:text-slate-400 group border border-transparent hover:border-slate-200 dark:hover:border-slate-700"
             >
-              <span>More features</span>
+              <span className="group-hover:text-slate-800 dark:group-hover:text-slate-200 transition-colors">More features</span>
               {moreExpanded ? (
-                <ChevronUp className="w-3.5 h-3.5" />
+                <ChevronUp className="w-4 h-4 transition-transform group-hover:-translate-y-0.5" />
               ) : (
-                <ChevronDown className="w-3.5 h-3.5" />
+                <ChevronDown className="w-4 h-4 transition-transform group-hover:translate-y-0.5" />
               )}
             </button>
 
             {moreExpanded && (
-              <div className="space-y-1 animate-in fade-in slide-in-from-top-1 duration-150">
+              <div className="space-y-1.5 animate-in fade-in slide-in-from-top-2 duration-200 pt-1">
                 {secondaryItems.map(renderNavItem)}
               </div>
             )}
@@ -257,17 +234,19 @@ export function Sidebar({ role }: SidebarProps) {
         )}
       </div>
 
-      {/* Footer */}
-      <div
-        className="mt-6 p-3 rounded-xl text-[11px] font-medium flex items-center justify-between"
-        style={{
-          background: "var(--color-bg-secondary)",
-          border: "1px solid var(--color-border)",
-          color: "var(--color-text-muted)",
-        }}
-      >
-        <span>TutorMate BD</span>
-        <span className="text-[10px] font-mono opacity-80">v1.0.0</span>
+      {/* Footer System Info */}
+      <div className="mt-8 px-1 pb-2">
+        <div className="p-3.5 rounded-2xl flex items-center justify-between bg-slate-50 dark:bg-slate-900/50 border border-slate-200/60 dark:border-slate-800/60 shadow-inner group cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+          <div className="flex items-center gap-2.5">
+            <div className="w-6 h-6 rounded-lg bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center group-hover:scale-110 transition-transform">
+              <Sparkles className="w-3 h-3 text-blue-600 dark:text-blue-400" />
+            </div>
+            <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300">TutorMate BD</span>
+          </div>
+          <span className="text-[9px] font-black font-mono text-slate-400 dark:text-slate-500 bg-slate-200/50 dark:bg-slate-800 px-1.5 py-0.5 rounded-md group-hover:text-blue-500 transition-colors">
+            v1.0.0
+          </span>
+        </div>
       </div>
     </aside>
   );

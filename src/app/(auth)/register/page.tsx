@@ -41,6 +41,7 @@ export default function RegisterPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [verificationSent, setVerificationSent] = useState(false);
 
   function formatPhoneNumber(phone: string): string {
     const cleaned = phone.replace(/\D/g, "");
@@ -80,6 +81,7 @@ export default function RegisterPage() {
           data: {
             full_name: fullName,
             phone: contactPhone || undefined,
+            role: role,
           },
         },
       });
@@ -89,6 +91,12 @@ export default function RegisterPage() {
       const user = data.user;
       if (!user) {
         throw new Error("Registration failed.");
+      }
+
+      // If no session is returned, email confirmation is required by Supabase
+      if (!data.session) {
+        setVerificationSent(true);
+        return;
       }
 
       if (role === "tutor" || role === "owner") {
@@ -265,6 +273,35 @@ export default function RegisterPage() {
     } finally {
       setLoading(false);
     }
+  }
+
+  if (verificationSent) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 text-center space-y-6">
+        <div className="w-16 h-16 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4">
+          <Mail className="w-8 h-8" />
+        </div>
+        <h2 className="text-2xl font-bold" style={{ color: "var(--color-text)" }}>
+          Check your email
+        </h2>
+        <p className="text-sm max-w-md mx-auto" style={{ color: "var(--color-text-secondary)" }}>
+          We&apos;ve sent a verification link to <span className="font-semibold text-indigo-600">{email}</span>. 
+          Please check your inbox (and spam folder) and click the link to verify your account before signing in.
+        </p>
+        <div className="pt-4">
+          <Link
+            href="/login"
+            className="px-6 py-2.5 text-sm font-semibold text-white rounded-lg transition-all duration-200 hover:opacity-90 inline-block"
+            style={{
+              background: "linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%)",
+              boxShadow: "var(--shadow-md)",
+            }}
+          >
+            Go to Login
+          </Link>
+        </div>
+      </div>
+    );
   }
 
   return (

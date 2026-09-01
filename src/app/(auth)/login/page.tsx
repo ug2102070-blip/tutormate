@@ -79,6 +79,37 @@ function LoginContent() {
         return;
       }
 
+      // Check if this is a new Google OAuth registration
+      let savedRole: "tutor" | "student" | "owner" | "parent" | null = null;
+      let savedInstitution = "";
+      let savedInviteCode = "";
+      let hasOnboardData = false;
+      try {
+        const savedData = localStorage.getItem("tm_onboard_data");
+        if (savedData) {
+          hasOnboardData = true;
+          const parsed = JSON.parse(savedData);
+          if (["tutor", "student", "owner", "parent"].includes(parsed.role)) savedRole = parsed.role;
+          if (parsed.institution) savedInstitution = parsed.institution;
+          if (parsed.inviteCode) savedInviteCode = parsed.inviteCode;
+        }
+      } catch {
+        // ignore localStorage errors
+      }
+
+      if (hasOnboardData) {
+        setPendingUser(user);
+        setOnboardName(user.user_metadata?.full_name || user.user_metadata?.displayName || "");
+        setOnboardRole(savedRole || "tutor");
+        setOnboardInstitution(savedInstitution);
+        setOnboardInviteCode(savedInviteCode);
+
+        // Clear the data after pre-filling
+        localStorage.removeItem("tm_onboard_data");
+        setIsCheckingProfile(false);
+        return;
+      }
+
       // Existing user — redirect straight to their dashboard or requested redirect
       if (profile) {
         isRedirectingRef.current = true;
@@ -99,31 +130,12 @@ function LoginContent() {
         router.replace(destination);
         return;
       }
-
-      // Genuinely new user — no profile exists, show onboarding
-      let savedRole: "tutor" | "student" | "owner" | "parent" = "tutor";
-      let savedInstitution = "";
-      let savedInviteCode = "";
-      try {
-        const savedData = localStorage.getItem("tm_onboard_data");
-        if (savedData) {
-          const parsed = JSON.parse(savedData);
-          if (["tutor", "student", "owner", "parent"].includes(parsed.role)) savedRole = parsed.role;
-          if (parsed.institution) savedInstitution = parsed.institution;
-          if (parsed.inviteCode) savedInviteCode = parsed.inviteCode;
-        }
-      } catch {
-        // ignore localStorage errors
-      }
-
+      // Fallback for missing profile (should rarely happen due to DB trigger, but just in case)
       setPendingUser(user);
       setOnboardName(user.user_metadata?.full_name || user.user_metadata?.displayName || "");
-      setOnboardRole(savedRole);
-      setOnboardInstitution(savedInstitution);
-      setOnboardInviteCode(savedInviteCode);
-
-      // Clear the data after pre-filling
-      localStorage.removeItem("tm_onboard_data");
+      setOnboardRole("tutor");
+      setOnboardInstitution("");
+      setOnboardInviteCode("");
     } catch {
       // Unexpected error — do not silently fall into onboarding
       setError("Something went wrong while verifying your account. Please refresh.");

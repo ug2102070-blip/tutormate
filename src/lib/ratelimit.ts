@@ -62,6 +62,7 @@ class InMemoryRateLimiter {
 
 const fallbackInviteLimiter = new InMemoryRateLimiter(5, 60 * 1000);
 const fallbackAuthLimiter = new InMemoryRateLimiter(10, 60 * 1000);
+const fallbackAiLimiter = new InMemoryRateLimiter(10, 60 * 1000);
 
 /**
  * Rate limiter for student invite code claims.
@@ -88,4 +89,18 @@ export const authRateLimiter = redisInstance
       prefix: "ratelimit:auth",
     })
   : fallbackAuthLimiter;
+
+/**
+ * Rate limiter for AI generation server actions (generateQuestions, generateAssignment, etc.).
+ * Sliding window: 10 AI calls per 60 seconds per authenticated user UID.
+ * Prevents subscription-plan bypass via rapid direct server action calls.
+ */
+export const aiRateLimiter = redisInstance
+  ? new Ratelimit({
+      redis: redisInstance,
+      limiter: Ratelimit.slidingWindow(10, "60 s"),
+      analytics: true,
+      prefix: "ratelimit:ai",
+    })
+  : fallbackAiLimiter;
 

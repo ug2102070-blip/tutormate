@@ -14,6 +14,7 @@ import {
 import type { AssignmentDoc, SubmissionDoc } from "@/types";
 import { createNotification } from "@/actions/notificationActions";
 import { revalidatePath } from "next/cache";
+import { validateAttachmentExtension } from "@/lib/fileValidation";
 
 // ─── INTERNAL HELPER: SYNC SUBMISSIONS FOR PUBLISHED ASSIGNMENT ───────────────
 
@@ -427,6 +428,12 @@ export async function submitAssignment(
 ) {
   const authState = await verifyUserAuth();
   if (authState.role !== "student" || !authState.studentDocId) throw new Error("Unauthorized");
+
+  // Server-side file extension validation — reject dangerous/disallowed files
+  // BEFORE touching the database.
+  if (filePath) {
+    validateAttachmentExtension(filePath);
+  }
 
   const supabase = createAdminClient();
 

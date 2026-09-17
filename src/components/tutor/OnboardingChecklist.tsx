@@ -78,7 +78,12 @@ const STEPS: ChecklistItem[] = [
 
 export function OnboardingChecklist({ tutorName }: OnboardingChecklistProps) {
   const [completedSteps, setCompletedSteps] = useState<Record<string, boolean>>({});
-  const [isDismissed, setIsDismissed] = useState(false);
+  const [isDismissed, setIsDismissed] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem(DISMISSED_KEY) === "true";
+    }
+    return false;
+  });
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
@@ -86,20 +91,18 @@ export function OnboardingChecklist({ tutorName }: OnboardingChecklistProps) {
     let isSubscribed = true;
 
     async function fetchStatus() {
+      // 1. Check localStorage first for instant dismissal
+      if (typeof window !== "undefined" && localStorage.getItem(DISMISSED_KEY) === "true") {
+        if (isSubscribed) setIsDismissed(true);
+        return;
+      }
+
       try {
-        // 1. Check DB dismissal first (cross-device persistence)
+        // 2. Check DB dismissal (cross-device persistence)
         const dbDismissed = await getOnboardingDismissed();
         if (dbDismissed && isSubscribed) {
           setIsDismissed(true);
-          // Also set localStorage so subsequent loads are instant
           localStorage.setItem(DISMISSED_KEY, "true");
-          return;
-        }
-
-        // 2. Fallback: check localStorage for instant dismissal
-        const savedDismissed = localStorage.getItem(DISMISSED_KEY);
-        if (savedDismissed === "true" && isSubscribed) {
-          setIsDismissed(true);
           return;
         }
 

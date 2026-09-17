@@ -1,8 +1,27 @@
 import { NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
 import { initiateNagadPayment } from "@/lib/paymentGateway";
 
+/**
+ * Nagad Payment Initiate Route
+ *
+ * SECURITY FIX: Added session authentication guard.
+ * Previously this route accepted requests from any unauthenticated caller,
+ * allowing arbitrary feeId + amount values to be submitted, potentially
+ * triggering fraudulent payment sessions or probing fee IDs.
+ */
 export async function POST(request: Request) {
   try {
+    // ── Session Authentication ──────────────────────────────────────────────
+    const supabaseClient = await createClient();
+    const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
+    if (authError || !user) {
+      return NextResponse.json(
+        { success: false, error: "Unauthorized: You must be signed in to initiate a payment." },
+        { status: 401 }
+      );
+    }
+
     const body = await request.json();
     const { feeId, amount, studentId } = body;
 

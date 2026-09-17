@@ -17,8 +17,8 @@ export default function OwnerBatchesPage() {
   useEffect(() => {
     (async () => {
       try {
-        const data = await getOwnerBatches();
-        setBatches(data);
+        const { rows } = await getOwnerBatches();
+        setBatches(rows);
       } finally {
         setLoading(false);
       }

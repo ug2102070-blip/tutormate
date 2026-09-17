@@ -1,11 +1,12 @@
 "use server";
 
-import { createAdminClient, getSupabaseServerClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/server";
 import { verifyUserAuth } from "@/lib/authHelpers";
 import { hasRoleAtLeast } from "@/lib/permissions";
 import { materialSchema, type MaterialFormValues } from "@/lib/validations/material";
 import type { MaterialDoc } from "@/types";
 import { createNotification } from "@/actions/notificationActions";
+import { validateFileExtension } from "@/lib/fileValidation";
 
 /**
  * Creates a new material document. The actual file should be uploaded
@@ -19,7 +20,12 @@ export async function createMaterial(formData: MaterialFormValues) {
   const tutorId = authState.tutorId || authState.uid;
   const validated = materialSchema.parse(formData);
 
-  const supabase = await getSupabaseServerClient();
+  // Server-side MIME type / extension validation
+  // Validates the storage path extension against the declared fileType category
+  // BEFORE writing anything to the database.
+  validateFileExtension(validated.filePath, validated.fileType);
+
+  const supabase = createAdminClient();
 
   const insertData = {
     tutor_id: tutorId,
@@ -32,24 +38,11 @@ export async function createMaterial(formData: MaterialFormValues) {
     is_published: validated.isPublished,
   };
 
-  let { data: material, error } = await supabase
+  const { data: material, error } = await supabase
     .from("materials")
     .insert(insertData)
     .select("id")
     .single();
-
-  if (error) {
-    // Fallback to admin client if client insert had RLS issue
-    const adminSupabase = createAdminClient();
-    const adminRes = await adminSupabase
-      .from("materials")
-      .insert(insertData)
-      .select("id")
-      .single();
-
-    material = adminRes.data;
-    error = adminRes.error;
-  }
 
   if (error || !material) {
     throw new Error(`Failed to save material: ${error?.message || "Unknown error"}`);
@@ -102,29 +95,19 @@ export async function updateMaterial(
   }
   const tutorId = authState.tutorId || authState.uid;
 
-  const supabase = await getSupabaseServerClient();
-  
+  const supabase = createAdminClient();
+
   const updateData: any = {};
   if (updates.title !== undefined) updateData.title = updates.title;
   if (updates.description !== undefined) updateData.description = updates.description;
   if (updates.batchId !== undefined) updateData.batch_id = updates.batchId || null;
   if (updates.isPublished !== undefined) updateData.is_published = updates.isPublished;
 
-  let { error } = await supabase
+  const { error } = await supabase
     .from("materials")
     .update(updateData)
     .eq("id", materialId)
     .eq("tutor_id", tutorId);
-
-  if (error) {
-    const adminSupabase = createAdminClient();
-    const adminRes = await adminSupabase
-      .from("materials")
-      .update(updateData)
-      .eq("id", materialId)
-      .eq("tutor_id", tutorId);
-    error = adminRes.error;
-  }
 
   if (error) {
     throw new Error(`Failed to update material: ${error.message}`);
@@ -143,49 +126,27 @@ export async function deleteMaterial(materialId: string) {
   }
   const tutorId = authState.tutorId || authState.uid;
 
-  const supabase = await getSupabaseServerClient();
+  const supabase = createAdminClient();
 
   // First, get the file_path to delete the file from storage
-  let { data: material, error: getErr } = await supabase
+  const { data: material } = await supabase
     .from("materials")
     .select("file_path")
     .eq("id", materialId)
     .eq("tutor_id", tutorId)
     .single();
 
-  if (getErr || !material) {
-    const adminSupabase = createAdminClient();
-    const { data: adminMaterial } = await adminSupabase
-      .from("materials")
-      .select("file_path")
-      .eq("id", materialId)
-      .eq("tutor_id", tutorId)
-      .single();
-    material = adminMaterial;
-  }
-
   if (material?.file_path) {
     // Delete file from storage
-    const adminSupabase = createAdminClient();
-    await adminSupabase.storage.from("attachments").remove([material.file_path]);
+    await supabase.storage.from("attachments").remove([material.file_path]);
   }
 
   // Delete db row
-  let { error } = await supabase
+  const { error } = await supabase
     .from("materials")
     .delete()
     .eq("id", materialId)
     .eq("tutor_id", tutorId);
-
-  if (error) {
-    const adminSupabase = createAdminClient();
-    const adminRes = await adminSupabase
-      .from("materials")
-      .delete()
-      .eq("id", materialId)
-      .eq("tutor_id", tutorId);
-    error = adminRes.error;
-  }
 
   if (error) {
     throw new Error(`Failed to delete material: ${error.message}`);

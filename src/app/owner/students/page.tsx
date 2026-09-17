@@ -13,6 +13,7 @@ const feeStatusBadge: Record<string, { label: string; color: string; bg: string 
 
 export default function OwnerStudentsPage() {
   const [students, setStudents] = useState<OwnerStudentRow[]>([]);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filterTutor, setFilterTutor] = useState("all");
@@ -21,8 +22,9 @@ export default function OwnerStudentsPage() {
   useEffect(() => {
     (async () => {
       try {
-        const data = await getOwnerStudents();
-        setStudents(data);
+        const { rows, total: t } = await getOwnerStudents();
+        setStudents(rows);
+        setTotal(t);
       } finally {
         setLoading(false);
       }
@@ -160,7 +162,7 @@ export default function OwnerStudentsPage() {
       {/* Count badge */}
       {!loading && (
         <p className="text-[11px] text-right" style={{ color: "var(--color-text-muted)" }}>
-          Showing {filtered.length} of {students.length} students
+          Showing {filtered.length} of {total} students
         </p>
       )}
     </div>

@@ -105,10 +105,19 @@ const GetUserProfileSchema = z.object({
 
 /**
  * Checks if user profile exists in Supabase `profiles` table.
+ *
+ * FIX (Security): Requires authentication and asserts the caller can only
+ * read their own profile. Previously requireAuth: false allowed any
+ * unauthenticated caller to probe any user's profile by UUID.
  */
 export const getUserProfile = createSafeAction(
   GetUserProfileSchema,
-  async ({ uid }) => {
+  async ({ uid }, authContext) => {
+    // Self-only assertion — a user must only be able to read their own profile
+    if (!authContext || authContext.uid !== uid) {
+      throw new Error("Unauthorized: You can only read your own profile.");
+    }
+
     const supabase = createAdminClient();
     const { data, error } = await supabase
       .from("profiles")
@@ -121,7 +130,7 @@ export const getUserProfile = createSafeAction(
     }
     return { exists: true, data };
   },
-  { requireAuth: false }
+  { requireAuth: true }
 );
 
 // ─── ONBOARD TUTOR USER ───────────────────────────────────────────────────────

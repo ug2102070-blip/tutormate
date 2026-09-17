@@ -178,37 +178,69 @@ export async function getOwnerDashboardStats(): Promise<OwnerDashboardStats> {
   }
   const attendanceRate = totalCount > 0 ? Math.round((presentCount / totalCount) * 100) : 100;
 
-  // Per-tutor quick stats (recent 5)
-  const recentTutors: OwnerDashboardStats["recentTutors"] = [];
-  for (const t of (tutors ?? []).slice(0, 5)) {
-    const { count: bc } = await adminSupabase
+  // Per-tutor quick stats (recent 5) — FIX: batch fetch instead of per-tutor loop
+  const top5TutorIds = (tutors ?? []).slice(0, 5).map((t) => t.id);
+  const [{ data: top5Batches }, { data: top5Students }] = await Promise.all([
+    adminSupabase
       .from("batches")
-      .select("*", { count: "exact", head: true })
-      .eq("tutor_id", t.id)
-      .eq("is_archived", false);
-    const { count: sc } = await adminSupabase
+      .select("tutor_id")
+      .in("tutor_id", top5TutorIds.length ? top5TutorIds : ["__none__"])
+      .eq("is_archived", false),
+    adminSupabase
       .from("students")
-      .select("*", { count: "exact", head: true })
-      .eq("tutor_id", t.id)
-      .eq("status", "active");
-    recentTutors.push({ fullName: t.full_name, batchCount: bc ?? 0, studentCount: sc ?? 0, joinedAt: t.created_at });
+      .select("tutor_id")
+      .in("tutor_id", top5TutorIds.length ? top5TutorIds : ["__none__"])
+      .eq("status", "active"),
+  ]);
+
+  // Count per tutor in JS — O(n) instead of O(n * 2 queries)
+  const batchCountByTutor = new Map<string, number>();
+  const studentCountByTutor = new Map<string, number>();
+  for (const b of top5Batches ?? []) {
+    batchCountByTutor.set(b.tutor_id, (batchCountByTutor.get(b.tutor_id) ?? 0) + 1);
+  }
+  for (const s of top5Students ?? []) {
+    studentCountByTutor.set(s.tutor_id, (studentCountByTutor.get(s.tutor_id) ?? 0) + 1);
   }
 
-  // Revenue trend — last 6 months
+  const recentTutors: OwnerDashboardStats["recentTutors"] = (tutors ?? []).slice(0, 5).map((t) => ({
+    fullName: t.full_name,
+    batchCount: batchCountByTutor.get(t.id) ?? 0,
+    studentCount: studentCountByTutor.get(t.id) ?? 0,
+    joinedAt: t.created_at,
+  }));
+
+  // Revenue trend — last 6 months — FIX: single date-range query, group in JS
+  const trendStart = new Date(currentYear, currentMonth - 1 - 5, 1);
+  const trendStartYear = trendStart.getFullYear();
+  const trendStartMonth = trendStart.getMonth() + 1;
+
+  const { data: trendFees } = await adminSupabase
+    .from("fees")
+    .select("year, month, amount_paid")
+    .in("tutor_id", tutorIds.length ? tutorIds : ["__none__"])
+    .gte("year", trendStartYear)
+    .order("year", { ascending: true })
+    .order("month", { ascending: true });
+
+  // Build a map of "YYYY-MM" → total revenue
+  const trendMap = new Map<string, number>();
+  for (const row of trendFees ?? []) {
+    const key = `${row.year}-${String(row.month).padStart(2, "0")}`;
+    trendMap.set(key, (trendMap.get(key) ?? 0) + (Number(row.amount_paid) || 0));
+  }
+
   const monthlyRevenueTrend: { month: string; revenue: number }[] = [];
   for (let i = 5; i >= 0; i--) {
     const d = new Date(currentYear, currentMonth - 1 - i, 1);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    const monthLabel = d.toLocaleString("default", { month: "short", year: "2-digit" });
+    // Filter out months before trendStartYear/Month to avoid partial data from wrong year
     const y = d.getFullYear();
     const m = d.getMonth() + 1;
-    const monthLabel = d.toLocaleString("default", { month: "short", year: "2-digit" });
-    const { data: mFees } = await adminSupabase
-      .from("fees")
-      .select("amount_paid")
-      .in("tutor_id", tutorIds.length ? tutorIds : ["__none__"])
-      .eq("year", y)
-      .eq("month", m);
-    const rev = (mFees ?? []).reduce((s, r) => s + (Number(r.amount_paid) || 0), 0);
-    monthlyRevenueTrend.push({ month: monthLabel, revenue: rev });
+    const isInRange =
+      y > trendStartYear || (y === trendStartYear && m >= trendStartMonth);
+    monthlyRevenueTrend.push({ month: monthLabel, revenue: isInRange ? (trendMap.get(key) ?? 0) : 0 });
   }
 
   return {
@@ -251,45 +283,57 @@ export async function getOwnerTutors(): Promise<OwnerTutorRow[]> {
 
   if (!tutors || tutors.length === 0) return [];
 
+  const tutorIds = tutors.map((t) => t.id);
   const now = new Date();
-  const rows: OwnerTutorRow[] = [];
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth() + 1;
 
-  for (const t of tutors) {
-    const { count: bc } = await adminSupabase
+  // FIX: 3 bulk queries instead of 3 * N sequential queries
+  const [{ data: allBatches }, { data: allStudents }, { data: allFees }] = await Promise.all([
+    adminSupabase
       .from("batches")
-      .select("*", { count: "exact", head: true })
-      .eq("tutor_id", t.id)
-      .eq("is_archived", false);
-
-    const { count: sc } = await adminSupabase
+      .select("tutor_id")
+      .in("tutor_id", tutorIds)
+      .eq("is_archived", false),
+    adminSupabase
       .from("students")
-      .select("*", { count: "exact", head: true })
-      .eq("tutor_id", t.id)
-      .eq("status", "active");
-
-    const { data: feeData } = await adminSupabase
+      .select("tutor_id")
+      .in("tutor_id", tutorIds)
+      .eq("status", "active"),
+    adminSupabase
       .from("fees")
-      .select("amount_paid")
-      .eq("tutor_id", t.id)
-      .eq("year", now.getFullYear())
-      .eq("month", now.getMonth() + 1);
+      .select("tutor_id, amount_paid")
+      .in("tutor_id", tutorIds)
+      .eq("year", currentYear)
+      .eq("month", currentMonth),
+  ]);
 
-    const monthlyRevenue = (feeData ?? []).reduce((s, r) => s + (Number(r.amount_paid) || 0), 0);
+  // Aggregate in JS — O(n) instead of O(n * 3 queries)
+  const batchCountByTutor = new Map<string, number>();
+  const studentCountByTutor = new Map<string, number>();
+  const revenueByTutor = new Map<string, number>();
 
-    rows.push({
-      tutorId: t.id,
-      userId: t.user_id,
-      fullName: t.full_name,
-      institution: t.institution,
-      contactPhone: t.contact_phone,
-      batchCount: bc ?? 0,
-      studentCount: sc ?? 0,
-      monthlyRevenue,
-      joinedAt: t.created_at,
-    });
+  for (const b of allBatches ?? []) {
+    batchCountByTutor.set(b.tutor_id, (batchCountByTutor.get(b.tutor_id) ?? 0) + 1);
+  }
+  for (const s of allStudents ?? []) {
+    studentCountByTutor.set(s.tutor_id, (studentCountByTutor.get(s.tutor_id) ?? 0) + 1);
+  }
+  for (const f of allFees ?? []) {
+    revenueByTutor.set(f.tutor_id, (revenueByTutor.get(f.tutor_id) ?? 0) + (Number(f.amount_paid) || 0));
   }
 
-  return rows;
+  return tutors.map((t) => ({
+    tutorId: t.id,
+    userId: t.user_id,
+    fullName: t.full_name,
+    institution: t.institution,
+    contactPhone: t.contact_phone,
+    batchCount: batchCountByTutor.get(t.id) ?? 0,
+    studentCount: studentCountByTutor.get(t.id) ?? 0,
+    monthlyRevenue: revenueByTutor.get(t.id) ?? 0,
+    joinedAt: t.created_at,
+  }));
 }
 
 export async function removeTutorFromCenterByOwner(targetTutorId: string) {
@@ -319,7 +363,10 @@ export interface OwnerStudentRow {
   createdAt: string;
 }
 
-export async function getOwnerStudents(): Promise<OwnerStudentRow[]> {
+export async function getOwnerStudents(
+  page = 1,
+  pageSize = 100
+): Promise<{ rows: OwnerStudentRow[]; total: number }> {
   const { centerId } = await requireOwner();
   const adminSupabase = createAdminClient();
 
@@ -328,46 +375,55 @@ export async function getOwnerStudents(): Promise<OwnerStudentRow[]> {
     .select("id, full_name")
     .eq("coaching_center_id", centerId);
 
-  if (!tutors || tutors.length === 0) return [];
+  if (!tutors || tutors.length === 0) return { rows: [], total: 0 };
 
   const tutorMap = new Map(tutors.map((t) => [t.id, t.full_name]));
   const tutorIds = tutors.map((t) => t.id);
 
   const now = new Date();
-  const { data: students } = await adminSupabase
+  const offset = (page - 1) * pageSize;
+
+  // Paginated student fetch
+  const { data: students, count: totalCount } = await adminSupabase
     .from("students")
-    .select("id, full_name, phone, institution, tutor_id, enrolled_batch_ids, status, created_at")
-    .in("tutor_id", tutorIds)
-    .order("created_at", { ascending: false });
-
-  if (!students) return [];
-
-  const rows: OwnerStudentRow[] = await Promise.all(
-    students.map(async (s) => {
-      const { data: feeRow } = await adminSupabase
-        .from("fees")
-        .select("status")
-        .eq("student_id", s.id)
-        .eq("year", now.getFullYear())
-        .eq("month", now.getMonth() + 1)
-        .limit(1)
-        .maybeSingle();
-
-      return {
-        studentId: s.id,
-        fullName: s.full_name,
-        phone: s.phone,
-        institution: s.institution,
-        tutorName: tutorMap.get(s.tutor_id) ?? "Unknown",
-        enrolledBatchIds: s.enrolled_batch_ids ?? [],
-        feeStatus: (feeRow?.status as OwnerStudentRow["feeStatus"]) ?? "none",
-        status: s.status as "active" | "archived",
-        createdAt: s.created_at,
-      };
+    .select("id, full_name, phone, institution, tutor_id, enrolled_batch_ids, status, created_at", {
+      count: "exact",
     })
-  );
+    .in("tutor_id", tutorIds)
+    .order("created_at", { ascending: false })
+    .range(offset, offset + pageSize - 1);
 
-  return rows;
+  if (!students || students.length === 0) return { rows: [], total: totalCount ?? 0 };
+
+  const studentIds = students.map((s) => s.id);
+
+  // FIX: Single bulk fee query instead of 1-per-student
+  const { data: feeRows } = await adminSupabase
+    .from("fees")
+    .select("student_id, status")
+    .in("student_id", studentIds)
+    .eq("year", now.getFullYear())
+    .eq("month", now.getMonth() + 1);
+
+  // Build student_id → fee status map (latest record wins)
+  const feeStatusByStudent = new Map<string, string>();
+  for (const f of feeRows ?? []) {
+    feeStatusByStudent.set(f.student_id, f.status);
+  }
+
+  const rows: OwnerStudentRow[] = students.map((s) => ({
+    studentId: s.id,
+    fullName: s.full_name,
+    phone: s.phone,
+    institution: s.institution,
+    tutorName: tutorMap.get(s.tutor_id) ?? "Unknown",
+    enrolledBatchIds: s.enrolled_batch_ids ?? [],
+    feeStatus: (feeStatusByStudent.get(s.id) as OwnerStudentRow["feeStatus"]) ?? "none",
+    status: s.status as "active" | "archived",
+    createdAt: s.created_at,
+  }));
+
+  return { rows, total: totalCount ?? 0 };
 }
 
 // ─── Batches ──────────────────────────────────────────────────────────────────
@@ -384,7 +440,10 @@ export interface OwnerBatchRow {
   createdAt: string;
 }
 
-export async function getOwnerBatches(): Promise<OwnerBatchRow[]> {
+export async function getOwnerBatches(
+  page = 1,
+  pageSize = 100
+): Promise<{ rows: OwnerBatchRow[]; total: number }> {
   const { centerId } = await requireOwner();
   const adminSupabase = createAdminClient();
 
@@ -393,18 +452,23 @@ export async function getOwnerBatches(): Promise<OwnerBatchRow[]> {
     .select("id, full_name")
     .eq("coaching_center_id", centerId);
 
-  if (!tutors || tutors.length === 0) return [];
+  if (!tutors || tutors.length === 0) return { rows: [], total: 0 };
 
   const tutorMap = new Map(tutors.map((t) => [t.id, t.full_name]));
   const tutorIds = tutors.map((t) => t.id);
+  const offset = (page - 1) * pageSize;
 
-  const { data: batches } = await adminSupabase
+  const { data: batches, count: totalCount } = await adminSupabase
     .from("batches")
-    .select("id, tutor_id, name, subject, grade_class, monthly_fee, student_count, is_archived, created_at")
+    .select(
+      "id, tutor_id, name, subject, grade_class, monthly_fee, student_count, is_archived, created_at",
+      { count: "exact" }
+    )
     .in("tutor_id", tutorIds)
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .range(offset, offset + pageSize - 1);
 
-  return (batches ?? []).map((b) => ({
+  const rows = (batches ?? []).map((b) => ({
     batchId: b.id,
     tutorName: tutorMap.get(b.tutor_id) ?? "Unknown",
     name: b.name,
@@ -415,6 +479,8 @@ export async function getOwnerBatches(): Promise<OwnerBatchRow[]> {
     isArchived: b.is_archived,
     createdAt: b.created_at,
   }));
+
+  return { rows, total: totalCount ?? 0 };
 }
 
 // ─── Fee Report ───────────────────────────────────────────────────────────────
@@ -444,35 +510,39 @@ export async function getOwnerFeeReport(year?: number, month?: number): Promise<
 
   if (!tutors || tutors.length === 0) return [];
 
-  const rows: OwnerFeeRow[] = [];
+  const tutorIds = tutors.map((t) => t.id);
+  const tutorNameMap = new Map(tutors.map((t) => [t.id, t.full_name]));
 
-  for (const t of tutors) {
-    const { data: fees } = await adminSupabase
-      .from("fees")
-      .select("amount_due, amount_paid, status")
-      .eq("tutor_id", t.id)
-      .eq("year", y)
-      .eq("month", m);
+  // FIX: Single bulk query instead of 1 query per tutor
+  const { data: allFees } = await adminSupabase
+    .from("fees")
+    .select("tutor_id, amount_due, amount_paid, status")
+    .in("tutor_id", tutorIds)
+    .eq("year", y)
+    .eq("month", m);
 
-    const totalDue = (fees ?? []).reduce((s, r) => s + (Number(r.amount_due) || 0), 0);
-    const totalPaid = (fees ?? []).reduce((s, r) => s + (Number(r.amount_paid) || 0), 0);
-    const totalPending = Math.max(0, totalDue - totalPaid);
-    const paidCount = (fees ?? []).filter((r) => r.status === "paid").length;
-    const unpaidCount = (fees ?? []).filter((r) => r.status === "unpaid").length;
-    const partialCount = (fees ?? []).filter((r) => r.status === "partial").length;
-
-    rows.push({
-      tutorName: t.full_name,
-      totalDue,
-      totalPaid,
-      totalPending,
-      paidCount,
-      unpaidCount,
-      partialCount,
-    });
+  // Group fees by tutor_id in JS
+  const feesByTutor = new Map<string, typeof allFees>(
+    tutorIds.map((id) => [id, []])
+  );
+  for (const fee of allFees ?? []) {
+    feesByTutor.get(fee.tutor_id)?.push(fee);
   }
 
-  return rows;
+  return tutors.map((t) => {
+    const fees = feesByTutor.get(t.id) ?? [];
+    const totalDue = fees.reduce((s, r) => s + (Number(r.amount_due) || 0), 0);
+    const totalPaid = fees.reduce((s, r) => s + (Number(r.amount_paid) || 0), 0);
+    return {
+      tutorName: tutorNameMap.get(t.id) ?? t.full_name,
+      totalDue,
+      totalPaid,
+      totalPending: Math.max(0, totalDue - totalPaid),
+      paidCount: fees.filter((r) => r.status === "paid").length,
+      unpaidCount: fees.filter((r) => r.status === "unpaid").length,
+      partialCount: fees.filter((r) => r.status === "partial").length,
+    };
+  });
 }
 
 // ─── Attendance Summary ───────────────────────────────────────────────────────

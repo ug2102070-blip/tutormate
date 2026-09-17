@@ -11,14 +11,23 @@ export async function POST(request: NextRequest) {
 
 async function handleCronJob(request: NextRequest) {
   try {
-    // 1. Verify Secret Key for Cron Security
+    // 1. Verify CRON_SECRET — fail-closed: missing env var = deny all
     const cronSecret = process.env.CRON_SECRET;
+
+    if (!cronSecret) {
+      // CRON_SECRET is not configured — treat as a misconfiguration and deny
+      console.error("[CRON] CRON_SECRET env var is not set. Cron endpoint is disabled.");
+      return NextResponse.json(
+        { success: false, error: "Cron endpoint is not configured." },
+        { status: 401 }
+      );
+    }
+
     const authHeader = request.headers.get("authorization");
     const customHeader = request.headers.get("x-cron-secret");
+    const providedKey = authHeader?.replace("Bearer ", "").trim() || customHeader?.trim();
 
-    const providedKey = authHeader?.replace("Bearer ", "") || customHeader;
-
-    if (cronSecret && providedKey !== cronSecret) {
+    if (!providedKey || providedKey !== cronSecret) {
       return NextResponse.json({ success: false, error: "Unauthorized cron request." }, { status: 401 });
     }
 

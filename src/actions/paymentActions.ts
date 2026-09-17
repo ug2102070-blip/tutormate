@@ -7,7 +7,6 @@ import type { FeeDoc } from "@/types";
 
 export interface PaymentInitiateResult {
   success: boolean;
-  paymentUrl?: string;
   invoiceNo?: string;
   amount?: number;
   gateway?: "bkash" | "nagad";
@@ -15,7 +14,16 @@ export interface PaymentInitiateResult {
 }
 
 /**
- * Initiates a bKash or Nagad online MFS fee payment session.
+ * Validates a fee record and returns metadata needed to initiate payment.
+ *
+ * SECURITY FIX: No longer constructs or returns a pre-built callback URL.
+ * The callback URL (with HMAC token) is generated server-side inside
+ * paymentGateway.ts and returned only from the payment initiate API routes.
+ * Returning a pre-built ?status=success callback URL to the client would allow
+ * the client to replay it directly, forging a payment confirmation.
+ *
+ * SECURITY FIX: Added ownership check — only the fee's student or tutor
+ * may initiate payment for a given fee record.
  */
 export async function initiateFeePayment(
   feeId: string,
@@ -36,17 +44,29 @@ export async function initiateFeePayment(
       return { success: false, error: "Fee statement record not found." };
     }
 
+    // ── Ownership check ────────────────────────────────────────────────────────
+    // Only the student named on the fee OR the tutor who owns it may initiate.
+    const isStudent = fee.student_id === auth.uid;
+    const isTutor = fee.tutor_id === (auth.tutorId || auth.uid);
+    if (!isStudent && !isTutor) {
+      return {
+        success: false,
+        error: "Unauthorized: You do not have permission to pay this fee.",
+      };
+    }
+
     const amount = Number(fee.amount_due) - Number(fee.amount_paid);
     if (amount <= 0 || fee.status === "paid") {
       return { success: false, error: "This fee statement is already fully paid." };
     }
 
     const invoiceNo = `INV-${gateway.toUpperCase()}-${feeId.slice(0, 8)}-${Date.now()}`;
-    const paymentUrl = `/api/payment/${gateway}/callback?paymentID=${invoiceNo}&status=success&feeId=${feeId}&amount=${amount}`;
 
+    // NOTE: paymentUrl is intentionally NOT returned.
+    // The client should POST to /api/payment/<gateway>/initiate which generates
+    // a signed (HMAC-protected) redirect URL server-side.
     return {
       success: true,
-      paymentUrl,
       invoiceNo,
       amount,
       gateway,
@@ -59,6 +79,10 @@ export async function initiateFeePayment(
 
 /**
  * Verifies and completes a bKash / Nagad payment transaction.
+ *
+ * SECURITY FIX: Added ownership check — only the fee's student or tutor
+ * may mark a fee record as paid. Previously, any authenticated user could
+ * supply any feeId and mark it paid (IDOR).
  */
 export async function verifyPaymentTransaction(
   feeId: string,
@@ -84,6 +108,17 @@ export async function verifyPaymentTransaction(
 
     if (fetchErr || !fee) {
       return { success: false, error: "Fee statement record not found." };
+    }
+
+    // ── Ownership check ────────────────────────────────────────────────────────
+    // Only the student on the fee OR the owning tutor may verify/mark it paid.
+    const isStudent = fee.student_id === auth.uid;
+    const isTutor = fee.tutor_id === (auth.tutorId || auth.uid);
+    if (!isStudent && !isTutor) {
+      return {
+        success: false,
+        error: "Unauthorized: You do not have permission to verify this transaction.",
+      };
     }
 
     const nowIso = new Date().toISOString();

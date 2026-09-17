@@ -1,6 +1,6 @@
 "use server";
 
-import { createAdminClient, getSupabaseServerClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/server";
 import { verifyUserAuth } from "@/lib/authHelpers";
 import { batchSchema, type BatchFormValues } from "@/lib/validations/batch";
 import { checkBatchLimit } from "@/lib/serverSubscriptions";
@@ -54,7 +54,7 @@ export async function createBatch(formData: BatchFormValues) {
   // Ensure tutor record exists for legacy users created before trigger installation
   await ensureTutorRecord(tutorId, authState.email);
 
-  const supabase = await getSupabaseServerClient();
+  const supabase = createAdminClient();
 
   let { data: batch, error } = await supabase
     .from("batches")
@@ -70,28 +70,6 @@ export async function createBatch(formData: BatchFormValues) {
     })
     .select("id")
     .single();
-
-  if (error) {
-    // Fallback to admin client if client insert had any permission issue
-    const adminSupabase = createAdminClient();
-    const adminRes = await adminSupabase
-      .from("batches")
-      .insert({
-        tutor_id: tutorId,
-        name: validated.name,
-        subject: validated.subject,
-        grade_class: validated.gradeClass,
-        monthly_fee: validated.monthlyFee,
-        schedule: validated.schedule,
-        student_count: 0,
-        is_archived: false,
-      })
-      .select("id")
-      .single();
-
-    batch = adminRes.data;
-    error = adminRes.error;
-  }
 
   if (error || !batch) {
     if (error?.message?.includes("permission denied")) {
@@ -131,9 +109,9 @@ export async function updateBatch(
   const tutorId = authState.tutorId || authState.uid;
   const validated = batchSchema.parse(formData);
 
-  const supabase = await getSupabaseServerClient();
+  const supabase = createAdminClient();
 
-  let { error } = await supabase
+  const { error } = await supabase
     .from("batches")
     .update({
       name: validated.name,
@@ -144,22 +122,6 @@ export async function updateBatch(
     })
     .eq("id", batchId)
     .eq("tutor_id", tutorId);
-
-  if (error && (error.code === "42501" || error.message.includes("permission denied"))) {
-    const adminSupabase = createAdminClient();
-    const adminRes = await adminSupabase
-      .from("batches")
-      .update({
-        name: validated.name,
-        subject: validated.subject,
-        grade_class: validated.gradeClass,
-        monthly_fee: validated.monthlyFee,
-        schedule: validated.schedule,
-      })
-      .eq("id", batchId)
-      .eq("tutor_id", tutorId);
-    error = adminRes.error;
-  }
 
   if (error) {
     throw new Error(`Failed to update batch: ${error.message}`);
@@ -180,25 +142,14 @@ export async function toggleArchiveBatch(batchId: string) {
   }
   const tutorId = authState.tutorId || authState.uid;
 
-  const supabase = await getSupabaseServerClient();
+  const supabase = createAdminClient();
 
-  let { data: batch, error: getErr } = await supabase
+  const { data: batch } = await supabase
     .from("batches")
     .select("is_archived")
     .eq("id", batchId)
     .eq("tutor_id", tutorId)
     .single();
-
-  if (getErr) {
-    const adminSupabase = createAdminClient();
-    const adminRes = await adminSupabase
-      .from("batches")
-      .select("is_archived")
-      .eq("id", batchId)
-      .eq("tutor_id", tutorId)
-      .single();
-    batch = adminRes.data;
-  }
 
   if (!batch) {
     throw new Error("Batch not found or unauthorized");
@@ -206,21 +157,11 @@ export async function toggleArchiveBatch(batchId: string) {
 
   const nextArchived = !batch.is_archived;
 
-  let { error } = await supabase
+  const { error } = await supabase
     .from("batches")
     .update({ is_archived: nextArchived })
     .eq("id", batchId)
     .eq("tutor_id", tutorId);
-
-  if (error) {
-    const adminSupabase = createAdminClient();
-    const adminRes = await adminSupabase
-      .from("batches")
-      .update({ is_archived: nextArchived })
-      .eq("id", batchId)
-      .eq("tutor_id", tutorId);
-    error = adminRes.error;
-  }
 
   if (error) {
     throw new Error(`Failed to update batch status: ${error.message}`);

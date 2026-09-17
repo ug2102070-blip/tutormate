@@ -62,6 +62,39 @@ export function DashboardClientUI({ tutorName, metrics, liveData }: DashboardCli
   const { t } = useLanguage();
   const [scheduleTab, setScheduleTab] = useState<"today" | "tomorrow">("today");
   const [academicTab, setAcademicTab] = useState<"exams" | "assignments" | "materials">("exams");
+  const [activeCardIndex, setActiveCardIndex] = useState(0);
+  const scrollContainerRef = React.useRef<HTMLDivElement>(null);
+  const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
+  const quickAddRef = React.useRef<HTMLDivElement>(null);
+
+  // Close dropdown if clicked outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (quickAddRef.current && !quickAddRef.current.contains(event.target as Node)) {
+        setIsQuickAddOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleCardsScroll = () => {
+    if (!scrollContainerRef.current) return;
+    const { scrollLeft, scrollWidth, clientWidth } = scrollContainerRef.current;
+
+    if (scrollWidth <= clientWidth) return;
+
+    const maxScroll = scrollWidth - clientWidth;
+    const scrollPercentage = scrollLeft / maxScroll;
+
+    let index = Math.round(scrollPercentage * (gradientCards.length - 1));
+    if (index < 0) index = 0;
+    if (index >= gradientCards.length) index = gradientCards.length - 1;
+
+    if (index !== activeCardIndex) {
+      setActiveCardIndex(index);
+    }
+  };
 
   // Pinned Notes from multi-note storage
   const [pinnedNotes, setPinnedNotes] = useState<PinnedNote[]>([]);
@@ -210,13 +243,16 @@ export function DashboardClientUI({ tutorName, metrics, liveData }: DashboardCli
         </div>
 
         <div className="flex items-center gap-2">
-          <Link
-            href="/tutor/batches/new"
+          {/* Quick Add Button */}
+          <button
+            type="button"
+            onClick={() => setIsQuickAddOpen(true)}
             className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition-all active:scale-95 shadow-md shadow-blue-500/20 flex items-center gap-2"
           >
             <Plus className="w-4 h-4" />
-            <span>Add New Batch</span>
-          </Link>
+            <span>Create New</span>
+          </button>
+          
           <Link
             href="/tutor/ai-assistant"
             className="px-3.5 py-2.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 font-bold text-xs border border-indigo-200 dark:border-indigo-800 transition-all active:scale-95 hover:bg-indigo-100 flex items-center gap-1.5"
@@ -226,6 +262,102 @@ export function DashboardClientUI({ tutorName, metrics, liveData }: DashboardCli
           </Link>
         </div>
       </div>
+
+      {/* Quick Add Radial Crescent Modal (Baka Cad Style) */}
+      {isQuickAddOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center overflow-hidden pointer-events-auto">
+          {/* Light Blurred Backdrop (Reduced blur) */}
+          <div 
+            className="absolute inset-0 bg-slate-900/10 dark:bg-slate-950/40 backdrop-blur-[2px] animate-in fade-in duration-300"
+            onClick={() => setIsQuickAddOpen(false)}
+          />
+          
+          <div className="relative w-[340px] h-[340px] animate-in zoom-in-75 fade-in duration-500 ease-out pointer-events-none">
+            
+            {/* Center Close Button */}
+            <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10 flex flex-col items-center pointer-events-auto">
+              <button
+                onClick={() => setIsQuickAddOpen(false)}
+                className="w-16 h-16 rounded-full bg-white dark:bg-slate-800 shadow-[0_0_40px_rgba(0,0,0,0.1)] flex items-center justify-center text-slate-800 dark:text-white hover:scale-110 hover:bg-slate-50 transition-all active:scale-95 border border-slate-100 dark:border-slate-700"
+              >
+                <X className="w-8 h-8" />
+              </button>
+            </div>
+
+            {/* Crescent Items (Arranged in a bottom arc - Smile shape) */}
+            
+            {/* Item 1: New Batch (Far Left) */}
+            <div 
+              className="absolute left-1/2 top-1/2 transition-transform duration-500 pointer-events-auto"
+              style={{ transform: `translate(calc(-50% - 130px), calc(-50% - 20px))` }}
+            >
+              <Link
+                href="/tutor/batches/new"
+                onClick={() => setIsQuickAddOpen(false)}
+                className="flex flex-col items-center justify-center gap-1.5 group w-16"
+              >
+                <div className="w-14 h-14 rounded-full bg-white dark:bg-slate-800 shadow-xl border border-slate-100/80 dark:border-slate-700 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <Users className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+                </div>
+                <div className="text-[11px] font-extrabold text-slate-700 dark:text-slate-200 bg-white/80 dark:bg-slate-900/80 px-2 py-0.5 rounded-md backdrop-blur-md text-center shadow-xs">Batch</div>
+              </Link>
+            </div>
+
+            {/* Item 2: Add Student (Bottom-Left) */}
+            <div 
+              className="absolute left-1/2 top-1/2 transition-transform duration-500 pointer-events-auto"
+              style={{ transform: `translate(calc(-50% - 65px), calc(-50% + 112px))` }}
+            >
+              <Link
+                href="/tutor/students"
+                onClick={() => setIsQuickAddOpen(false)}
+                className="flex flex-col items-center justify-center gap-1.5 group w-16"
+              >
+                <div className="w-14 h-14 rounded-full bg-white dark:bg-slate-800 shadow-xl border border-slate-100/80 dark:border-slate-700 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <GraduationCap className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
+                </div>
+                <div className="text-[11px] font-extrabold text-slate-700 dark:text-slate-200 bg-white/80 dark:bg-slate-900/80 px-2 py-0.5 rounded-md backdrop-blur-md text-center shadow-xs">Student</div>
+              </Link>
+            </div>
+
+            {/* Item 3: Schedule Exam (Bottom-Right) */}
+            <div 
+              className="absolute left-1/2 top-1/2 transition-transform duration-500 pointer-events-auto"
+              style={{ transform: `translate(calc(-50% + 65px), calc(-50% + 112px))` }}
+            >
+              <Link
+                href="/tutor/exams"
+                onClick={() => setIsQuickAddOpen(false)}
+                className="flex flex-col items-center justify-center gap-1.5 group w-16"
+              >
+                <div className="w-14 h-14 rounded-full bg-white dark:bg-slate-800 shadow-xl border border-slate-100/80 dark:border-slate-700 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <Award className="w-6 h-6 text-amber-600 dark:text-amber-400" />
+                </div>
+                <div className="text-[11px] font-extrabold text-slate-700 dark:text-slate-200 bg-white/80 dark:bg-slate-900/80 px-2 py-0.5 rounded-md backdrop-blur-md text-center shadow-xs">Exam</div>
+              </Link>
+            </div>
+
+            {/* Item 4: Study Material (Far Right) */}
+            <div 
+              className="absolute left-1/2 top-1/2 transition-transform duration-500 pointer-events-auto"
+              style={{ transform: `translate(calc(-50% + 130px), calc(-50% - 20px))` }}
+            >
+              <Link
+                href="/tutor/materials"
+                onClick={() => setIsQuickAddOpen(false)}
+                className="flex flex-col items-center justify-center gap-1.5 group w-16"
+              >
+                <div className="w-14 h-14 rounded-full bg-white dark:bg-slate-800 shadow-xl border border-slate-100/80 dark:border-slate-700 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <FileText className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+                </div>
+                <div className="text-[11px] font-extrabold text-slate-700 dark:text-slate-200 bg-white/80 dark:bg-slate-900/80 px-2 py-0.5 rounded-md backdrop-blur-md text-center shadow-xs">Material</div>
+              </Link>
+            </div>
+
+          </div>
+        </div>
+      )}
+
 
       {/* Pilot Onboarding Guide (Positioned at top for immediate first-time tutor visibility) */}
       <OnboardingChecklist tutorName={tutorName} />
@@ -264,41 +396,61 @@ export function DashboardClientUI({ tutorName, metrics, liveData }: DashboardCli
       )}
 
       {/* 6 Vibrant Gradient Hero KPI Cards */}
-      <div className="flex overflow-x-auto pb-4 -mx-4 px-4 sm:mx-0 sm:px-0 sm:pb-0 sm:grid sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4 snap-x snap-mandatory [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-        {gradientCards.map((card) => {
-          const Icon = card.icon;
-          return (
-            <Link
-              key={card.title}
-              href={card.href}
-              className="relative p-4 sm:p-5 rounded-2xl text-white overflow-hidden transition-all duration-200 hover:-translate-y-1 active:scale-95 group block shrink-0 w-[45vw] min-w-[160px] max-w-[200px] sm:w-auto sm:min-w-0 sm:max-w-none snap-start"
-              style={{
-                background: card.gradient,
-                boxShadow: card.shadow,
-              }}
-            >
-              <div className="absolute -right-4 -bottom-4 w-20 h-20 rounded-full bg-white/10 blur-xl pointer-events-none group-hover:scale-125 transition-transform" />
+      <div className="space-y-3 relative">
+        <div
+          ref={scrollContainerRef}
+          onScroll={handleCardsScroll}
+          className="flex overflow-x-auto pt-6 pb-8 -mt-6 -mb-8 sm:mt-0 sm:mb-0 sm:pt-0 sm:pb-0 sm:grid sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4 snap-x snap-mandatory [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+        >
+          {gradientCards.map((card) => {
+            const Icon = card.icon;
+            return (
+              <Link
+                key={card.title}
+                href={card.href}
+                className="relative p-4 sm:p-5 rounded-2xl text-white overflow-hidden transition-all duration-200 hover:-translate-y-1 active:scale-95 group block shrink-0 w-[45vw] min-w-[160px] max-w-[200px] sm:w-auto sm:min-w-0 sm:max-w-none snap-start"
+                style={{
+                  background: card.gradient,
+                  boxShadow: card.shadow,
+                }}
+              >
+                <div className="absolute -right-4 -bottom-4 w-20 h-20 rounded-full bg-white/10 blur-xl pointer-events-none group-hover:scale-125 transition-transform" />
 
-              <div className="flex items-center justify-between mb-3 relative z-10">
-                <span className="text-[11px] sm:text-xs font-semibold text-white/90 truncate max-w-[100px]">
-                  {card.title}
-                </span>
-                <div className="w-7 h-7 rounded-xl bg-white/20 backdrop-blur-xs flex items-center justify-center shrink-0">
-                  <Icon className="w-4 h-4 text-white" />
+                <div className="flex items-center justify-between mb-3 relative z-10">
+                  <span className="text-[11px] sm:text-xs font-semibold text-white/90 truncate max-w-[100px]">
+                    {card.title}
+                  </span>
+                  <div className="w-7 h-7 rounded-xl bg-white/20 backdrop-blur-xs flex items-center justify-center shrink-0">
+                    <Icon className="w-4 h-4 text-white" />
+                  </div>
                 </div>
-              </div>
 
-              <div className="relative z-10">
-                <div className="text-xl sm:text-2xl font-black tracking-tight truncate">
-                  {card.value}
+                <div className="relative z-10">
+                  <div className="text-xl sm:text-2xl font-black tracking-tight truncate">
+                    {card.value}
+                  </div>
+                  <div className="text-[10px] text-white/80 font-medium mt-1 truncate">
+                    {card.subtitle}
+                  </div>
                 </div>
-                <div className="text-[10px] text-white/80 font-medium mt-1 truncate">
-                  {card.subtitle}
-                </div>
-              </div>
-            </Link>
-          );
-        })}
+              </Link>
+            );
+          })}
+        </div>
+
+        {/* Mobile Pagination Dots */}
+        <div className="flex items-center justify-center gap-1.5 sm:hidden relative z-10 !mt-3">
+          {gradientCards.map((_, idx) => (
+            <div
+              key={idx}
+              className={`h-1.5 rounded-full transition-all duration-300 ${
+                idx === activeCardIndex
+                  ? "w-4 bg-blue-600 dark:bg-blue-500"
+                  : "w-1.5 bg-slate-300 dark:bg-slate-700"
+              }`}
+            />
+          ))}
+        </div>
       </div>
 
       {/* Row 1: Class Routine & Sessions (Left 7 cols) + Upcoming Exams & Doubts Quick Box (Right 5 cols) */}

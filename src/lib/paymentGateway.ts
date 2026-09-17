@@ -1,7 +1,14 @@
 /**
  * TutorMate Payment Gateway Engine
  * Supports bKash Checkout API, Nagad PGW, and SSLCommerz with seamless Sandbox / Mock Fallback.
+ *
+ * SECURITY FIX: Mock callback URLs now include an HMAC-SHA256 token parameter.
+ * The callback route handlers MUST verify this token before writing to the DB.
+ * This prevents external actors from forging payment confirmations by directly
+ * hitting /api/payment/<gateway>/callback with crafted query parameters.
  */
+
+import { generateCallbackToken } from "@/lib/paymentHmac";
 
 export type PaymentProvider = "bkash" | "nagad" | "sslcommerz" | "manual";
 
@@ -100,8 +107,16 @@ export async function initiateBkashPayment(
   }
 
   // ── Mock / Sandbox Simulation Mode ──
+  // Generate HMAC token so the callback route can verify authenticity.
   const mockPaymentId = `BKASH-MOCK-${req.feeId.slice(0, 8)}-${Date.now()}`;
-  const mockRedirectUrl = `/api/payment/bkash/callback?paymentID=${mockPaymentId}&status=success&feeId=${req.feeId}&amount=${req.amount}`;
+  const hmacToken = generateCallbackToken("bkash", req.feeId, req.amount);
+  const mockRedirectUrl =
+    `/api/payment/bkash/callback` +
+    `?paymentID=${mockPaymentId}` +
+    `&status=success` +
+    `&feeId=${req.feeId}` +
+    `&amount=${req.amount}` +
+    `&token=${hmacToken}`;
 
   return {
     success: true,
@@ -121,9 +136,15 @@ export async function initiateNagadPayment(
   const merchantId = process.env.NAGAD_MERCHANT_ID;
   const isConfigured = Boolean(merchantId);
 
-  // If live keys configured, perform cryptographic handshake; otherwise return standard sandbox callback
   const orderId = `NAGAD-ORD-${req.feeId.slice(0, 8)}-${Date.now()}`;
-  const mockRedirectUrl = `/api/payment/nagad/callback?order_id=${orderId}&status=success&feeId=${req.feeId}&amount=${req.amount}`;
+  const hmacToken = generateCallbackToken("nagad", req.feeId, req.amount);
+  const mockRedirectUrl =
+    `/api/payment/nagad/callback` +
+    `?order_id=${orderId}` +
+    `&status=success` +
+    `&feeId=${req.feeId}` +
+    `&amount=${req.amount}` +
+    `&token=${hmacToken}`;
 
   return {
     success: true,
@@ -142,10 +163,16 @@ export async function initiateSSLCommerzPayment(
 ): Promise<PaymentInitiateResponse> {
   const storeId = process.env.SSLCOMMERZ_STORE_ID;
   const storePass = process.env.SSLCOMMERZ_STORE_PASS;
-  const isLive = process.env.SSLCOMMERZ_IS_LIVE === "true";
 
   const tranId = `SSLC-TRX-${req.feeId.slice(0, 8)}-${Date.now()}`;
-  const mockRedirectUrl = `/api/payment/bkash/callback?paymentID=${tranId}&status=success&feeId=${req.feeId}&amount=${req.amount}`;
+  const hmacToken = generateCallbackToken("sslcommerz", req.feeId, req.amount);
+  const mockRedirectUrl =
+    `/api/payment/bkash/callback` +
+    `?paymentID=${tranId}` +
+    `&status=success` +
+    `&feeId=${req.feeId}` +
+    `&amount=${req.amount}` +
+    `&token=${hmacToken}`;
 
   return {
     success: true,

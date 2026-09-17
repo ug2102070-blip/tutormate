@@ -2,7 +2,6 @@ import { cache } from "react";
 import { createAdminClient, createClient } from "@/lib/supabase/server";
 import type { UserRole, Permission } from "@/types";
 import { getRoleDefaultPermissions, assertPermission } from "@/lib/permissions";
-import type { User } from "@supabase/supabase-js";
 
 export interface VerifiedAuth {
   uid: string;
@@ -79,7 +78,7 @@ async function fetchProfileAuth(
   uid: string,
   email?: string,
   appMetadata?: Record<string, any>,
-  userMetadata?: Record<string, any>
+  _userMetadata?: Record<string, any> // kept for API compat — intentionally not trusted (client-writable)
 ): Promise<VerifiedAuth> {
   // 1. Zero-Latency Path: Check JWT Custom Claims (app_metadata)
   // This is the fastest path and requires NO database hits.
@@ -106,23 +105,11 @@ async function fetchProfileAuth(
   });
 
   if (error || !data || !data.role) {
-    // 3. Fallback Path: Public User Metadata (less secure, used during provisioning)
-    if (userMetadata?.role) {
-      const role = userMetadata.role as UserRole;
-      const permissionsSet = new Set<Permission>(getRoleDefaultPermissions(role));
-
-      return {
-        uid,
-        role: role,
-        tutorId: userMetadata.tutorId,
-        studentDocId: userMetadata.studentDocId || userMetadata.studentId,
-        studentAuthUid: userMetadata.studentAuthUid,
-        email: email,
-        permissions: Array.from(permissionsSet),
-      };
-    }
-
-    // Ultimate fallback
+    // ⚠️  user_metadata fallback intentionally REMOVED.
+    // user_metadata is client-writable — any authenticated user can set
+    // user_metadata.role = 'tutor' via the Supabase client, which would grant
+    // them full tutor privileges. Fail-closed: if the DB RPC returns no role,
+    // the user gets null permissions until their profile is properly provisioned.
     return {
       uid,
       role: null,

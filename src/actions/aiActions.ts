@@ -3,6 +3,8 @@
 import { verifyUserAuth } from "@/lib/authHelpers";
 import { createAdminClient } from "@/lib/supabase/server";
 import { checkAiFeatureAccess } from "@/lib/serverSubscriptions";
+import { aiRateLimiter } from "@/lib/ratelimit";
+
 
 export interface QuestionGenParams {
   classLevel: string;
@@ -41,6 +43,11 @@ interface ParentMessageParams {
 }
 
 // Call Gemini REST API with enhanced prompt engineering
+// PERFORMANCE FIX: 15-second timeout per Gemini model attempt.
+// Without this, a slow/unresponsive Gemini API call hangs the serverless
+// function indefinitely until the platform's hard timeout fires (30s+).
+const GEMINI_TIMEOUT_MS = 15_000;
+
 async function callGemini(prompt: string, systemInstruction?: string): Promise<string> {
   const apiKey = process.env.GEMINI_API_KEY;
 
@@ -53,6 +60,9 @@ async function callGemini(prompt: string, systemInstruction?: string): Promise<s
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
+            // AbortSignal.timeout() throws DOMException (AbortError) after the
+            // specified ms, ensuring we never hang longer than GEMINI_TIMEOUT_MS.
+            signal: AbortSignal.timeout(GEMINI_TIMEOUT_MS),
             body: JSON.stringify({
               contents: [
                 {
@@ -75,8 +85,12 @@ async function callGemini(prompt: string, systemInstruction?: string): Promise<s
         } else {
           console.warn(`Gemini API call to ${model} status:`, response.status);
         }
-      } catch (err) {
-        console.error(`Gemini API error on ${model}:`, err);
+      } catch (err: unknown) {
+        if (err instanceof DOMException && err.name === "TimeoutError") {
+          console.warn(`Gemini API timeout on ${model} after ${GEMINI_TIMEOUT_MS}ms — trying next model.`);
+        } else {
+          console.error(`Gemini API error on ${model}:`, err);
+        }
       }
     }
   }
@@ -88,6 +102,10 @@ export async function generateQuestions(params: QuestionGenParams) {
   const authState = await verifyUserAuth();
   if (authState.role !== "tutor" && authState.role !== "owner" && authState.role !== "admin") throw new Error("Unauthorized");
   await checkAiFeatureAccess(authState.tutorId || authState.uid);
+
+  // Rate limit: 10 AI calls per 60 seconds per user to prevent plan-bypass abuse
+  const aiRlResult = await aiRateLimiter.limit(authState.uid);
+  if (!aiRlResult.success) throw new Error("Too many AI requests. Please wait a moment before generating again.");
 
   const cleanDirective = `
 CRITICAL FORMATTING & NOTATION RULES:
@@ -173,6 +191,10 @@ export async function generateAssignment(params: AssignmentGenParams) {
   if (authState.role !== "tutor" && authState.role !== "owner" && authState.role !== "admin") throw new Error("Unauthorized");
   await checkAiFeatureAccess(authState.tutorId || authState.uid);
 
+  // Rate limit: 10 AI calls per 60 seconds per user
+  const aiRlResult = await aiRateLimiter.limit(authState.uid);
+  if (!aiRlResult.success) throw new Error("Too many AI requests. Please wait a moment before generating again.");
+
   const cleanDirective = `
 CRITICAL FORMATTING & NOTATION RULES:
 1. Do NOT include any introductory greetings, pleasantries, meta-commentary, or conversational fluff. Start DIRECTLY with the assignment title and objectives immediately.
@@ -233,6 +255,10 @@ Include:
 export async function generateLessonPlan(params: LessonPlanParams) {
   const authState = await verifyUserAuth();
   if (authState.role !== "tutor") throw new Error("Unauthorized");
+
+  // Rate limit: 10 AI calls per 60 seconds per user
+  const aiRlResult = await aiRateLimiter.limit(authState.uid);
+  if (!aiRlResult.success) throw new Error("Too many AI requests. Please wait a moment before generating again.");
 
   const cleanDirective = (params.cleanOutputOnly ?? true)
     ? "\n\nCRITICAL DIRECTIVE: Do NOT include any introductory greetings (e.g. 'Hello! I am TutorMate AI...'), pleasantries, meta-commentary, or conversational fluff. Start DIRECTLY with the lesson plan title and overview immediately in clean Markdown format."
@@ -356,6 +382,10 @@ export async function generateParentMessage(params: ParentMessageParams) {
   const authState = await verifyUserAuth();
   if (authState.role !== "tutor") throw new Error("Unauthorized");
 
+  // Rate limit: 10 AI calls per 60 seconds per user
+  const aiRlResult = await aiRateLimiter.limit(authState.uid);
+  if (!aiRlResult.success) throw new Error("Too many AI requests. Please wait a moment before generating again.");
+
   const langInstruction = params.language === "bn"
     ? "Write in highly polite, respectful, standard Bengali (বাংলা) appropriate for Bangladeshi parents."
     : params.language === "banglish"
@@ -463,6 +493,10 @@ export async function sendParentPortalNotification(params: {
 export async function generateWeeklySummary() {
   const authState = await verifyUserAuth();
   if (authState.role !== "tutor") throw new Error("Unauthorized");
+
+  // Rate limit: 10 AI calls per 60 seconds per user
+  const aiRlResult = await aiRateLimiter.limit(authState.uid);
+  if (!aiRlResult.success) throw new Error("Too many AI requests. Please wait a moment before generating again.");
 
   const tutorId = authState.tutorId || authState.uid;
   const adminSupabase = createAdminClient();

@@ -1,6 +1,83 @@
 import type { NextConfig } from "next";
 
+// ---------------------------------------------------------------------------
+// Security Headers — applied to every route
+// ---------------------------------------------------------------------------
+const productionOrigin = process.env.NEXT_PUBLIC_APP_URL ?? "https://tutormate.app";
+
+const securityHeaders = [
+  // Prevent the page from being loaded in a frame/iframe (clickjacking)
+  {
+    key: "X-Frame-Options",
+    value: "DENY",
+  },
+  // Prevent MIME-type sniffing
+  {
+    key: "X-Content-Type-Options",
+    value: "nosniff",
+  },
+  // Control referrer information sent with requests
+  {
+    key: "Referrer-Policy",
+    value: "strict-origin-when-cross-origin",
+  },
+  // Disable browser features not used by TutorMate
+  {
+    key: "Permissions-Policy",
+    value: "camera=(), microphone=(), geolocation=(), payment=(self)",
+  },
+  // Enforce HTTPS for 1 year (enable once TLS is confirmed on production)
+  {
+    key: "Strict-Transport-Security",
+    value: "max-age=31536000; includeSubDomains; preload",
+  },
+  // Content Security Policy
+  // - default-src 'self'  →  everything defaults to same-origin
+  // - script-src          →  allows Next.js runtime chunks + inline scripts Next.js injects
+  // - style-src           →  allows inline styles that Tailwind injects
+  // - img-src             →  allow same-origin, data URIs, and Supabase storage CDN
+  // - connect-src         →  allow Supabase API + Upstash + Gemini API + self
+  // - frame-ancestors     →  CSP equivalent of X-Frame-Options: DENY
+  {
+    key: "Content-Security-Policy",
+    value: [
+      "default-src 'self'",
+      // 'unsafe-inline' + 'unsafe-eval' needed for Next.js App Router dev mode;
+      // for production, replace with nonce-based approach.
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+      "font-src 'self' https://fonts.gstatic.com",
+      `img-src 'self' data: blob: https://*.supabase.co ${productionOrigin}`,
+      [
+        "connect-src 'self'",
+        "https://*.supabase.co",
+        "https://*.upstash.io",
+        "https://generativelanguage.googleapis.com",
+        productionOrigin,
+      ].join(" "),
+      "frame-src 'none'",
+      "frame-ancestors 'none'",
+      "object-src 'none'",
+      "base-uri 'self'",
+      "form-action 'self'",
+      "upgrade-insecure-requests",
+    ].join("; "),
+  },
+];
+
 const nextConfig: NextConfig = {
+  // -------------------------------------------------------------------------
+  // Security headers applied to all routes
+  // -------------------------------------------------------------------------
+  async headers() {
+    return [
+      {
+        source: "/(.*)",
+        headers: securityHeaders,
+      },
+    ];
+  },
+
   webpack: (config, { dev, isServer }) => {
     if (dev) {
       // Source map বন্ধ করলে compile অনেক দ্রুত হয়

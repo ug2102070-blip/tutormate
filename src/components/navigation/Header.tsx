@@ -18,7 +18,7 @@ import { MobileDrawer } from "@/components/navigation/MobileDrawer";
 export function Header() {
   const router = useRouter();
   const pathname = usePathname();
-  const { user, role } = useAuth();
+  const { user, role, displayName } = useAuth();
   const { t } = useLanguage();
   const [showMenu, setShowMenu] = useState(false);
   const [showMobileDrawer, setShowMobileDrawer] = useState(false);
@@ -53,13 +53,12 @@ export function Header() {
     }
   }
 
-  const displayName =
-    user?.user_metadata?.full_name ||
-    user?.user_metadata?.displayName ||
-    user?.email?.split("@")[0] ||
-    "User";
+  // displayName comes from useAuth (fetched from profiles table — source of truth)
+  // Fallback to email prefix if profile name not yet loaded
+  const resolvedDisplayName =
+    displayName || user?.email?.split("@")[0] || "User";
 
-  const initials = displayName
+  const initials = resolvedDisplayName
     .split(" ")
     .slice(0, 2)
     .map((w: string) => w[0])
@@ -199,7 +198,7 @@ export function Header() {
               className="text-xs font-bold leading-tight"
               style={{ color: "var(--color-text)" }}
             >
-              {displayName}
+              {resolvedDisplayName}
             </div>
             <div
               className="text-[10px] leading-tight"
@@ -242,7 +241,7 @@ export function Header() {
                   className="text-xs font-bold truncate"
                   style={{ color: "var(--color-text)" }}
                 >
-                  {displayName}
+                  {resolvedDisplayName}
                 </div>
                 <div
                   className="text-[10px] truncate font-medium mt-0.5"

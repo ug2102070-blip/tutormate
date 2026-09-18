@@ -23,9 +23,18 @@ export default async function TutorDashboardPage() {
     redirect("/login");
   }
 
+  // Fetch display name from profiles table (source of truth) — not user_metadata
+  // user_metadata contains Google OAuth name which may differ from the registered name
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("full_name")
+    .eq("id", user!.id)
+    .maybeSingle();
+
   const tutorName =
-    user.user_metadata?.full_name ||
-    user.email?.split("@")[0] ||
+    profile?.full_name ||
+    user!.user_metadata?.full_name ||
+    user!.email?.split("@")[0] ||
     "Tutor";
 
   return (

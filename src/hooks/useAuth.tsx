@@ -18,8 +18,9 @@ interface AuthState {
   user: User | null;
   claims: CustomClaims | null;
   role: UserRole | null;
+  displayName: string;
   loading: boolean;
-  refreshClaims: (forUser?: User) => Promise<void>;
+  refreshClaims: (forUser?: User, forceDbCheck?: boolean) => Promise<void>;
   refreshUser: () => Promise<void>;
 }
 
@@ -27,14 +28,16 @@ const AuthContext = createContext<AuthState>({
   user: null,
   claims: null,
   role: null,
+  displayName: "",
   loading: true,
-  refreshClaims: async (_forUser?: User) => {},
+  refreshClaims: async (_forUser?: User, _forceDbCheck?: boolean) => {},
   refreshUser: async () => {},
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [claims, setClaims] = useState<CustomClaims | null>(null);
+  const [displayName, setDisplayName] = useState<string>("");
   const [loading, setLoading] = useState(true);
 
   async function fetchUserClaims(supabaseUser: User, forceDbCheck = false): Promise<CustomClaims | null> {
@@ -84,6 +87,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .select("*")
         .eq("id", supabaseUser.id)
         .maybeSingle();
+
+      // Sync display name from profiles table (source of truth for names)
+      if (profile?.full_name) {
+        setDisplayName(profile.full_name);
+      } else {
+        // Fallback to Google OAuth / metadata name
+        const metaName =
+          supabaseUser.user_metadata?.full_name ||
+          supabaseUser.user_metadata?.displayName ||
+          supabaseUser.email?.split("@")[0] ||
+          "";
+        setDisplayName(metaName);
+      }
 
       if (tutor || profile) {
         const role = profile?.role || (tutor ? "tutor" : null);
@@ -147,6 +163,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setClaims(newClaims);
   }
 
+
   async function refreshUser(forceDbCheck = false) {
     const { data } = await supabase.auth.getUser();
     const currentUser = data?.user ?? null;
@@ -166,12 +183,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const { data } = await supabase.auth.getUser();
         const currentUser = data?.user ?? null;
         if (currentUser) {
-          const initialClaims = await fetchUserClaims(currentUser);
+          // Always force DB check on init so role is always from source of truth (profiles table)
+          const initialClaims = await fetchUserClaims(currentUser, true);
           setUser(currentUser);
           setClaims(initialClaims);
         } else {
           setUser(null);
           setClaims(null);
+          setDisplayName("");
         }
       } catch (err) {
         console.error("initAuth error:", err);
@@ -186,12 +205,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       async (event, session) => {
         const currentUser = session?.user ?? null;
         if (currentUser) {
-          const newClaims = await fetchUserClaims(currentUser);
+          // Force DB check on auth state changes (login/logout) to always get correct role
+          const newClaims = await fetchUserClaims(currentUser, true);
           setUser(currentUser);
           setClaims(newClaims);
         } else {
           setUser(null);
           setClaims(null);
+          setDisplayName("");
         }
         setLoading(false);
       }
@@ -206,7 +227,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, claims, role, loading, refreshClaims, refreshUser }}
+      value={{ user, claims, role, displayName, loading, refreshClaims, refreshUser }}
     >
       {children}
     </AuthContext.Provider>

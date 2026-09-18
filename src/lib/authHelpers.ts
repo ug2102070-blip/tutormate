@@ -82,19 +82,33 @@ async function fetchProfileAuth(
 ): Promise<VerifiedAuth> {
   // 1. Zero-Latency Path: Check JWT Custom Claims (app_metadata)
   // This is the fastest path and requires NO database hits.
+  // IMPORTANT: Only short-circuit if role-critical claims are complete.
+  // The sync_user_claims trigger only syncs `role` + `tutorId` from profiles.
+  // For students, tutorId comes from the `students` table (not profiles), and
+  // studentDocId is never synced at all — so we must fall through to the DB RPC
+  // if those fields are missing for roles that require them.
   if (appMetadata?.role) {
     const role = appMetadata.role as UserRole;
-    const permissionsSet = new Set<Permission>(getRoleDefaultPermissions(role));
+    const studentDocId = appMetadata.studentDocId || appMetadata.studentId;
+    const tutorId = appMetadata.tutorId;
 
-    return {
-      uid,
-      role: role,
-      tutorId: appMetadata.tutorId,
-      studentDocId: appMetadata.studentDocId || appMetadata.studentId,
-      studentAuthUid: appMetadata.studentAuthUid,
-      email: email,
-      permissions: Array.from(permissionsSet),
-    };
+    // Validate completeness for roles that need IDs to function
+    const isStudentComplete = role !== "student" || (!!studentDocId && !!tutorId);
+    const isTutorComplete = role !== "tutor" || !!tutorId;
+
+    if (isStudentComplete && isTutorComplete) {
+      const permissionsSet = new Set<Permission>(getRoleDefaultPermissions(role));
+      return {
+        uid,
+        role: role,
+        tutorId,
+        studentDocId,
+        studentAuthUid: appMetadata.studentAuthUid,
+        email: email,
+        permissions: Array.from(permissionsSet),
+      };
+    }
+    // Claims incomplete — fall through to DB RPC to get full context
   }
 
   const supabase = createAdminClient();

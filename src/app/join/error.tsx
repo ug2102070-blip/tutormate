@@ -3,14 +3,13 @@
 import * as Sentry from "@sentry/nextjs";
 import { useEffect } from "react";
 import Link from "next/link";
-import { AlertTriangle, RefreshCw, LayoutDashboard } from "lucide-react";
+import { AlertTriangle, RefreshCw, LogIn } from "lucide-react";
 
 /**
- * Tutor segment error boundary.
- * Next.js App Router catches any unhandled errors thrown in /tutor/** routes
- * and renders this component instead of crashing the entire app.
+ * Join (student invite) segment error boundary.
+ * Catches errors thrown within the /join route (e.g., invalid invite code, network error).
  */
-export default function TutorError({
+export default function JoinError({
   error,
   reset,
 }: {
@@ -38,10 +37,10 @@ export default function TutorError({
 
         <div className="space-y-2">
           <h1 className="text-lg font-extrabold" style={{ color: "var(--color-text)" }}>
-            Something went wrong
+            Unable to Join
           </h1>
           <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
-            An unexpected error occurred. Your data is safe — this page failed to load.
+            Something went wrong while processing your invite code. Please try again or contact your tutor.
           </p>
           {process.env.NODE_ENV === "development" && error?.message && (
             <p className="text-xs font-mono bg-rose-50 dark:bg-rose-950/30 text-rose-700 dark:text-rose-400 p-3 rounded-xl text-left mt-3 break-all border border-rose-200 dark:border-rose-900/40">
@@ -60,12 +59,12 @@ export default function TutorError({
             Try Again
           </button>
           <Link
-            href="/tutor/dashboard"
+            href="/login"
             className="flex items-center gap-2 px-4 py-2 rounded-xl border font-bold text-sm transition-all hover:bg-slate-50 dark:hover:bg-slate-800"
             style={{ borderColor: "var(--color-border)", color: "var(--color-text-muted)" }}
           >
-            <LayoutDashboard className="w-4 h-4" />
-            Dashboard
+            <LogIn className="w-4 h-4" />
+            Back to Login
           </Link>
         </div>
       </div>

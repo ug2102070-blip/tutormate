@@ -427,7 +427,7 @@ export async function submitAssignment(
   studentNotes?: string | null
 ) {
   const authState = await verifyUserAuth();
-  if (authState.role !== "student" || !authState.studentDocId) throw new Error("Unauthorized");
+  if (authState.role !== "student") throw new Error("Unauthorized");
 
   // Server-side file extension validation — reject dangerous/disallowed files
   // BEFORE touching the database.
@@ -437,12 +437,24 @@ export async function submitAssignment(
 
   const supabase = createAdminClient();
 
+  // Resolve studentDocId from auth claims or fall back to DB lookup
+  let studentDocId = authState.studentDocId;
+  if (!studentDocId) {
+    const { data: studentRow } = await supabase
+      .from("students")
+      .select("id")
+      .eq("auth_uid", authState.uid)
+      .maybeSingle();
+    if (!studentRow) throw new Error("Student record not found");
+    studentDocId = studentRow.id;
+  }
+
   // 1. Get submission and assignment details
   const { data: sub, error: fetchErr } = await supabase
     .from("assignment_submissions")
     .select(`id, assignment_id, assignments ( id, title, deadline, tutor_id )`)
     .eq("id", submissionId)
-    .eq("student_id", authState.studentDocId)
+    .eq("student_id", studentDocId)
     .single();
 
   if (fetchErr || !sub) throw new Error("Submission record not found");
@@ -462,7 +474,7 @@ export async function submitAssignment(
     .from("assignment_submissions")
     .update(updateData)
     .eq("id", submissionId)
-    .eq("student_id", authState.studentDocId);
+    .eq("student_id", studentDocId);
 
   // Fallback if student_notes column is missing
   if (error && error.message?.includes("student_notes")) {
@@ -471,7 +483,7 @@ export async function submitAssignment(
       .from("assignment_submissions")
       .update(updateData)
       .eq("id", submissionId)
-      .eq("student_id", authState.studentDocId);
+      .eq("student_id", studentDocId);
     error = retry.error;
   }
 
@@ -818,9 +830,22 @@ export async function getSubmissions(assignmentId: string): Promise<SubmissionDo
 
 export async function getStudentSubmissions(batchId?: string): Promise<SubmissionDoc[]> {
   const authState = await verifyUserAuth();
-  if (authState.role !== "student" || !authState.studentDocId) throw new Error("Unauthorized");
+  if (authState.role !== "student") throw new Error("Unauthorized");
 
   const supabase = createAdminClient();
+
+  // Resolve studentDocId from auth claims or fall back to DB lookup
+  let studentDocId = authState.studentDocId;
+  if (!studentDocId) {
+    const { data: studentRow } = await supabase
+      .from("students")
+      .select("id")
+      .eq("auth_uid", authState.uid)
+      .maybeSingle();
+    if (!studentRow) return [];
+    studentDocId = studentRow.id;
+  }
+
   let query = supabase
     .from("assignment_submissions")
     .select(`
@@ -837,7 +862,7 @@ export async function getStudentSubmissions(batchId?: string): Promise<Submissio
         batches ( name )
       )
     `)
-    .eq("student_id", authState.studentDocId)
+    .eq("student_id", studentDocId)
     .order("created_at", { ascending: false });
 
   const { data, error } = await query;

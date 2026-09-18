@@ -202,17 +202,36 @@ export async function getTutorMaterials(batchId?: string) {
  */
 export async function getStudentMaterials(batchId?: string) {
   const authState = await verifyUserAuth();
-  if (authState.role !== "student" || !authState.studentDocId || !authState.tutorId) {
+  if (authState.role !== "student") {
     throw new Error("Unauthorized");
   }
 
   const supabase = createAdminClient();
 
+  // Resolve studentDocId / tutorId — may be missing from JWT claims if the
+  // student's app_metadata wasn't fully synced yet (invite code claimed after registration).
+  let studentDocId = authState.studentDocId;
+  let tutorId = authState.tutorId;
+
+  if (!studentDocId || !tutorId) {
+    const { data: studentRow } = await supabase
+      .from("students")
+      .select("id, tutor_id, enrolled_batch_ids")
+      .eq("auth_uid", authState.uid)
+      .maybeSingle();
+
+    if (!studentRow) return [];
+    studentDocId = studentRow.id;
+    tutorId = studentRow.tutor_id;
+  }
+
+  if (!studentDocId || !tutorId) return [];
+
   // Need to get student's enrolled batches
   const { data: student } = await supabase
     .from("students")
     .select("enrolled_batch_ids")
-    .eq("id", authState.studentDocId)
+    .eq("id", studentDocId)
     .single();
 
   const enrolledBatchIds = student?.enrolled_batch_ids || [];
@@ -221,7 +240,7 @@ export async function getStudentMaterials(batchId?: string) {
   let query = supabase
     .from("materials")
     .select("*")
-    .eq("tutor_id", authState.tutorId)
+    .eq("tutor_id", tutorId)
     .eq("is_published", true)
     .order("created_at", { ascending: false });
 

@@ -205,11 +205,21 @@ export async function getExams(batchId: string | null = null) {
 
     return { success: true, exams: formattedExams };
   } else if (authState.role === "student") {
-    const { data: student } = await supabase
+    let { data: student } = await supabase
       .from("students")
       .select("enrolled_batch_ids")
       .eq("auth_uid", authState.uid)
-      .single();
+      .maybeSingle();
+
+    // Fallback via studentDocId when auth_uid not yet set
+    if (!student && authState.studentDocId) {
+      const { data: fallback } = await supabase
+        .from("students")
+        .select("enrolled_batch_ids")
+        .eq("id", authState.studentDocId)
+        .maybeSingle();
+      student = fallback;
+    }
 
     if (!student?.enrolled_batch_ids?.length) {
       return { success: true, exams: [] as ExamWithStatsDoc[] };
@@ -447,13 +457,25 @@ export async function getStudentExamResults() {
 
   const supabase = createAdminClient();
 
-  const { data: student } = await supabase
+  // Primary lookup: by auth_uid
+  let { data: student } = await supabase
     .from("students")
     .select("id")
     .eq("auth_uid", authState.uid)
-    .single();
+    .maybeSingle();
 
-  if (!student) throw new Error("Student record not found");
+  // Fallback: use studentDocId from JWT claims (set via profiles.student_doc_id)
+  // when students.auth_uid hasn't been synced yet
+  if (!student && authState.studentDocId) {
+    const { data: fallback } = await supabase
+      .from("students")
+      .select("id")
+      .eq("id", authState.studentDocId)
+      .maybeSingle();
+    student = fallback;
+  }
+
+  if (!student) return { success: true, results: [] };
 
   const { data, error } = await supabase
     .from("exam_results")

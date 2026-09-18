@@ -63,6 +63,7 @@ class InMemoryRateLimiter {
 const fallbackInviteLimiter = new InMemoryRateLimiter(5, 60 * 1000);
 const fallbackAuthLimiter = new InMemoryRateLimiter(10, 60 * 1000);
 const fallbackAiLimiter = new InMemoryRateLimiter(10, 60 * 1000);
+const fallbackPaymentLimiter = new InMemoryRateLimiter(5, 60 * 1000);
 
 /**
  * Rate limiter for student invite code claims.
@@ -103,4 +104,18 @@ export const aiRateLimiter = redisInstance
       prefix: "ratelimit:ai",
     })
   : fallbackAiLimiter;
+
+/**
+ * Rate limiter for payment initiation (initiateFeePayment).
+ * Sliding window: 5 initiations per 60 seconds per authenticated user UID.
+ * Prevents card-testing, brute-force, and accidental duplicate submissions.
+ */
+export const paymentRateLimiter = redisInstance
+  ? new Ratelimit({
+      redis: redisInstance,
+      limiter: Ratelimit.slidingWindow(5, "60 s"),
+      analytics: true,
+      prefix: "ratelimit:payment",
+    })
+  : fallbackPaymentLimiter;
 

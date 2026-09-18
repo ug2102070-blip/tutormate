@@ -120,6 +120,7 @@ export const studentNavCategories: NavCategory[] = [
     items: [
       { href: "/student/attendance", label: "My Attendance", key: "myAttendance", icon: CalendarCheck },
       { href: "/student/fees", label: "Payment History", key: "paymentHistory", icon: CreditCard },
+      { href: "/student/settings", label: "Settings", key: "studentSettings", icon: Settings },
     ],
   },
 ];

@@ -1,5 +1,6 @@
 "use client";
 
+import * as Sentry from "@sentry/nextjs";
 import { useEffect } from "react";
 import Link from "next/link";
 import { AlertTriangle, RefreshCw, LayoutDashboard } from "lucide-react";
@@ -12,7 +13,7 @@ export default function OwnerError({
   reset: () => void;
 }) {
   useEffect(() => {
-    console.error("[OwnerError boundary]", error);
+    Sentry.captureException(error);
   }, [error]);
 
   return (

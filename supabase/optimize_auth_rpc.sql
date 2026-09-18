@@ -40,7 +40,19 @@ BEGIN
 
   -- 3. Check if user is a student
   IF v_role IS NULL OR v_role = 'student' THEN
+    -- Primary lookup: by auth_uid or direct id match
     SELECT id, tutor_id INTO v_student FROM students WHERE auth_uid = p_uid OR id = p_uid LIMIT 1;
+
+    -- Fallback: if profile has student_doc_id set but students.auth_uid was never written
+    -- (e.g. invite code was claimed but the students row still has auth_uid = NULL)
+    IF NOT FOUND AND v_profile.student_doc_id IS NOT NULL THEN
+      SELECT id, tutor_id INTO v_student FROM students WHERE id = v_profile.student_doc_id LIMIT 1;
+      IF FOUND THEN
+        -- Lazily repair: write auth_uid so the fast path works next time
+        UPDATE students SET auth_uid = p_uid WHERE id = v_student.id AND auth_uid IS NULL;
+      END IF;
+    END IF;
+
     IF FOUND THEN
       v_role := 'student';
       v_student_doc_id := v_student.id;

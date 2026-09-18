@@ -151,7 +151,7 @@ export default function RegisterPage() {
         }
       }
 
-      await refreshClaims(user).catch(() => {});
+      await refreshClaims(user, true).catch(() => {});
       router.push(
         role === "student" ? "/student/dashboard" :
         role === "parent" ? "/parent/dashboard" :
@@ -261,7 +261,7 @@ export default function RegisterPage() {
         throw signErr;
       }
 
-      await refreshClaims(signData.user).catch(() => {});
+      await refreshClaims(signData.user, true).catch(() => {});
       router.push(
         role === "student" ? "/student/dashboard" :
         role === "parent" ? "/parent/dashboard" :

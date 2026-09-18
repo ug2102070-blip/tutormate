@@ -113,7 +113,7 @@ function LoginContent() {
       // Existing user — redirect straight to their dashboard or requested redirect
       if (profile) {
         isRedirectingRef.current = true;
-        await refreshClaims().catch(() => {});
+        await refreshClaims(undefined, true).catch(() => {});
         const redirectParam = searchParams.get("redirect");
 
         let destination = "/tutor/dashboard";
@@ -303,7 +303,7 @@ function LoginContent() {
         }
       }
 
-      await refreshClaims().catch(() => {});
+      await refreshClaims(undefined, true).catch(() => {});
       router.push(onboardRole === "student" ? "/student/dashboard" : onboardRole === "parent" ? "/parent/dashboard" : onboardRole === "owner" ? "/owner/dashboard" : "/tutor/dashboard");
     } catch (err: unknown) {
       setError(formatAuthError(err));

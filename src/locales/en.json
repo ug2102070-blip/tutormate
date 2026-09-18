@@ -330,7 +330,11 @@
   "materials": {
     "title": "Study Materials",
     "subtitle": "Upload and manage notes, PDFs, and resources for your batches",
+    "recordedClasses": "Recorded Classes 🎥",
     "recordedClassesBtn": "Recorded Classes 🎥",
+    "filterBySubject": "Filter by Subject:",
+    "allSubjects": "All Subjects",
+    "loading": "Loading your materials...",
     "uploadMaterialTitle": "Upload Material",
     "titleLabel": "Title *",
     "titlePlaceholder": "e.g., Chapter 1 Notes",
@@ -345,15 +349,17 @@
     "filterByBatch": "Filter by Batch:",
     "allMaterials": "All Materials",
     "loadingMaterials": "Loading materials...",
+    "noMaterials": "No study materials uploaded yet",
     "noMaterialsTitle": "No Materials Found",
-    "noMaterialsDescAll": "You haven't uploaded any study materials yet.",
+    "noMaterialsDescAll": "Your tutor hasn't shared any study materials yet.",
+    "noMaterialsDescSubject": "No materials available for this specific subject.",
     "noMaterialsDescBatch": "No materials uploaded for this specific batch.",
     "unknownSize": "Unknown size",
+    "general": "General",
     "globalAll": "Global (All)",
     "draftHidden": "Draft (Hidden from students)",
     "deleteConfirm": "Are you sure you want to delete this material?",
-    "uploadNew": "Upload Material",
-    "noMaterials": "No study materials uploaded yet"
+    "uploadNew": "Upload Material"
   },
   "assignments": {
     "title": "Homework & Assignments",

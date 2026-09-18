@@ -100,19 +100,60 @@ async function getLinkedStudentId(parentUid: string): Promise<{
   tutorId: string;
 } | null> {
   const supabase = createAdminClient();
+
+  // Primary lookup: parent_links table
   const { data } = await supabase
     .from("parent_links")
     .select("student_id, students(id, auth_uid, tutor_id)")
     .eq("parent_uid", parentUid)
     .limit(1)
-    .single();
+    .maybeSingle();
 
-  if (!data) return null;
-  const student = data.students as any;
+  if (data) {
+    const student = data.students as any;
+    return {
+      studentId: data.student_id,
+      studentAuthUid: student?.auth_uid ?? null,
+      tutorId: student?.tutor_id ?? "",
+    };
+  }
+
+  // Fallback: profiles table has student_doc_id + tutor_id set during linkParentToStudent
+  // This handles cases where parent_links upsert failed but profile was saved correctly.
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("student_doc_id, tutor_id")
+    .eq("id", parentUid)
+    .eq("role", "parent")
+    .maybeSingle();
+
+  if (!profile?.student_doc_id) return null;
+
+  // Fetch student auth_uid for the fallback path
+  const { data: student } = await supabase
+    .from("students")
+    .select("id, auth_uid, tutor_id")
+    .eq("id", profile.student_doc_id)
+    .maybeSingle();
+
+  if (!student) return null;
+
+  // Repair the missing parent_links row so future calls use the fast path
+  void (async () => {
+    try {
+      await supabase
+        .from("parent_links")
+        .upsert(
+          { parent_uid: parentUid, student_id: profile.student_doc_id },
+          { onConflict: "parent_uid, student_id" }
+        );
+    } catch { /* best-effort repair, ignore errors */ }
+  })();
+
   return {
-    studentId: data.student_id,
-    studentAuthUid: student?.auth_uid ?? null,
-    tutorId: student?.tutor_id ?? "",
+    studentId: profile.student_doc_id,
+    studentAuthUid: student.auth_uid ?? null,
+    tutorId: student.tutor_id ?? profile.tutor_id ?? "",
   };
 }
 

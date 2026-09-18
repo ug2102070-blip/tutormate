@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/server";
 import { verifyUserAuth } from "@/lib/authHelpers";
+import { paymentRateLimiter } from "@/lib/ratelimit";
 import type { FeeDoc } from "@/types";
 
 export interface PaymentInitiateResult {
@@ -31,6 +32,13 @@ export async function initiateFeePayment(
 ): Promise<PaymentInitiateResult> {
   try {
     const auth = await verifyUserAuth();
+
+    // Rate limit: 5 payment initiations per 60 seconds per user
+    const rlResult = await paymentRateLimiter.limit(auth.uid);
+    if (!rlResult.success) {
+      return { success: false, error: "Too many payment attempts. Please wait a moment before trying again." };
+    }
+
     const supabase = createAdminClient();
 
     // Fetch fee record

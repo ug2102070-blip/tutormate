@@ -275,11 +275,14 @@ export async function getOwnerTutors(): Promise<OwnerTutorRow[]> {
   const { centerId } = await requireOwner();
   const adminSupabase = createAdminClient();
 
+  // Limit: a coaching center realistically won't have more than 500 tutors.
+  // This cap prevents accidental full-table scans if the table grows unexpectedly.
   const { data: tutors } = await adminSupabase
     .from("tutors")
     .select("id, user_id, full_name, institution, contact_phone, created_at")
     .eq("coaching_center_id", centerId)
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .limit(500);
 
   if (!tutors || tutors.length === 0) return [];
 
@@ -577,12 +580,15 @@ export async function getOwnerAttendanceSummary(days = 7): Promise<OwnerAttendan
   startDate.setDate(startDate.getDate() - days);
   const startDateStr = startDate.toISOString().slice(0, 10);
 
+  // Safety cap: 2 000 attendance rows covers ~285 batches × 7 days.
+  // Beyond this, the attendance summary page should use a tighter date range.
   const { data: attRows } = await adminSupabase
     .from("attendance")
     .select("tutor_id, batch_id, date, records")
     .in("tutor_id", tutorIds)
     .gte("date", startDateStr)
-    .order("date", { ascending: false });
+    .order("date", { ascending: false })
+    .limit(2000);
 
   if (!attRows || attRows.length === 0) return [];
 
@@ -715,11 +721,13 @@ export async function getCenterStaff(): Promise<any[]> {
   const { centerId } = await requireOwner();
   const adminSupabase = createAdminClient();
 
+  // Safety cap: staff list is typically small; 200 is a generous upper bound.
   const { data, error } = await adminSupabase
     .from("coaching_staff")
     .select("*")
     .eq("center_id", centerId)
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .limit(200);
 
   if (error) {
     console.error("[getCenterStaff] Error:", error);
@@ -796,11 +804,14 @@ export async function getCenterExpenses(): Promise<any[]> {
   const { centerId } = await requireOwner();
   const adminSupabase = createAdminClient();
 
+  // Safety cap: fetch the most recent 1 000 expense records.
+  // For historical data beyond this, a date-range filter should be added to the UI.
   const { data, error } = await adminSupabase
     .from("coaching_expenses")
     .select("*")
     .eq("center_id", centerId)
-    .order("date", { ascending: false });
+    .order("date", { ascending: false })
+    .limit(1000);
 
   if (error) {
     console.error("[getCenterExpenses] Error:", error);
